@@ -1,0 +1,14 @@
+{
+    "manager_password": "mgrpwd",
+    "root_dir": "D:/Python/vDB",
+    "db_list": [
+        {
+            "name": "db",
+            "base_dir": "D:/Python/vDB/db"
+        },
+        {
+            "name": "compta_DEV",
+            "base_dir": "D:/Python/vDB/compta_DEV"
+        }
+    ]
+}
