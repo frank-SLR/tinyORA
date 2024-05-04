@@ -43,4 +43,5 @@ if __name__ == "__main__":
             print("  {}".format(s))
     finally:
         if os.path.isfile("./parameters.json"):
+            copyfile("./parameters.json", args.db_parameters_file)
             os.remove("./parameters.json")
