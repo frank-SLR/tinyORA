@@ -29,8 +29,9 @@ TinyDB is a small database engine. It allows you to manage data using SQL.
 > Online APIs documentation is available on <basic_TinyDB_URL>/docs
 > For example : https://tinydb.mydomain.com:1521/tinyDB/docs
 
-> For all following examples, basic_TinyDB_URL will be :
+> For all following examples, <basic_TinyDB_URL> will be :
 > https://tinydb.mydomain.com:1521/tinyDB
+
 ## Welcome page
 
 Method: GET
