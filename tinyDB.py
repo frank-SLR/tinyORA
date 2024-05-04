@@ -15,6 +15,7 @@ class UnicornException(Exception):
         self.status_code = status_code
 
 
+# URL is <address>:<port>/tinyDB
 app: FastAPI = FastAPI(root_path='/tinyDB')
 # ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 # ssl_context.load_cert_chain('D:\\Python\\OpenSSL\\cert.pem', keyfile='D:\\Python\\OpenSSL\\key.pem')

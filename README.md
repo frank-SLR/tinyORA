@@ -76,10 +76,11 @@ You should define the file with inital value :
 
 To start tinyDB server, submit following command:
 ```bash
-python server.py -a <domain> -s <SSL_files_path> -p <port> -l <message_level>
+python server.py -a <domain> -s <SSL_files_path> -p <port> -l <message_level> -d <parameters_file>
+python server.py --address <domain> --ssl-path <SSL_files_path> --port <port> --log-level <message_level> --db-parameters-file <parameters_file>
 ```
 
-All parameters are optional.
+All parameters except <parameters_file> are optional.
 
 - **domain**: this is the address used for listening. Default value is ==127.0.0.1==.
 - **SSL_files_path**: This is the path where certificat files are stored.
@@ -94,9 +95,10 @@ All parameters are optional.
     |info|
     |debug|
     |trace |
+- **parameters_file**: JSON file containing parameters for TinyDB. See: [Parameters file](#parameters-file)
 
 
 ### Example:
 ```bash
-python server.py -a tinydb.mydomain.com -s d:/Python/OpenSSL -p 1521 -l warning
+python server.py -a tinydb.mydomain.com -s /opt/tinyDB/OpenSSL -p 1521 -l warning -d /opt/tinyDB/pfile.json
 ```

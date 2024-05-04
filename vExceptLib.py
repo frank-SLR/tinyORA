@@ -51,6 +51,8 @@ class vExept(Exception):
                 self.message = 'Database ({}) already exists'.format(message)
             case 602:
                 self.message = 'Invalid parameters file ({})'.format(message)
+            case 603:
+                self.message = 'Parameters file is missing'.format(message)
             # SERVER MANAGMENT (660-679)
             case 660:
                 self.message = 'Invalid Manager password'
