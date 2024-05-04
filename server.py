@@ -1,4 +1,4 @@
-# python server.py -s d:/Python/OpenSSL -p 1521 -l warning -d D:/Python/parameters.json
+# python server.py -s d:/Python/OpenSSL -p 1521 -l warning -d D:/Python/data/pfile.json
 from vExceptLib import vExept
 import argparse
 import uvicorn
@@ -41,3 +41,6 @@ if __name__ == "__main__":
         print("error code: {}".format(e.errcode))
         for s in e.message.split("\n"):
             print("  {}".format(s))
+    finally:
+        if os.path.isfile("./parameters.json"):
+            os.remove("./parameters.json")

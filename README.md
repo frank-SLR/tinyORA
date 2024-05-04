@@ -33,6 +33,7 @@ Following modules are mandatory:
 - copy
 - random
 - time
+- shutil
 
 You can install them with:
 
