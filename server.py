@@ -26,9 +26,3 @@ if __name__ == "__main__":
                     ssl_keyfile="{}/key.pem".format(args.ssl_path),
                     ssl_certfile="{}/cert.pem".format(args.ssl_path),
                     log_level=args.log_level)
-    # except Exception as e:
-    #     print('Internal error')
-    #     print(e)
-    # except UnboundLocalError as e:
-    #     print('Internal error')
-    #     print(e)

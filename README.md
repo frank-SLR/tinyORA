@@ -1,157 +1,100 @@
-## tinyDB
+# TinyDB
 
-TinyDB is a small database engine. It allows you to manage data using SQL.
-> Queries have to use the syntax decribe below.
+TinyDB is a small database engine.
+This doc explains the installation procedure.
 
 ---
 # Table of content
 
-[SELECT](#select)
-[WITH](#with)
-[DESC](#desc--describe)
-[GRANT](#grant)
-[REVOKE](#revoke)
-[CREATE](#create)
-[DROP](#drop)
-[INSERT](#insert)
-[UPDATE](#update)
-[COMMIT](#commit)
-[ROLLBACK](#rollback)
+[Needed modules](#needed-modules)
+[SSL](#ssl)
+[Start server](#start-server)
 
 ---
 
-> [] indicate an optional object
-> ... indicate object can be repeated
-> {} indicate multiple objects delimited by |. Only one object is used for query
-> [[]] indicate optional parentheses at the begin and the end of object
+## Needed modules
 
-## SELECT
-SELECT statement is formatted as :
+Following modules are mandatory:
 
-`select <SEL_COL> [ , <SEL_COL> ...]`
-`from <FROM_OBJ> [ , <FROM_OBJ> ...]`
-`inner join <FROM_OBJ> on <INNER_CLAUSE> [ { AND | OR } INNER_CLAUSE ...]`
-`where <WHERE_CLAUSE>;`
+- argparse
+- uvicorn
+- fastapi.FastAPI
+- fastapi.Response
+- fastapi.status
+- fastapi.Request
+- fastapi.responses.JSONResponse
+- sys
+- os
+- ssl
+- json
+- re
+- copy
+- random
+- time
 
-See: [SEL_COL](#sel_col), [FROM_OBJ](#from_obj), [INNER_CLAUSE](#inner_clause), [WHERE_CLAUSE](#where_clause)
+You can install them with:
 
-## DESC | DESCRIBE:
-Supply table definition.
+```bash
+pip install "argparse"
+pip install "fastapi[all]"
+pip install "uvicorn[standard]"
+pip install cryptography
+pip install requests
+```
 
-`desc [ <SCHEMA>. ] <TABLE_NAME>`
+## SSL
 
-## WITH
-The WITH clause associates one or more subqueries with the query.
+To enable HTTPs you need certificats.
+For example, you can create your own certificats with:
 
-`with <CURSOR_NAME> as ( <SELECT> ) [, <CURSOR_NAME> as ( <SELECT> ) ]`
-`<SELECT>`
+```bash
+openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 365
+```
 
-See: [SELECT](#select)
+For profesional purpose, you rather could contact your network security team.
 
-## GRANT
+## Parameters file
+TinyDB needs a parameters file for his initialisation.
+This file is ==parameters.json== and his format is JSON.
 
-`grant { select | insert | update | delete } on <SCHEMA> [ . <TABLE_NAME> ] to <USERNAME> [ with admin option ]`
-`grant { create | drop } user to <USERNAME> [ with admin option ]`
-`grant { create | drop } { table | index } on <SCHEMA> to <USERNAME> [ with admin option ]`
+You should define the file with inital value :
 
-## REVOKE
+```json
+{
+    "manager_password": "mgrpwd%1234",
+    "root_dir": "/opt/tinyDB",
+    "db_list": [
+    ]
+}
+```
+- **manager_password** is the password you will use to manage tinyDB.
+- **root_dir** is the path where database files will be created.
 
-`revoke { select | insert | update | delete } on <SCHEMA> [ . <TABLE_NAME> ] from <USERNAME>`
-`revoke { create | drop } user from <USERNAME>`
-`revoke { create | drop } { table | index } on <SCHEMA> from <USERNAME>`
+## Start server
 
-## CREATE
+To start tinyDB server, submit following command:
+```bash
+python server.py -a <domain> -s <SSL_files_path> -p <port> -l <message_level>
+```
 
-`create table [ <SCHEMA>. ] <TABLE_NAME> ( <COLUMN_NAME> <FORMAT> [ , <COLUMN_NAME> <FORMAT> ...])`
-`create table [ <SCHEMA>. ] <TABLE_NAME> as { <SELECT> | <WITH> }`
-`create user <USERNAME> identified by <PASSWORD>`
+All parameters are optional.
 
-## DROP
+- **domain**: this is the address used for listening. Default value is ==127.0.0.1==.
+- **SSL_files_path**: This is the path where certificat files are stored.
+- **port**: the port used for listening. Default value is ==1521==.
+- **message_level**: This is the minimal message level to display. Default value is ==warning==.
+    Following values are defined:
+    |Message level|
+    | ---: |
+    | critical
+    |error|
+    |warning|
+    |info|
+    |debug|
+    |trace |
 
-`drop table [ <SCHEMA>. ] <TABLE_NAME>`
-`drop user <USERNAME>`
 
-## INSERT
-
-`insert into [ <SCHEMA>. ] <TABLE_NAME> [ ( <COLUMN_NAME> [ , <COLUMN_NAME> ...] ) ] { <WITH> | <SELECT> }`
-`insert into [ <SCHEMA>. ] <TABLE_NAME> [ ( <COLUMN_NAME> [ , <COLUMN_NAME> ...] ) ]values (  <CONSTANT> [ ,  <CONSTANT> ...] )`
-
-## UPDATE
-
-`update [ <SCHEMA>. ] <TABLE_NAME> set <COLUMN_NAME>=<CONSTANT> [ , <COLUMN_NAME>=<CONSTANT> ...] where <WHERE_CLAUSE>`
-
-See: [WHERE_CLAUSE](#where_clause)
-
-## COMMIT
-Validates all previous queries.
-
-## ROLLBACK
-Invalidates all previous queries.
-
-## SEL_COL
-In SELECT statement, the column is identified with:
-
-Single column with optional alias:
-`[[<SCHEMA>.]<TABLE_NAME>.]<COLUMN_NAME> [<COL_ALIAS>]`
-`[<TABLE_ALIAS>.]<COLUMN_NAME> [<COL_ALIAS>]`
-
-All columns:
-`[[<SCHEMA>.]<TABLE_NAME>.]*`
-`[<TABLE_ALIAS>.]*`
-
-Data, can have various formats (string, number,...):
-`<CONSTANT>`
-
-## FROM_OBJ
-In FROM clause, objects can be tables or sub-queries
-
-`{ <FROM_TAB> | ( <SELECT> ) <CUR_ALIAS> }`
-
-If it is a subquery, it must be enclosed by parentheses.
-
-See: [FROM_TAB](#from_tab), [CUR_ALIAS](#cur_alias), [SELECT](#select)
-
-## INNER_CLAUSE
-
-`<GENERIC_COL> <WHERE_COMPARE> <GENERIC_COL>`
-
-See: [GENERIC_COL](#generic_col) [WHERE_COMPARE](#where_compare)
-
-## WHERE_CLAUSE
-
-`[[ ( ]] { <WHERE_CMP> | <WHERE_BETWEEN> | <WHERE_IN> } [ { and | or } <WHERE_CLAUSE> ] [[ ) ]]`
-
-See: [WHERE_CMP](#where_cmp), [WHERE_BETWEEN](#where_between), [WHERE_IN](#where_in)
-
-## FROM_TAB
-
-`{ [ <SCHEMA>. ] <TABLE_NAME> [ <TAB_ALIAS> ] | <CURSOR_NAME> [ <CUR_ALIAS> ] }`
-
-## CUR_ALIAS
-Defines an alias for a cursor.
-
-## GENERIC_COL
-Defines a column.
-
-`[ { [ <SCHEMA>. ] <TABLE_NAME> . | <TAB_ALIAS> . } ] <COLUMN_NAME> [COL_ALIAS]`
-
-## WHERE_COMPARE
-Operators available for the comparison.
-
-`{ = | > | < | >= | <= | <> | != }`
-
-## WHERE_CMP
-Comparison between two objects.
-
-`[[ ( ]] <SEL_COL> <WHERE_COMPARE> <SEL_COL> [[ ) ]]`
-
-See: [SEL_COL](#sel_col), [WHERE_COMPARE](#where_compare)
-
-## WHERE_BETWEEN
-
-Not yet implemented.
-
-## WHERE_IN
-
-Not yet implemented.
-
+### Example:
+```bash
+python server.py -a tinydb.mydomain.com -s d:/Python/OpenSSL -p 1521 -l warning
+```
