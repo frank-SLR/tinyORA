@@ -90,12 +90,12 @@ All parameters except <parameters_file> are optional.
     Following values are defined:
     |Message level|
     | ---: |
-    | critical
+    |critical|
     |error|
     |warning|
     |info|
     |debug|
-    |trace |
+    |trace|
 - **parameters_file**: JSON file containing parameters for TinyDB. See: [Parameters file](#parameters-file)
 
 

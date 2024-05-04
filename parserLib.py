@@ -60,6 +60,9 @@ class vParser():
                 case 'UPDATE':
                     self.__parsed_query["querytype"] = 'UPDATE'
                     self.__parse_update(pos)
+                case 'DELETE':
+                    self.__parsed_query["querytype"] = 'DELETE'
+                    self.__parse_delete(pos)
                 case 'COMMIT':
                     if pos < len(self.__query):
                         raise vExept(735)
@@ -502,6 +505,33 @@ class vParser():
             word, pos = self.__parse_word(pos)
             if word == ',':
                 word, pos = self.__parse_word(pos)
+        if pos < len(self.__query):
+            if word.upper() == 'WHERE':
+                word, pos = self.__parse_WHERE_CLAUSE(pos)
+            else:
+                raise vExept(738, word)
+        # generate where test
+        lst_where = []
+        w_idx = 0
+        bracket = 0
+        v_idx = 0
+        while w_idx < len(self.__parsed_query['where']):
+            w_idx, lst_where, v_idx, bracket = self.__compute_where(self.__parsed_query['where'], w_idx, lst_where, v_idx, 'AND', bracket)
+        self.__parsed_query['parsed_where'] = lst_where
+
+    def __parse_delete(self, pos):
+        word, pos = self.__parse_word(pos)
+        if word.upper() != 'FROM':
+            raise vExept(718, word)
+        word, pos = self.__parse_word(pos)
+        a_t = word.upper().split('.')
+        if len(a_t) == 1:
+            self.__parsed_query["from"].append([self.__get_cur_name(), None, a_t[0], 'TABLE'])
+        elif len(a_t) == 2:
+            self.__parsed_query["from"].append([self.__get_cur_name(), a_t[0], a_t[1], 'TABLE'])
+        else:
+            raise vExept(209, word)
+        word, pos = self.__parse_word(pos)
         if pos < len(self.__query):
             if word.upper() == 'WHERE':
                 word, pos = self.__parse_WHERE_CLAUSE(pos)

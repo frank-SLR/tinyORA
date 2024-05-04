@@ -31,7 +31,7 @@ class vSession(object):
             result = {"columns": [], "rows": []}
         elif self.__parsed_query["querytype"] in ['DESCRIBE']:
             result = {"columns": [], "schema": [], "table_name": []}
-        elif self.__parsed_query["querytype"] in ['GRANT', 'CREATE', 'DROP', 'INSERT', 'COMMIT', 'ROLLBACK', 'UPDATE']:
+        elif self.__parsed_query["querytype"] in ['GRANT', 'CREATE', 'DROP', 'INSERT', 'COMMIT', 'ROLLBACK', 'UPDATE', 'DELETE']:
             result = {"message": None}
 
         # put locks
@@ -44,7 +44,7 @@ class vSession(object):
         elif self.__parsed_query["querytype"] in ['INSERT']:
             while not self.db.add_lock(session_id=self.session_id, owner=self.__parsed_query["insert"][0], name=self.__parsed_query["insert"][1], lock_type=1):
                 pass
-        if self.__parsed_query["querytype"] in ['UPDATE']:
+        if self.__parsed_query["querytype"] in ['UPDATE', 'DELETE']:
             tbl = self.__parsed_query["from"][0]
             while not self.db.add_lock(session_id=self.session_id, owner=tbl[1], name=tbl[2], lock_type=1):
                 pass
@@ -59,7 +59,7 @@ class vSession(object):
                             pass
 
         # load tables
-        if self.__parsed_query["querytype"] in ['SELECT', 'DESCRIBE', 'UPDATE']:
+        if self.__parsed_query["querytype"] in ['SELECT', 'DESCRIBE', 'UPDATE', 'DELETE']:
             self.__validate_tables()
 
         # check GRANT
@@ -151,6 +151,13 @@ class vSession(object):
             t_name=self.__parsed_query["from"][0][2]
             if not self.__get_grant_for_object(owner=u_name, obj_name=t_name, grant_needed='UPDATE'):
                 raise vExept(210, '{}.{}'.format(u_name, t_name))
+        elif self.__parsed_query["querytype"] in ['DELETE']:
+            if self.__parsed_query["from"][0][1] is None:
+                self.__parsed_query["from"][0][1] = self.current_schema
+            u_name=self.__parsed_query["from"][0][1]
+            t_name=self.__parsed_query["from"][0][2]
+            if not self.__get_grant_for_object(owner=u_name, obj_name=t_name, grant_needed='DELETE'):
+                raise vExept(210, '{}.{}'.format(u_name, t_name))
 
         # process query
         if self.__parsed_query["querytype"] in ['CREATE']:
@@ -189,6 +196,9 @@ class vSession(object):
         elif self.__parsed_query["querytype"] in ['UPDATE']:
             cnt = self.__process_update()
             result = {"message": "{} line(s) updated".format(cnt)}
+        elif self.__parsed_query["querytype"] in ['DELETE']:
+            cnt = self.__process_delete()
+            result = {"message": "{} line(s) deleted".format(cnt)}
         elif self.__parsed_query["querytype"] in ['DESCRIBE']:
             result["schema"] = self.__parsed_query["from"][0][1]
             result["table_name"] = self.__parsed_query["from"][0][2]
@@ -514,6 +524,25 @@ class vSession(object):
         del self.__RowsPosInTables
         self.__add_updated_table(self.__parsed_query["from"][0][4][0])
         return updt_rows_cnt
+
+    def __process_delete(self):
+        # generate data for where clause
+        self.__validate_where()
+        # search rows to update
+        del_rows_cnt = 0
+        RowsToDel = []
+        self.__RowsPosInTables = [None]
+        for n in range(len(self.__parsed_query["from"][0][4][0]["rows"])):
+            self.__RowsPosInTables[0] = n
+            if self.__process_tests():
+                del_rows_cnt += 1
+                RowsToDel.append(n)
+        del self.__RowsPosInTables
+        while len(RowsToDel) > 0:
+            del self.__parsed_query["from"][0][4][0]["rows"][RowsToDel[0]]
+            del RowsToDel[0]
+        self.__add_updated_table(self.__parsed_query["from"][0][4][0])
+        return del_rows_cnt
 
     def __format_value(self, value, type_value):
         try:

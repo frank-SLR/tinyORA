@@ -24,6 +24,8 @@ TinyDB is a small database engine. It allows you to manage data using SQL.
 
 [UPDATE](#update)
 
+[DELETE](#delete)
+
 [COMMIT](#commit)
 
 [ROLLBACK](#rollback)
@@ -188,6 +190,20 @@ Example:
 
 ```sql
 update emp_with_dep set dep_name='Research/Quantum' where emp_id=12;
+```
+
+## DELETE
+
+```
+delete from [ <SCHEMA>. ] <TABLE_NAME> where <WHERE_CLAUSE>
+```
+
+See: [WHERE_CLAUSE](#where_clause)
+
+Example:
+
+```sql
+delete from emp_with_dep where emp_id=12;
 ```
 
 ## COMMIT

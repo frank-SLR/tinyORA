@@ -27,7 +27,7 @@ inner join <FROM_OBJ> on <INNER_CLAUSE> [ { AND | OR} INNER_CLAUSE ...]
 --right outer join <FROM_OBJ> on <INNER_CLAUSE> [ { AND | OR} INNER_CLAUSE ...]
 where <WHERE_CLAUSE>
 --group by <SEL_COL> [ , <SEL_COL> ...]
---order by <SEL_COL> [ , <SEL_COL> ...] ;
+--order by <SEL_COL> [ , <SEL_COL> ...]
 
 WITH :
 with <CURSOR_NAME> as ( <SELECT> ) [, <CURSOR_NAME> as ( <SELECT> ) ]
@@ -48,7 +48,7 @@ revoke { create | drop } { table | index } on <SCHEMA> from <USERNAME>
 
 CREATE :
 create table [ <SCHEMA>. ] <TABLE_NAME> ( <COLUMN_NAME> <FORMAT> [ , <COLUMN_NAME> <FORMAT> ...])
-create table [ <SCHEMA>. ] <TABLE_NAME> as { <SELECT> | <WITH> }
+create table [ <SCHEMA>. ] <TABLE_NAME> as { <SELECT> | <WITH> } 
 create user <USERNAME> identified by <PASSWORD>
 
 DROP :
@@ -62,6 +62,8 @@ insert into [ <SCHEMA>. ] <TABLE_NAME> [ ( <COLUMN_NAME> [ , <COLUMN_NAME> ...] 
 UPDATE :
 update [ <SCHEMA>. ] <TABLE_NAME> set <COLUMN_NAME>=<CONSTANT> [ , <COLUMN_NAME>=<CONSTANT> ...] where <WHERE_CLAUSE>
 
+DELETE :
+delete from [ <SCHEMA>. ] <TABLE_NAME> where <WHERE_CLAUSE>
 
 COMMIT
 ROLLBACK
