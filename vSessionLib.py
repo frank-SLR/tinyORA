@@ -178,21 +178,7 @@ class vSession(object):
             cnt = self.__process_insert()
             result = {"message": "{} line(s) inserted".format(cnt)}
         elif self.__parsed_query["querytype"] in ['SELECT']:
-            # generate select columns for result
-            result = self.__validate_select(result)
-            # generate data for where clause
-            self.__validate_where()
-            # generate data for where clause of inner join
-            self.__validate_inner_where()
-            # fetch rows for query
-            self.__result = []
-            self.__RowsPosInTables = []
-            for n in range(len(self.__parsed_query["from"])):
-                self.__RowsPosInTables.append(None)
-            self.__get_rows(cur_idx=0)
-            result["rows"] = self.__result
-            del self.__result
-            del self.__RowsPosInTables
+            result = self.__process_select(result)
         elif self.__parsed_query["querytype"] in ['UPDATE']:
             cnt = self.__process_update()
             result = {"message": "{} line(s) updated".format(cnt)}
@@ -321,6 +307,16 @@ class vSession(object):
                             raise vExept(801)
                     self.__result.append(rrow)
 
+    def __prefetch_get_rows(self):
+        for cur_idx in range(len(self.__parsed_query["from"])):
+            if self.__parsed_query["from"][cur_idx][3] == 'TABLE':
+                tmp_rows = []
+                for n in range(len(self.__parsed_query["from"][cur_idx][4][0]["rows"])):
+                    self.__RowsPosInTables[cur_idx] = n
+                    if self.__prefetch_process_tests(cur_idx):
+                        tmp_rows.append(self.__parsed_query["from"][cur_idx][4][0]["rows"][n])
+                self.__parsed_query["from"][cur_idx][4][0]["rows"] = tmp_rows
+
     def __process_tests(self):
         # parsed_where: item_id, field1, oper, field2
         #            or item_id, ['META', item_id], oper, ['META', item_id]
@@ -371,6 +367,73 @@ class vSession(object):
                 if len(temp_res) > 0:
                     inner_tests = inner_tests and temp_res[-1]
         return where_tests and inner_tests
+
+    def __prefetch_process_tests(self, tab_num):
+        # parsed_where: item_id, field1, oper, field2
+        #            or item_id, ['META', item_id], oper, ['META', item_id]
+        #            or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], oper, ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
+        if len(self.__parsed_query["parsed_where"]) > 0:
+            temp_res = []
+            for tst in self.__parsed_query['parsed_where']:
+                if tst[1][0] != tst[3][0]:
+                    raise vExept(899, tst)
+                if tst[1][0] == "TST":
+                    if tst[1][5] == "COLUMN":
+                        if tst[1][1] == tab_num:
+                            c1 = self.__parsed_query["from"][tst[1][1]][4][0]["rows"][self.__RowsPosInTables[tst[1][1]]][tst[1][2]]
+                    else:
+                        c1 = tst[1][4]
+                    if tst[3][5] == "COLUMN":
+                        if tst[3][1] == tab_num:
+                            c2 = self.__parsed_query["from"][tst[3][1]][4][0]["rows"][self.__RowsPosInTables[tst[3][1]]][tst[3][2]]
+                    else:
+                        c2 = tst[3][4]
+                    tstoper = tst[2]
+                    if (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] != "COLUMN") or \
+                       (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num) and (tst[1][5] != "COLUMN") or \
+                       (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num):
+                        result = self.__compare_cols(str(c1), str(c2), tstoper)
+                    else:
+                        result = None
+                else:
+                    if temp_res[tst[1][1]] is None:
+                        if temp_res[tst[3][1]] is None:
+                            result = True
+                        else:
+                            result = temp_res[tst[3][1]]
+                    else:
+                        if temp_res[tst[3][1]] is None:
+                            result = temp_res[tst[1][1]]
+                        else:
+                            result = self.__compare_cols(temp_res[tst[1][1]], temp_res[tst[3][1]], tst[2])
+                temp_res.append(result)
+            where_tests = temp_res[-1]
+            if where_tests is None:
+                where_tests = True
+        else:
+            where_tests = True
+        return where_tests
+
+    def __process_select(self, result):
+        # generate select columns for result
+        result = self.__validate_select(result)
+        # generate data for where clause
+        self.__validate_where()
+        # generate data for where clause of inner join
+        self.__validate_inner_where()
+        # init gloal variable for rows fetch
+        self.__result = []
+        self.__RowsPosInTables = []
+        for n in range(len(self.__parsed_query["from"])):
+            self.__RowsPosInTables.append(None)
+        # prefetch rows in source tables
+        self.__prefetch_get_rows()
+        # fetch rows for query
+        self.__get_rows(cur_idx=0)
+        result["rows"] = self.__result
+        del self.__result
+        del self.__RowsPosInTables
+        return result
 
     def __process_create_table(self):
         if len(self.__parsed_query["create"][0][3]) == 1: # create table with cursor
