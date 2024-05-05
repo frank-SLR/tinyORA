@@ -310,12 +310,21 @@ class vSession(object):
     def __prefetch_get_rows(self):
         for cur_idx in range(len(self.__parsed_query["from"])):
             if self.__parsed_query["from"][cur_idx][3] == 'TABLE':
-                tmp_rows = []
-                for n in range(len(self.__parsed_query["from"][cur_idx][4][0]["rows"])):
-                    self.__RowsPosInTables[cur_idx] = n
-                    if self.__prefetch_process_tests(cur_idx):
-                        tmp_rows.append(self.__parsed_query["from"][cur_idx][4][0]["rows"][n])
-                self.__parsed_query["from"][cur_idx][4][0]["rows"] = tmp_rows
+                Validate_prefetch_process = False
+                for tst in self.__parsed_query['parsed_where']:
+                    if tst[1][0] == "TST":
+                        if (tst[1][5] == "COLUMN") and (tst[1][1] == cur_idx) and (tst[3][5] != "COLUMN") or \
+                           (tst[3][5] == "COLUMN") and (tst[3][1] == cur_idx) and (tst[1][5] != "COLUMN") or \
+                           (tst[1][5] == "COLUMN") and (tst[1][1] == cur_idx) and (tst[3][5] == "COLUMN") and (tst[3][1] == cur_idx):
+                            Validate_prefetch_process = True
+                            break
+                if Validate_prefetch_process:
+                    tmp_rows = []
+                    for n in range(len(self.__parsed_query["from"][cur_idx][4][0]["rows"])):
+                        self.__RowsPosInTables[cur_idx] = n
+                        if self.__prefetch_process_tests(cur_idx):
+                            tmp_rows.append(self.__parsed_query["from"][cur_idx][4][0]["rows"][n])
+                    self.__parsed_query["from"][cur_idx][4][0]["rows"] = tmp_rows
 
     def __process_tests(self):
         # parsed_where: item_id, field1, oper, field2
