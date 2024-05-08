@@ -27,12 +27,14 @@ if __name__ == "__main__":
             uvicorn.run("tinyDB:app",
                         host=args.address,
                         port=args.port,
+                        # workers=8,
                         reload=True,
                         log_level=args.log_level)
         else:
             uvicorn.run("tinyDB:app",
                         host=args.address,
                         port=args.port,
+                        # workers=8,
                         reload=True,
                         ssl_keyfile="{}/key.pem".format(args.ssl_path),
                         ssl_certfile="{}/cert.pem".format(args.ssl_path),

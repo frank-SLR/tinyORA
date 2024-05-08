@@ -23,7 +23,7 @@ class vSession(object):
         self.__updated_tables = []
         super().__init__()
 
-    def submit_query(self, _query:str):
+    async def submit_query(self, _query:str):
         self.__parsed_query = vParser().parse_query(query=_query)
         # print(self.__parsed_query)
 
@@ -39,24 +39,54 @@ class vSession(object):
             for n in range(len(self.__parsed_query["from"])):
                 tbl = self.__parsed_query["from"][n]
                 if tbl[3] == 'TABLE':
-                    while not self.db.add_lock(session_id=self.session_id, owner=tbl[1], name=tbl[2], lock_type=10):
-                        pass
+                    lock_flg = True
+                    while lock_flg:
+                        lock_val = self.db.add_lock(session_id=self.session_id, owner=tbl[1], name=tbl[2], lock_type=10)
+                        match lock_val:
+                            case 0:
+                                lock_flg = False
+                            case 1:
+                                raise vExept(1900, '{}.{}'.format(tbl[1], tbl[2]))
         elif self.__parsed_query["querytype"] in ['INSERT']:
-            while not self.db.add_lock(session_id=self.session_id, owner=self.__parsed_query["insert"][0], name=self.__parsed_query["insert"][1], lock_type=1):
-                pass
+            lock_flg = True
+            while lock_flg:
+                lock_val = self.db.add_lock(session_id=self.session_id, owner=self.__parsed_query["insert"][0], name=self.__parsed_query["insert"][1], lock_type=1)
+                match lock_val:
+                    case 0:
+                        lock_flg = False
+                    case 1:
+                        raise vExept(1900, '{}.{}'.format(self.__parsed_query["insert"][0], self.__parsed_query["insert"][1]))
         if self.__parsed_query["querytype"] in ['UPDATE', 'DELETE']:
             tbl = self.__parsed_query["from"][0]
-            while not self.db.add_lock(session_id=self.session_id, owner=tbl[1], name=tbl[2], lock_type=1):
-                pass
+            lock_flg = True
+            while lock_flg:
+                lock_val = self.db.add_lock(session_id=self.session_id, owner=tbl[1], name=tbl[2], lock_type=1)
+                match lock_val:
+                    case 0:
+                        lock_flg = False
+                    case 1:
+                        raise vExept(1900, '{}.{}'.format(tbl[1], tbl[2]))
         elif self.__parsed_query["querytype"] in ['DROP']:
             if self.__parsed_query["drop"][0][0] == 'TABLE':
-                while not self.db.add_lock(session_id=self.session_id, owner=self.__parsed_query["drop"][0][1], name=self.__parsed_query["drop"][0][2], lock_type=0):
-                    pass
+                lock_flg = True
+                while lock_flg:
+                    lock_val = self.db.add_lock(session_id=self.session_id, owner=self.__parsed_query["drop"][0][1], name=self.__parsed_query["drop"][0][2], lock_type=0)
+                    match lock_val:
+                        case 0:
+                            lock_flg = False
+                        case 1:
+                            raise vExept(1900, '{}.{}'.format(self.__parsed_query["drop"][0][1], self.__parsed_query["drop"][0][2]))
             elif self.__parsed_query["drop"][0][0] == 'USER':
                 for TAB in self.db.db["Tables"]:
                     if TAB["schema"] == self.__parsed_query["drop"][0][1]:
-                        while not self.db.add_lock(session_id=self.session_id, owner=TAB["schema"], name=TAB["table_name"], lock_type=0):
-                            pass
+                        lock_flg = True
+                        while lock_flg:
+                            lock_val = self.db.add_lock(session_id=self.session_id, owner=TAB["schema"], name=TAB["table_name"], lock_type=0)
+                            match lock_val:
+                                case 0:
+                                    lock_flg = False
+                                case 1:
+                                    raise vExept(1900, '{}.{}'.format(TAB["schema"], TAB["table_name"]))
 
         # load tables
         if self.__parsed_query["querytype"] in ['SELECT', 'DESCRIBE', 'UPDATE', 'DELETE']:

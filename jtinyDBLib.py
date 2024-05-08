@@ -7,7 +7,8 @@ from vExceptLib import vExept
 
 # JSON DB
 class JSONtinyDB():
-    def __init__(self, _db_base_dir=None):
+    def __init__(self, _g_params, _db_base_dir=None):
+        self.__g_params = _g_params
         self.__latchcnt = 0
         self.__RAZ()
         if _db_base_dir is None:
@@ -108,6 +109,8 @@ class JSONtinyDB():
             raise vExept(15)
 
     def add_lock(self, session_id, owner, name, lock_type):
+        # return 0 => lock acquired
+        # return 1 => lock not acquired because of previous lock
         if self.__DB_enable:
             self.__latchcnt += 1
             while self.__latchcnt > 1:
@@ -119,23 +122,24 @@ class JSONtinyDB():
                     if self.__locks[n][0] == session_id:
                         if self.__locks[n][3] == lock_type:
                             self.__latchcnt -= 1
-                            return True
+                            return 0
                     else:
                         match lock_type:
                             case 0:
                                 self.__latchcnt -= 1
-                                return False
+                                return 1
                             case 1:
                                 if self.__locks[n][3] in [0, 1]:
                                     self.__latchcnt -= 1
-                                    return False
+                                    return 1
                             case 10:
                                 if self.__locks[n][3] == 0:
                                     self.__latchcnt -= 1
-                                    return False
+                                    return 1
             self.__locks.append([session_id, owner, name, lock_type])
             self.__latchcnt -= 1
-            return True
+            print(self.__locks)
+            return 0
         else:
             raise vExept(15)
 

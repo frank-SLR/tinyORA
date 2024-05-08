@@ -66,12 +66,15 @@ You should define the file with inital value :
 {
     "manager_password": "mgrpwd%1234",
     "root_dir": "/opt/tinyDB",
+    "global_parameters":{
+    },
     "db_list": [
     ]
 }
 ```
 - **manager_password** is the password you will use to manage tinyDB.
 - **root_dir** is the path where database files will be created.
+- **global_parameters** list of parameters for futur use
 
 ## Start server
 

@@ -166,7 +166,9 @@ class vExept(Exception):
                 self.message = 'Username/Schema does not exist ({})'.format(message)
             case 1801:
                 self.message = 'User already exists ({})'.format(message)
-            # ~~~~~BLANK (1900-1999)
+            # LOCKs (1900-1999)
+            case 1900:
+                self.message = 'Unable to catch lock on {}'.format(message)
             # CREATE table (2000-2099)
             # CURSOR (2100-2199)
             case 2100:

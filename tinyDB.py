@@ -21,7 +21,7 @@ app: FastAPI = FastAPI(root_path='/tinyDB')
 # ssl_context.load_cert_chain('D:\\Python\\OpenSSL\\cert.pem', keyfile='D:\\Python\\OpenSSL\\key.pem')
 
 # init internal variables
-app.sessions = []
+app.sessions = [] # [session_id, session, username, database, request.client.host]
 app.dbs = []
 app.parameters_file = "./parameters.json"
 
@@ -36,7 +36,7 @@ else:
 # load and open DB(s)
 for db in app.__meta_cfg["db_list"]:
     if os.path.exists(db["base_dir"]):
-        app.dbs.append([db["name"], vDB(_db_base_dir=db["base_dir"])])
+        app.dbs.append([db["name"], vDB(_db_base_dir=db["base_dir"], g_params=app.__meta_cfg["global_parameters"])])
     else:
         raise vExept(23, db["base_dir"])
 
@@ -55,7 +55,7 @@ async def unicorn_exception_handler(request: Request, exc: UnicornException):
 # Welcome
 # --------------------------------------------------------------------
 @app.get("/")
-def read_root(request: Request):
+async def read_root(request: Request):
     """say hello
 
     Returns:
@@ -92,7 +92,7 @@ async def open_connection(database: str, username: str, password: str, request: 
             raise vExept(600)
         else:
             try:
-                session = db.create_session(username=username, password=password)
+                session = await db.create_session(username=username, password=password)
                 session_id = str(session.session_id)
                 app.sessions.append([session_id, session, username, database, request.client.host])
             except vExept as e:
@@ -107,7 +107,7 @@ async def open_connection(database: str, username: str, password: str, request: 
 # DISCONNECT
 # --------------------------------------------------------------------
 @app.post("/disconnect/db", status_code=status.HTTP_200_OK)
-async def close_connection(session_id: str, request: Request) -> dict:
+def close_connection(session_id: str, request: Request) -> dict:
     """Close connection
 
     Args:
@@ -169,7 +169,7 @@ async def post_query(query: str, session_id: str, request: Request) -> dict:
             raise vExept(1000, session_id)
         if app.sessions[n][4] != request.client.host:
             raise vExept(680, '{} / {}'.format(app.sessions[n][4], request.client.host))
-        result = app.sessions[n][1].submit_query(_query=query)
+        result = await app.sessions[n][1].submit_query(_query=query)
     except vExept as e:
         raise UnicornException(message=e.message, err_code=e.errcode, status_code = status.HTTP_400_BAD_REQUEST)
     return {"result":result, "err_message":err_message}
@@ -261,7 +261,7 @@ async def list_tables(session_id: str, request: Request):
             raise vExept(1000, session_id)
         if app.sessions[n][4] != request.client.host:
             raise vExept(680, '{} / {}'.format(app.sessions[n][4], request.client.host))
-        result = app.sessions[n][1].get_tables()
+        result = await app.sessions[n][1].get_tables()
     except vExept as e:
         raise UnicornException(message=e.message, err_code=e.errcode, status_code = status.HTTP_400_BAD_REQUEST)
     return {"result":result, "err_message":err_message}
@@ -324,81 +324,3 @@ async def list_dbs(mgrpassword: str):
     except vExept as e:
         raise UnicornException(message=e.message, err_code=e.errcode, status_code = status.HTTP_400_BAD_REQUEST)
     return {"result":result, "err_message":err_message}
-
-
-# session = db.create_session(username='admin', password='adminpwd')
-# session = db.create_session(username='autre', password='autrepwd')
-# session = db.create_session(username='resto', password='restopwd')
-#
-# for tab in session.get_tables():
-#     session.describe(tab[0], tab[1])
-
-# query = "select a.type, a.name plat, c.name legume " + \
-#         "from resto.plats a, resto.plat_legume b, resto.legumes c " + \
-#         "where a.id=b.id_plat and b.id_legume=c.id "
-# session.parse_query(_query=query)
-# result, result_cols = session.fetch()
-# print(result_cols)
-# print(result)
-# print ('-------------------------------------')
-
-# query = "insert into resto.plats (id, name, type ) values( 8, 'salade', 'entree');"
-# session.parse_query(_query=query)
-# print ('-------------------------------------')
-
-# query = "insert into resto.plats (id, name) values( 9, 'salade');"
-# session.parse_query(_query=query)
-# print ('-------------------------------------')
-
-# query = "insert into resto.plats values(10, 'entree', 'salade');"
-# session.parse_query(_query=query)
-# print ('-------------------------------------')
-
-# query = 'select id, name, type from resto.plats a where (a.id >= 7) or (id < 2  );     '
-# session.parse_query(_query=query)
-# result, result_cols = session.fetch()
-# print(result_cols)
-# print(result)
-# print ('-------------------------------------')
-
-# query = "select 'bonjour' truc, -98.23 annee, id, type, name from resto.plats a where id=1 or id = 6;"
-# session.parse_query(_query=query)
-# result, result_cols = session.fetch()
-# print(result_cols)
-# print(result)
-# print ('-------------------------------------')
-
-# query = "insert into autre.desserts (id, name) values( 9, 'fruit');"
-# session.parse_query(_query=query)
-# print ('-------------------------------------')
-
-# query = "select id, name from autre.desserts;"
-# session.parse_query(_query=query)
-# result, result_cols = session.fetch()
-# print(result_cols)
-# print(result)
-# print ('-------------------------------------')
-
-# session.commit()
-# print ('-------------------------------------')
-
-# query = "drop table autre.desserts"
-# session.parse_query(_query=query)
-# print ('-------------------------------------')
-
-# query = 'grant create user to resto;'
-# session.parse_query(_query=query)
-# print ('-------------------------------------')
-
-# query = 'grant drop table to autre;'
-# session.parse_query(_query=query)
-# print ('-------------------------------------')
-
-# query = 'create user toto identified by totopwd;'
-# session.parse_query(_query=query)
-# print ('-------------------------------------')
-
-# query = "create table toto.rien (id int, name str);"
-# session.parse_query(_query=query)
-# print ('-------------------------------------')
-
