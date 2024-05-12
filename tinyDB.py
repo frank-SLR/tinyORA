@@ -17,25 +17,31 @@ class UnicornException(Exception):
         self.status_code = status_code
 
 
-# URL is <address>:<port>/tinyDB
-app: FastAPI = FastAPI(root_path='/tinyDB')
-# ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-# ssl_context.load_cert_chain('D:\\Python\\OpenSSL\\cert.pem', keyfile='D:\\Python\\OpenSSL\\key.pem')
+# load parameters file
+parameters_file = "./parameters.json"
+if os.path.isfile(parameters_file):
+    __id_db = open(parameters_file)
+    __meta_cfg = json.load(__id_db)
+    __id_db.close()
+else:
+    raise vExept(602, sys.argv[1])
+
+# URL is <address>:<port>/tinyDB if root_path is not define
+if "root_path" in __meta_cfg["global_parameters"]:
+    app: FastAPI = FastAPI(root_path=__meta_cfg["global_parameters"]["root_path"])
+else:
+    app: FastAPI = FastAPI(root_path='/tinyDB')
 
 # init internal variables
 app.sessions = [] # [session_id, session, username, database, request.client.host]
 app.dbs = []
-app.parameters_file = "./parameters.json"
-app.executor = concurrent.futures.ThreadPoolExecutor() # max_workers=61 default
-app.threads = []
-
-# load parameters file
-if os.path.isfile(app.parameters_file):
-    __id_db = open(app.parameters_file)
-    app.__meta_cfg = json.load(__id_db)
-    __id_db.close()
+app.parameters_file = parameters_file
+app.__meta_cfg = __meta_cfg
+if "background_process" in app.__meta_cfg["global_parameters"]:
+    app.executor = concurrent.futures.ThreadPoolExecutor(max_workers=app.__meta_cfg["global_parameters"]["background_process"])
 else:
-    raise vExept(602, sys.argv[1])
+    app.executor = concurrent.futures.ThreadPoolExecutor() # max_workers=61 default
+app.threads = []
 
 # load and open DB(s)
 for db in app.__meta_cfg["db_list"]:

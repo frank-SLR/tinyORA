@@ -120,12 +120,14 @@ Parameters:
 |Parameter name|type|Description|
 | --- | --- | :--- |
 |session_id|str|the session identifier|
-|table|str|Format query result|
+|table|str|Format query result. OPTIONAL. Default value:JSON|
 
 Authorized values for "table" parameters are :
-TEXT: table structure
-JSON: should i really explain ?
-HTML: an HTML table object
+|Value|Description|
+| --- | --- |
+|TEXT|structured as table with column names as header|
+|JSON|should i really explain ?|
+|HTML|an HTML table object|
 
 The return codes:
 |Code|Description|
