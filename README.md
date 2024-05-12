@@ -34,15 +34,17 @@ Following modules are mandatory:
 - random
 - time
 - shutil
+- tabulate
 
 You can install them with:
 
 ```bash
-pip install "argparse"
-pip install "fastapi[all]"
-pip install "uvicorn[standard]"
+pip install argparse
+pip install fastapi[all]
+pip install uvicorn[standard]
 pip install cryptography
 pip install requests
+pip install tabulate
 ```
 
 ## SSL

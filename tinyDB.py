@@ -8,7 +8,7 @@ from fastapi import FastAPI, Response, status, Request
 from fastapi.responses import JSONResponse
 import sys, os, ssl, json
 import concurrent.futures
-
+import tabulate
 
 class UnicornException(Exception):
     def __init__(self, err_code: int, message: str, status_code: int):
@@ -185,7 +185,7 @@ async def post_query(query: str, session_id: str, request: Request) -> dict:
 # QUERY GET
 # --------------------------------------------------------------------
 @app.get("/query", status_code=status.HTTP_200_OK)
-async def get_query(session_id: str, request: Request, response: Response) -> dict:
+async def get_query(session_id: str, request: Request, response: Response, table='JSON') -> dict:
     """Fetch result of SQL query
 
     Args:
@@ -202,6 +202,8 @@ async def get_query(session_id: str, request: Request, response: Response) -> di
     result = {}
     found_sess = False
     try:
+        if table.upper() not in ['JSON', 'TEXT', 'HTML']:
+            raise(9000, table)
         for n in range(len(app.sessions)):
             if str(app.sessions[n][0]) == str(session_id):
                 found_sess = True
@@ -216,7 +218,6 @@ async def get_query(session_id: str, request: Request, response: Response) -> di
             for n in range(len(app.threads)):
                 sesid_thrd = app.threads[n]
                 if sesid_thrd[0] == session_id:
-                    # thrd_done, thrd_run = concurrent.futures.wait(sesid_thrd[1], timeout=0.000001, return_when=concurrent.futures.FIRST_COMPLETED)
                     if sesid_thrd[1].running():
                         response.status_code = status.HTTP_204_NO_CONTENT
                     else:
@@ -228,8 +229,26 @@ async def get_query(session_id: str, request: Request, response: Response) -> di
             raise vExept(1001)
     except vExept as e:
         raise UnicornException(message=e.message, err_code=e.errcode, status_code = status.HTTP_400_BAD_REQUEST)
-    return {"result":result, "err_message":err_message}
-
+    if ("rows" in result) and ("columns" in result):
+        match table.upper():
+            case 'JSON':
+                return {"result":result, "err_message":err_message}
+            case 'HTML':
+                tmp = result["rows"]
+                tmpcols = []
+                for n in result['columns']:
+                    tmpcols.append(n[0])
+                tmp.insert(0, tmpcols)
+                return {"result":tabulate.tabulate(tmp, headers="firstrow", tablefmt="html"), "err_message":err_message}
+            case 'TEXT':
+                tmp = result["rows"]
+                tmpcols = []
+                for n in result['columns']:
+                    tmpcols.append(n[0])
+                tmp.insert(0, tmpcols)
+                return {"result":tabulate.tabulate(tmp, headers="firstrow"), "err_message":err_message}
+    else:
+        return {"result":result, "err_message":err_message}
 
 # --------------------------------------------------------------------
 # CREATE DB

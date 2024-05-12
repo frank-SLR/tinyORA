@@ -120,6 +120,12 @@ Parameters:
 |Parameter name|type|Description|
 | --- | --- | :--- |
 |session_id|str|the session identifier|
+|table|str|Format query result|
+
+Authorized values for "table" parameters are :
+TEXT: table structure
+JSON: should i really explain ?
+HTML: an HTML table object
 
 The return codes:
 |Code|Description|

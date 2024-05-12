@@ -180,6 +180,9 @@ class vExept(Exception):
             # FORMAT (2200-2299)
             case 2200:
                 self.message = 'Invalid format for value ({})'.format(message)
-            # ~~~~~BLANK (2300-9999)
+            # ~~~~~BLANK (2300-9899)
+            # HTML
+            case 9900:
+                self.message = 'TABLE parameter has an unexpected value ({})'.format(message)
 
         super().__init__(self.message)
