@@ -16,6 +16,8 @@ TinyDB is a small database engine. It allows you to manage data using SQL.
 
 [Submit query](#submit-query)
 
+[Fetch query result](#fetch-query-result)
+
 [List tables owned by current session account](#list-tables-owned-by-current-session-account)
 
 [List open sessions](#list-open-sessions)
@@ -108,6 +110,22 @@ The return codes:
 |Code|Description|
 | --- | :--- |
 |200|Successful|
+|400|Error|
+
+## Fetch query result
+
+Method: GET
+URL: <basic_TinyDB_URL>/query
+Parameters: 
+|Parameter name|type|Description|
+| --- | --- | :--- |
+|session_id|str|the session identifier|
+
+The return codes:
+|Code|Description|
+| --- | :--- |
+|200|Successful|
+|204|Query process not yet finished|
 |400|Error|
 
 ## List tables owned by current session account

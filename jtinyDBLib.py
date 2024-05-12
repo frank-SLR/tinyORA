@@ -138,7 +138,7 @@ class JSONtinyDB():
                                     return 1
             self.__locks.append([session_id, owner, name, lock_type])
             self.__latchcnt -= 1
-            print(self.__locks)
+            # print(self.__locks)
             return 0
         else:
             raise vExept(15)

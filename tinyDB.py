@@ -7,6 +7,8 @@ from vExceptLib import vExept
 from fastapi import FastAPI, Response, status, Request
 from fastapi.responses import JSONResponse
 import sys, os, ssl, json
+import concurrent.futures
+
 
 class UnicornException(Exception):
     def __init__(self, err_code: int, message: str, status_code: int):
@@ -24,6 +26,8 @@ app: FastAPI = FastAPI(root_path='/tinyDB')
 app.sessions = [] # [session_id, session, username, database, request.client.host]
 app.dbs = []
 app.parameters_file = "./parameters.json"
+app.executor = concurrent.futures.ThreadPoolExecutor() # max_workers=61 default
+app.threads = []
 
 # load parameters file
 if os.path.isfile(app.parameters_file):
@@ -140,7 +144,7 @@ def close_connection(session_id: str, request: Request) -> dict:
 
 
 # --------------------------------------------------------------------
-# QUERY
+# QUERY POST
 # --------------------------------------------------------------------
 @app.post("/query", status_code=status.HTTP_200_OK)
 async def post_query(query: str, session_id: str, request: Request) -> dict:
@@ -169,7 +173,59 @@ async def post_query(query: str, session_id: str, request: Request) -> dict:
             raise vExept(1000, session_id)
         if app.sessions[n][4] != request.client.host:
             raise vExept(680, '{} / {}'.format(app.sessions[n][4], request.client.host))
-        result = await app.sessions[n][1].submit_query(_query=query)
+        app.threads.append([session_id, app.executor.submit(app.sessions[n][1].submit_query, query)])
+        result = 'Query submitted'
+        # result = await app.sessions[n][1].submit_query(_query=query)
+    except vExept as e:
+        raise UnicornException(message=e.message, err_code=e.errcode, status_code = status.HTTP_400_BAD_REQUEST)
+    return {"result":result, "err_message":err_message}
+
+
+# --------------------------------------------------------------------
+# QUERY GET
+# --------------------------------------------------------------------
+@app.get("/query", status_code=status.HTTP_200_OK)
+async def get_query(session_id: str, request: Request, response: Response) -> dict:
+    """Fetch result of SQL query
+
+    Args:
+        session_id (str): session ID
+        request (Request): Informations about client
+
+    Raises:
+        vExept: vDB exception
+
+    Returns:
+        dict: dict{result, err_message{errcode, message}}
+    """
+    err_message = {}
+    result = {}
+    found_sess = False
+    try:
+        for n in range(len(app.sessions)):
+            if str(app.sessions[n][0]) == str(session_id):
+                found_sess = True
+                break
+        if not found_sess:
+            raise vExept(1000, session_id)
+        if app.sessions[n][4] != request.client.host:
+            raise vExept(680, '{} / {}'.format(app.sessions[n][4], request.client.host))
+        
+        thrd_found = False
+        if len(app.threads) > 0:
+            for n in range(len(app.threads)):
+                sesid_thrd = app.threads[n]
+                if sesid_thrd[0] == session_id:
+                    # thrd_done, thrd_run = concurrent.futures.wait(sesid_thrd[1], timeout=0.000001, return_when=concurrent.futures.FIRST_COMPLETED)
+                    if sesid_thrd[1].running():
+                        response.status_code = status.HTTP_204_NO_CONTENT
+                    else:
+                        result = sesid_thrd[1].result()
+                        del app.threads[n]
+                    thrd_found = True
+                    break
+        if not thrd_found:
+            raise vExept(1001)
     except vExept as e:
         raise UnicornException(message=e.message, err_code=e.errcode, status_code = status.HTTP_400_BAD_REQUEST)
     return {"result":result, "err_message":err_message}

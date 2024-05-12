@@ -23,7 +23,7 @@ class vSession(object):
         self.__updated_tables = []
         super().__init__()
 
-    async def submit_query(self, _query:str):
+    def submit_query(self, _query:str):
         self.__parsed_query = vParser().parse_query(query=_query)
         # print(self.__parsed_query)
 

@@ -155,6 +155,8 @@ class vExept(Exception):
             # SESSION (1000-1099)
             case 1000:
                 self.message = 'Invalid SESSION_ID ({})'.format(message)
+            case 1001:
+                self.message = 'No query submitted or previous result already fetched'
             # ~~~~~BLANK (1100-1699)
             # COLUMN format (1700-1799)
             case 1700:
