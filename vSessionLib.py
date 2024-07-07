@@ -337,6 +337,17 @@ class vSession(object):
                             raise vExept(801)
                     self.__result.append(rrow)
 
+    def __check_cols_name(self, result):
+        for x, name1 in enumerate(result["columns"]):
+            cpt = 1
+            for y, name2 in enumerate(result["columns"]):
+                if y > x:
+                    if name1[0].upper() == name2[0].upper():
+                        result["columns"][y][0] = f'{result["columns"][y][0]}_{cpt}'
+                        cpt += 1
+        return result
+            
+    
     def __prefetch_get_rows(self):
         for cur_idx in range(len(self.__parsed_query["from"])):
             if self.__parsed_query["from"][cur_idx][3] == 'TABLE':
@@ -469,6 +480,7 @@ class vSession(object):
         self.__prefetch_get_rows()
         # fetch rows for query
         self.__get_rows(cur_idx=0)
+        self.__check_cols_name(result=result)
         result["rows"] = self.__result
         del self.__result
         del self.__RowsPosInTables
