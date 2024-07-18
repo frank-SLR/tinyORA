@@ -456,8 +456,7 @@ class vParser():
                                 raise vExept(724, c_type)
                             if word not in [',', ')']:
                                 raise vExept(725, word)
-                            c_cols.append(c_col)
-                            c_cols.append(c_type)
+                            c_cols.append([c_col, c_type])
                             c_col, c_type = None, None
                         self.__parsed_query["create"].append(['TABLE', t_owner, t_name, c_cols])
                     case _:
