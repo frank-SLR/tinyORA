@@ -10,7 +10,7 @@ This page will help ypou for the first queries you want to submit.
 
 ---
 
-> For all following examples, <basic_TinyDB_URL> will be :
+> For all following examples, <basic_TinyORA_URL> will be :
 https://tinydb.mydomain.com:1521/tinyDB
 
 > For all examples, parameters will be set with following values:

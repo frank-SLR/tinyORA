@@ -1,6 +1,6 @@
-# TinyDB
+# TinyORA
 
-TinyDB is a small database engine.
+TinyORA is a small database engine.
 This doc explains the installation procedure.
 
 ---
@@ -59,7 +59,7 @@ openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 36
 For profesional purpose, you rather could contact your network security team.
 
 ## Parameters file
-TinyDB needs a parameters file for his initialisation.
+TinyORA needs a parameters file for his initialisation.
 This file is ==parameters.json== and his format is JSON.
 
 You should define the file with inital value :
@@ -67,16 +67,16 @@ You should define the file with inital value :
 ```json
 {
     "manager_password": "mgrpwd%1234",
-    "root_dir": "/opt/tinyDB",
+    "root_dir": "/opt/tinyORA",
     "global_parameters":{
         "background_process":30,
-        "root_path": "/tinyDB"
+        "root_path": "/tinyORA"
     },
     "db_list": [
     ]
 }
 ```
-- **manager_password** is the password you will use to manage tinyDB.
+- **manager_password** is the password you will use to manage tinyORA.
 - **root_dir** is the path where database files will be created.
 - **global_parameters** list of parameters for internal management
 
@@ -88,7 +88,7 @@ You should define the file with inital value :
 
 ## Start server
 
-To start tinyDB server, submit following command:
+To start tinyORA server, submit following command:
 ```bash
 python server.py -a <domain> -s <SSL_files_path> -p <port> -l <message_level> -d <parameters_file>
 python server.py --address <domain> --ssl-path <SSL_files_path> --port <port> --log-level <message_level> --db-parameters-file <parameters_file>
@@ -109,10 +109,10 @@ All parameters except <parameters_file> are optional.
     |info|
     |debug|
     |trace|
-- **parameters_file**: JSON file containing parameters for TinyDB. See: [Parameters file](#parameters-file)
+- **parameters_file**: JSON file containing parameters for TinyORA. See: [Parameters file](#parameters-file)
 
 
 ### Example:
 ```bash
-python server.py -a tinydb.mydomain.com -s /opt/tinyDB/OpenSSL -p 1521 -l warning -d /opt/tinyDB/pfile.json
+python server.py -a tinyora.mydomain.com -s /opt/tinyORA/OpenSSL -p 1521 -l warning -d /opt/tinyORA/pfile.json
 ```

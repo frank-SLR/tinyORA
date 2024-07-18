@@ -11,7 +11,7 @@ if __name__ == "__main__":
         parser.add_argument('-a', '--address', type=str, default='127.0.0.1', help="Listener address")
         parser.add_argument('-p', '--port', type=int, default=1521, help="Listener port")
         parser.add_argument('-s', '--ssl-path', type=str, default=None, help="Path for SSL files")
-        parser.add_argument('-d', '--db-parameters-file', type=str, default=None, help="Parameters file for TinyDB")
+        parser.add_argument('-d', '--db-parameters-file', type=str, default=None, help="Parameters file for TinyORA")
         parser.add_argument('-l', '--log-level', type=str, default="warning",
                             choices=['critical', 'error', 'warning', 'info', 'debug', 'trace'],
                             help="Log level for server")
@@ -24,14 +24,14 @@ if __name__ == "__main__":
             else:
                 raise vExept(602, args.db_parameters_file)
         if args.ssl_path is None:
-            uvicorn.run("tinyDB:app",
+            uvicorn.run("tinyORA:app",
                         host=args.address,
                         port=args.port,
                         # workers=8,
                         reload=True,
                         log_level=args.log_level)
         else:
-            uvicorn.run("tinyDB:app",
+            uvicorn.run("tinyORA:app",
                         host=args.address,
                         port=args.port,
                         # workers=8,
