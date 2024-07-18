@@ -1,6 +1,6 @@
-# tinyDB
+# tinyORA
 
-TinyDB is a small database engine. It allows you to manage data using SQL.
+TinyORA is a small database engine. It allows you to manage data using SQL.
 > Once server is started, all commands are submited with API.
 
 ---
@@ -10,9 +10,9 @@ TinyDB is a small database engine. It allows you to manage data using SQL.
 
 [Create database](#create-database)
 
-[Connect to TinyDB](#connect-to-tinydb)
+[Connect to TinyORA](#connect-to-tinyora)
 
-[Disconnect from TinyDB](#disconnect-from-tinydb)
+[Disconnect from TinyORA](#disconnect-from-tinyORA)
 
 [Submit query](#submit-query)
 
@@ -26,18 +26,18 @@ TinyDB is a small database engine. It allows you to manage data using SQL.
 
 ---
 
-> Some APIs need to connect to TinyDB as manager. The password for this account is defined in the parameters file.
+> Some APIs need to connect to TinyORA as manager. The password for this account is defined in the parameters file.
 
-> Online APIs documentation is available on <basic_TinyDB_URL>/docs
-> For example : https://tinydb.mydomain.com:1521/tinyDB/docs
+> Online APIs documentation is available on <basic_TinyORA_URL>/docs
+> For example : https://tinyora.mydomain.com:1521/tinyORA/docs
 
-> For all following examples, <basic_TinyDB_URL> will be :
-> https://tinydb.mydomain.com:1521/tinyDB
+> For all following examples, <basic_TinyORA_URL> will be :
+> https://tinyora.mydomain.com:1521/tinyORA
 
 ## Welcome page
 
 Method: GET
-URL: <basic_TinyDB_URL>
+URL: <basic_TinyORA_URL>
 Parameters: None
 
 This API returns a simple message with your IP address
@@ -50,7 +50,7 @@ The return codes:
 ## Create database
 
 Method: POST
-URL: <basic_TinyDB_URL>/create
+URL: <basic_TinyORA_URL>/create
 Parameters: 
 |Parameter name|type|Description|
 | --- | --- | :--- |
@@ -64,10 +64,10 @@ The return codes:
 |200|Successful|
 |400|Error|
 
-## Connect to TinyDB
+## Connect to TinyORA
 
 Method: GET
-URL: <basic_TinyDB_URL>/connect/db
+URL: <basic_TinyORA_URL>/connect/db
 Parameters: 
 |Parameter name|type|Description|
 | --- | --- | :--- |
@@ -81,10 +81,10 @@ The return codes:
 |200|Successful|
 |503|Error|
 
-## Disconnect from TinyDB
+## Disconnect from TinyORA
 
 Method: POST
-URL: <basic_TinyDB_URL>/disconnect/db
+URL: <basic_TinyORA_URL>/disconnect/db
 Parameters: 
 |Parameter name|type|Description|
 | --- | --- | :--- |
@@ -99,7 +99,7 @@ The return codes:
 ## Submit query
 
 Method: POST
-URL: <basic_TinyDB_URL>/query
+URL: <basic_TinyORA_URL>/query
 Parameters: 
 |Parameter name|type|Description|
 | --- | --- | :--- |
@@ -115,7 +115,7 @@ The return codes:
 ## Fetch query result
 
 Method: GET
-URL: <basic_TinyDB_URL>/query
+URL: <basic_TinyORA_URL>/query
 Parameters: 
 |Parameter name|type|Description|
 | --- | --- | :--- |
@@ -139,7 +139,7 @@ The return codes:
 ## List tables owned by current session account
 
 Method: GET
-URL: <basic_TinyDB_URL>/account/list_tables
+URL: <basic_TinyORA_URL>/account/list_tables
 Parameters: 
 |Parameter name|type|Description|
 | --- | --- | :--- |
@@ -154,7 +154,7 @@ The return codes:
 ## List open sessions
 
 Method: GET
-URL: <basic_TinyDB_URL>/admin/list_sessions
+URL: <basic_TinyORA_URL>/admin/list_sessions
 Parameters: 
 |Parameter name|type|Description|
 | --- | --- | :--- |
@@ -169,7 +169,7 @@ The return codes:
 ## list databases
 
 Method: GET
-URL: <basic_TinyDB_URL>/admin/list_databases
+URL: <basic_TinyORA_URL>/admin/list_databases
 Parameters: 
 |Parameter name|type|Description|
 | --- | --- | :--- |

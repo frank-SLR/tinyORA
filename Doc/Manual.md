@@ -1,6 +1,6 @@
-# tinyDB
+# TinyORA
 
-TinyDB is a small database engine. It allows you to manage data using SQL.
+TinyORA is a small database engine. It allows you to manage data using SQL.
 > Queries have to use the syntax decribe below.
 
 ---
