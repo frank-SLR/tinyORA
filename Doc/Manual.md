@@ -324,8 +324,13 @@ Comparison between two objects.
 See: [SEL_COL](#sel_col), [WHERE_COMPARE](#where_compare)
 
 ## WHERE_BETWEEN
+Comparison of one object between two other objects.
 
-Not yet implemented.
+```
+<SEL_COL> BETWEEN <SEL_COL> AND <SEL_COL>
+```
+
+See: [SEL_COL](#sel_col)
 
 ## WHERE_IN
 

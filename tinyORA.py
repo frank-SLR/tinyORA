@@ -30,7 +30,7 @@ else:
 if "root_path" in __meta_cfg["global_parameters"]:
     app: FastAPI = FastAPI(root_path=__meta_cfg["global_parameters"]["root_path"])
 else:
-    app: FastAPI = FastAPI(root_path='/tinyDB')
+    app: FastAPI = FastAPI(root_path='/tinyORA')
 
 # init internal variables
 app.sessions = [] # [session_id, session, username, database, request.client.host]

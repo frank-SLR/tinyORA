@@ -3,6 +3,18 @@ import random
 import datetime
 from vExceptLib import vExept
 
+# querytype: (SELECT, INSERT, UPDATE, DELETE, GRANT, REVOKE, CREATE, DROP, DESCRIBE, COMMIT, ROLLBACK)
+# select: table_alias, schema, table_name, col_name/value, alias, type(COL, INT, FLOAT, STR, HEX, DATAETIME, FUNCTION), table position, position in table, table or cursor, [-]
+# from: table_alias, schema, table_name, TABLE or CURSOR, {table}
+# cursors: cursor_alias, query
+# inner_where: list of items
+# parsed_inner_where: item_id, field1, oper, field2
+#                  or item_id, ['META', item_id], oper, ['META', item_id]
+#                  or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], oper, ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
+# parsed_where: item_id, field1, oper, field2
+#            or item_id, ['META', item_id], oper, ['META', item_id]
+#            or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], oper, ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
+# functions : [fct_id, fct_name, [[table_alias, schema, table_name, col_name/value, type(COL, INT, FLOAT, STR, HEX, DATAETIME, FUNCTION), table position, position in table, table or cursor]]]
 class vParser():
     def __init__(self) -> None:
         self.__intCurSeq = 0
@@ -11,18 +23,6 @@ class vParser():
         self.__list_of_functions = ['UPPER', 'LOWER', 'SUBSTR', 'TO_CHAR']
 
     def __raz(self) -> None:
-        # querytype: (SELECT, INSERT, UPDATE, DELETE, GRANT, REVOKE, CREATE, DROP, DESCRIBE, COMMIT, ROLLBACK)
-        # select: table_alias, schema, table_name, col_name/value, alias, type(COL, INT, FLOAT, STR, HEX, DATAETIME, FUNCTION), table position, position in table, table or cursor, [-]
-        # from: table_alias, schema, table_name, TABLE or CURSOR, {table}
-        # cursors: cursor_alias, query
-        # inner_where: list of items
-        # parsed_inner_where: item_id, field1, oper, field2
-        #                  or item_id, ['META', item_id], oper, ['META', item_id]
-        #                  or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], oper, ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
-        # parsed_where: item_id, field1, oper, field2
-        #            or item_id, ['META', item_id], oper, ['META', item_id]
-        #            or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], oper, ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
-        # functions : [fct_id, fct_name, [[table_alias, schema, table_name, col_name/value, type(COL, INT, FLOAT, STR, HEX, DATAETIME, FUNCTION), table position, position in table, table or cursor]]]
         self.__parsed_query = {"querytype": None, "select": [], "from": [], "where": [], "orderby": [], "groupby": [], "cursors": [],
                                "inner_where": [], "parsed_where": [], "parsed_inner_where": [], "grant": [], "revoke": [], "create": [], "drop": [], "insert": [], "update": [],
                                "functions": []}
@@ -811,12 +811,31 @@ class vParser():
                 m1 = word
             elif op is None:
                 op = word
+                if op.upper() == 'BETWEEN':
+                    v1, pos = self.__parse_word(pos)
+                    if self.__is_function(v1.upper()):
+                        par, pos = self.__parse_word(pos)
+                        if par != '(':
+                            raise vExept(739, par)
+                        v1, pos = self.__parse_COL_FCT(v1.upper(), pos)
+                    btwand, pos = self.__parse_word(pos)
+                    if btwand.upper() != 'AND':
+                        raise vExept(741, btwand)
+                    v2, pos = self.__parse_word(pos)
+                    if self.__is_function(v2.upper()):
+                        par, pos = self.__parse_word(pos)
+                        if par != '(':
+                            raise vExept(739, par)
+                        v2, pos = self.__parse_COL_FCT(v2.upper(), pos)
+                    self.__parsed_query["where"].append([m1, op, v1, btwand, v2])
+                    m1, op = None, None
             else:
                 self.__parsed_query["where"].append([m1, op, word])
                 m1, op = None, None
             word, pos = self.__parse_word(pos)
         if m1 is not None:
             self.__parsed_query["where"].append([m1, op, word])
+
         self.__remove_parenthesis(_where = self.__parsed_query["where"])
         return word, pos
 
@@ -912,7 +931,14 @@ class vParser():
                     fmt2, alias2, col2, schema2, table_name2, tab_cur2, num_tab2 = 'FUNCTION', None, x[2], None, None, None, None
                 else:
                     fmt2, alias2, col2, schema2, table_name2, tab_cur2, num_tab2 = self.__getColFromTable(x[2])
-                lst_where.append([v_idx, ['TST', num_tab1, None, alias1, col1, fmt1, schema1, table_name1, tab_cur1], x[1], ['TST', num_tab2, None, alias2, col2, fmt2, schema2, table_name2, tab_cur2]])
+                if (len(x) == 5) and (x[1].upper() == 'BETWEEN') and (x[3].upper() == 'AND'):
+                    if self.__is_parsed_function(x[4]):
+                        fmt3, alias3, col3, schema3, table_name3, tab_cur3, num_tab3 = 'FUNCTION', None, x[4], None, None, None, None
+                    else:
+                        fmt3, alias3, col3, schema3, table_name3, tab_cur3, num_tab3 = self.__getColFromTable(x[4])
+                    lst_where.append([v_idx, ['TST', num_tab1, None, alias1, col1, fmt1, schema1, table_name1, tab_cur1], 'BETWEEN', ['TST', num_tab2, None, alias2, col2, fmt2, schema2, table_name2, tab_cur2], ['TST', num_tab3, None, alias3, col3, fmt3, schema3, table_name3, tab_cur3]])
+                else:
+                    lst_where.append([v_idx, ['TST', num_tab1, None, alias1, col1, fmt1, schema1, table_name1, tab_cur1], x[1], ['TST', num_tab2, None, alias2, col2, fmt2, schema2, table_name2, tab_cur2]])
                 # x.insert(0, v_idx)
                 v_idx += 1
                 w_idx += 1

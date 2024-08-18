@@ -26,7 +26,9 @@ class vSession(object):
 
     def submit_query(self, _query:str):
         self.__parsed_query = vParser().parse_query(query=_query)
-        # print(self.__parsed_query)
+        # print(self.__parsed_query['where'])
+        # print(self.__parsed_query['parsed_where'])
+        # print(self.__parsed_query['functions'])
 
         if self.__parsed_query["querytype"] in ['SELECT']:
             result = {"columns": [], "rows": []}
@@ -382,7 +384,6 @@ class vSession(object):
                 fmtin = fmtin.replace('MI', '%M')
                 fmtin = fmtin.replace('SS', '%S')
                 return datetime.fromtimestamp(dtein).strftime(fmtin)[1:-1]
-                
 
     def __get_function(self, fct_id):
         for n in range(len(self.__parsed_query["functions"])):
@@ -463,6 +464,9 @@ class vSession(object):
             for tst in self.__parsed_query['parsed_where']:
                 if tst[1][0] != tst[3][0]:
                     raise vExept(899, tst)
+                if len(tst) == 5:
+                    if tst[3][0] != tst[4][0]:
+                        raise vExept(899, tst)
                 if tst[1][0] == "TST":
                     if tst[1][5] == "COLUMN":
                         c1 = self.__parsed_query["from"][tst[1][1]][4][0]["rows"][self.__RowsPosInTables[tst[1][1]]][tst[1][2]]
@@ -477,7 +481,16 @@ class vSession(object):
                     else:
                         c2 = tst[3][4]
                     tstoper = tst[2]
-                    result = self.__compare_cols(str(c1), str(c2), tstoper)
+                    if len(tst) == 5:
+                        if tst[4][5] == "COLUMN":
+                            c3 = self.__parsed_query["from"][tst[4][1]][4][0]["rows"][self.__RowsPosInTables[tst[4][1]]][tst[4][2]]
+                        elif tst[4][5] == "FUNCTION":
+                            c3 = self.__compute_function(tst[4][4])
+                        else:
+                            c3 = tst[4][4]
+                        result = self.__compare_cols(str(c1), str(c2), '>=') and self.__compare_cols(str(c1), str(c3), '<=')
+                    else:
+                        result = self.__compare_cols(str(c1), str(c2), tstoper)
                 else:
                     result = self.__compare_cols(temp_res[tst[1][1]], temp_res[tst[3][1]], tst[2])
                 temp_res.append(result)
@@ -526,20 +539,48 @@ class vSession(object):
                     if tst[1][5] == "COLUMN":
                         if tst[1][1] == tab_num:
                             c1 = self.__parsed_query["from"][tst[1][1]][4][0]["rows"][self.__RowsPosInTables[tst[1][1]]][tst[1][2]]
+                    elif tst[1][5] == "FUNCTION":
+                        if tst[1][1] == tab_num:
+                            c1 = self.__compute_function(tst[1][4])
                     else:
                         c1 = tst[1][4]
                     if tst[3][5] == "COLUMN":
                         if tst[3][1] == tab_num:
                             c2 = self.__parsed_query["from"][tst[3][1]][4][0]["rows"][self.__RowsPosInTables[tst[3][1]]][tst[3][2]]
+                    elif tst[3][5] == "FUNCTION":
+                        if tst[3][1] == tab_num:
+                            c2 = self.__compute_function(tst[3][4])
                     else:
                         c2 = tst[3][4]
                     tstoper = tst[2]
-                    if (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] != "COLUMN") or \
-                       (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num) and (tst[1][5] != "COLUMN") or \
-                       (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num):
-                        result = self.__compare_cols(str(c1), str(c2), tstoper)
+                    if len(tst) == 5:
+                        if tst[4][5] == "COLUMN":
+                            if tst[4][1] == tab_num:
+                                c3 = self.__parsed_query["from"][tst[4][1]][4][0]["rows"][self.__RowsPosInTables[tst[4][1]]][tst[4][2]]
+                        elif tst[4][5] == "FUNCTION":
+                            if tst[4][1] == tab_num:
+                                c3 = self.__compute_function(tst[4][4])
+                        else:
+                            c3 = tst[4][4]
+                        if (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] != "COLUMN") or \
+                        (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num) and (tst[1][5] != "COLUMN") or \
+                        (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num):
+                            result = self.__compare_cols(str(c1), str(c2), '>=')
+                            if (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[4][5] != "COLUMN") or \
+                            (tst[4][5] == "COLUMN") and (tst[4][1] == tab_num) and (tst[1][5] != "COLUMN") or \
+                            (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[4][5] == "COLUMN") and (tst[4][1] == tab_num):
+                                result = result and self.__compare_cols(str(c1), str(c3), '<=')
+                            else:
+                                result = None
+                        else:
+                            result = None
                     else:
-                        result = None
+                        if (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] != "COLUMN") or \
+                        (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num) and (tst[1][5] != "COLUMN") or \
+                        (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num):
+                            result = self.__compare_cols(str(c1), str(c2), tstoper)
+                        else:
+                            result = None
                 else:
                     if temp_res[tst[1][1]] is None:
                         if temp_res[tst[3][1]] is None:

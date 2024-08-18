@@ -142,6 +142,8 @@ class vExept(Exception):
                 self.message = 'Syntax error: expect open parenthesis but found "{}"'.format(message)
             case 740:
                 self.message = 'Syntax error: expect closing parenthesis but found "{}"'.format(message)
+            case 741:
+                self.message = 'Syntax error: reserved word "AND" expected but "{}" found'.format(message)
             # INTERNAL ERROR (800-899)
             case 801:
                 self.message = 'Internal error on column name in SELECT clause'

@@ -1,0 +1,17 @@
+{
+    "manager_password": "mgrpwd",
+    "root_dir": "D:/Python/data",
+    "global_parameters":{
+        "background_process":30
+    },
+    "db_list": [
+        {
+            "name": "db",
+            "base_dir": "D:/Python/data/db"
+        },
+        {
+            "name": "compta_DEV",
+            "base_dir": "D:/Python/data/compta_DEV"
+        }
+    ]
+}
