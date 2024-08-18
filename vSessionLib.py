@@ -1,6 +1,7 @@
 import re
 import copy
 import random
+from datetime import datetime
 from vExceptLib import vExept
 from jtinyDBLib import JSONtinyDB
 from parserLib import vParser
@@ -260,6 +261,7 @@ class vSession(object):
 
     def __searchColInFromTables(self, colin, aliasin, table_namein, schemain):
         count = 0
+        # print('__searchColInFromTables in', colin, aliasin, table_namein, schemain)
         for tf in range(len(self.__parsed_query["from"])):
             if (aliasin is not None) and (aliasin == self.__parsed_query["from"][tf][0]) or \
                ((aliasin is None) and ( (table_namein is None) or (\
@@ -277,6 +279,7 @@ class vSession(object):
                         memtf = tf
                         memctf = ctf
                         ctype = self.__parsed_query["from"][tf][4][0]["columns"][ctf][1]
+                        # print('__searchColInFromTables trouve:', colin, aliasin, table_namein, schemain, memtf, memctf, ctype)
                         break
         if count == 0:
             raise vExept(311, colin)
@@ -331,11 +334,96 @@ class vSession(object):
                             rrow.append(float(s[3]))
                         elif s[5] == 'HEX':
                             rrow.append(s[3])
+                        elif s[5] == 'DATETIME':
+                            rrow.append(s[3])
                         elif s[5] == 'STR':
                             rrow.append(s[3][1:-1])
+                        elif s[5] == 'FUNCTION':
+                            rrow.append(self.__compute_function(s[3]))
                         else:
                             raise vExept(801)
                     self.__result.append(rrow)
+
+    def __compute_function(self, fct_id):
+        fct_num = self.__get_function(fct_id)
+        match self.__parsed_query["functions"][fct_num][1]:
+            case 'UPPER':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return str(value).upper()
+            case 'LOWER':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return str(value).lower()
+            case 'SUBSTR':
+                if len(self.__parsed_query["functions"][fct_num][2]) != 3:
+                    raise vExept(2300, len(self.__parsed_query["functions"][fct_num][2]))
+                strin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                sttin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
+                lenin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2])
+                if not self.__check_STR(strin):
+                    raise vExept(2301, strin)
+                if not self.__check_INT(sttin):
+                    raise vExept(2302, sttin)
+                if not self.__check_INT(lenin):
+                    raise vExept(2303, lenin)
+                return strin[sttin:sttin+lenin]
+            case 'TO_CHAR':
+                if len(self.__parsed_query["functions"][fct_num][2]) != 2:
+                    raise vExept(2305, len(self.__parsed_query["functions"][fct_num][2]))
+                dtein = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                fmtin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
+                if (not self.__check_DATETIME(dtein)) and (not self.__check_FLOAT(dtein)):
+                    raise vExept(2306, dtein)
+                if not self.__check_STR(fmtin):
+                    raise vExept(2307, fmtin)
+                fmtin = fmtin.replace('YYYY', '%Y').replace('YY', '%y')
+                fmtin = fmtin.replace('MM', '%m').replace('MONTH', '%B').replace('MON', '%'+'b')
+                fmtin = fmtin.replace('DDD', '%j').replace('DD', '%'+'d').replace('DAY', '%A').replace('DY', '%'+'a')
+                fmtin = fmtin.replace('HH24', '%H').replace('HH', '%I')
+                fmtin = fmtin.replace('MI', '%M')
+                fmtin = fmtin.replace('SS', '%S')
+                return datetime.fromtimestamp(dtein).strftime(fmtin)[1:-1]
+                
+
+    def __get_function(self, fct_id):
+        for n in range(len(self.__parsed_query["functions"])):
+            if self.__parsed_query["functions"][n][0] == fct_id:
+                return n
+        raise vExept(802, fct_id)
+
+    def __get_function_col(self, colblk):
+        if colblk[4] == 'COLUMN':
+            return self.__parsed_query["from"][colblk[5]][4][0]["rows"][self.__RowsPosInTables[colblk[5]]][colblk[6]]
+        elif colblk[4] == 'FUNCTION':
+            return self.__compute_function(colblk[3])
+        else:
+            if colblk[4] is None:
+                return colblk[3]
+            else:
+                return self.__convert_value(colblk[3], colblk[4])
+
+    def __convert_value(self, varin, fmtin:str):
+        try:
+            match fmtin.upper():
+                case 'INT'|'FLOAT'|'HEX'|'DATAETIME':
+                    if self.__check_STR(varin):
+                        if varin[0] in ['"', "'"]:
+                            varin = varin[1:]
+                        if varin[-1] in ['"', "'"]:
+                            varin = varin[:-1]
+            match fmtin.upper():
+                case 'INT':
+                    return int(varin)
+                case 'FLOAT':
+                    return float(varin)
+                case 'STR':
+                    return str(varin)
+                case 'HEX':
+                    return hex(varin)
+                case 'DATAETIME':
+                    return datetime(varin)
+        except vExept as e:
+            raise vExept(2200, "convert {} into '{}'".format(fmtin, fmtin))
+        raise vExept(2201, fmtin)
 
     def __check_cols_name(self, result):
         for x, name1 in enumerate(result["columns"]):
@@ -346,8 +434,7 @@ class vSession(object):
                         result["columns"][y][0] = f'{result["columns"][y][0]}_{cpt}'
                         cpt += 1
         return result
-            
-    
+
     def __prefetch_get_rows(self):
         for cur_idx in range(len(self.__parsed_query["from"])):
             if self.__parsed_query["from"][cur_idx][3] == 'TABLE':
@@ -379,10 +466,14 @@ class vSession(object):
                 if tst[1][0] == "TST":
                     if tst[1][5] == "COLUMN":
                         c1 = self.__parsed_query["from"][tst[1][1]][4][0]["rows"][self.__RowsPosInTables[tst[1][1]]][tst[1][2]]
+                    elif tst[1][5] == "FUNCTION":
+                        c1 = self.__compute_function(tst[1][4])
                     else:
                         c1 = tst[1][4]
                     if tst[3][5] == "COLUMN":
                         c2 = self.__parsed_query["from"][tst[3][1]][4][0]["rows"][self.__RowsPosInTables[tst[3][1]]][tst[3][2]]
+                    elif tst[3][5] == "FUNCTION":
+                        c2 = self.__compute_function(tst[3][4])
                     else:
                         c2 = tst[3][4]
                     tstoper = tst[2]
@@ -403,10 +494,14 @@ class vSession(object):
                     if tst[1][0] == "TST":
                         if tst[1][5] == "COLUMN":
                             c1 = self.__parsed_query["from"][tst[1][1]][4][0]["rows"][self.__RowsPosInTables[tst[1][1]]][tst[1][2]]
+                        elif tst[1][5] == "FUNCTION":
+                            c1 = self.__compute_function(tst[1][4])
                         else:
                             c1 = tst[1][4]
                         if tst[3][5] == "COLUMN":
                             c2 = self.__parsed_query["from"][tst[3][1]][4][0]["rows"][self.__RowsPosInTables[tst[3][1]]][tst[3][2]]
+                        elif tst[3][5] == "FUNCTION":
+                            c2 = self.__compute_function(tst[3][4])
                         else:
                             c2 = tst[3][4]
                         tstoper = tst[2]
@@ -467,6 +562,8 @@ class vSession(object):
     def __process_select(self, result):
         # generate select columns for result
         result = self.__validate_select(result)
+        # generate columns for functions
+        self.__validate_function()
         # generate data for where clause
         self.__validate_where()
         # generate data for where clause of inner join
@@ -492,18 +589,21 @@ class vSession(object):
             cur = vsess.submit_query(_query=self.__getCursorQuery(self.__parsed_query["create"][0][3][0]))
             del vsess
             blck = {
-                "table_name": self.__parsed_query["create"][0][2],
-                "schema": self.__parsed_query["create"][0][1],
+                "table_name": self.__parsed_query["create"][0][2].upper(),
+                "schema": self.__parsed_query["create"][0][1].upper(),
                 "columns": cur["columns"],
                 "rows": cur["rows"]
                 }
         else: # create table with columns
             blck = {
-                "table_name": self.__parsed_query["create"][0][2],
-                "schema": self.__parsed_query["create"][0][1],
+                "table_name": self.__parsed_query["create"][0][2].upper(),
+                "schema": self.__parsed_query["create"][0][1].upper(),
                 "columns": self.__parsed_query["create"][0][3],
                 "rows": []
                 }
+        # upcase for columns name
+        for n in range(len(blck["columns"])):
+            blck["columns"][n][0] = str(blck["columns"][n][0]).upper()
         owner = self.__parsed_query["create"][0][1]
         table_name = self.__parsed_query["create"][0][2]
         if self.db.checkTableExists(owner=owner, table_name=table_name):
@@ -543,7 +643,7 @@ class vSession(object):
             self.db.saveDB()
         else:
             raise vExept(210, '{].{}'.format(owner, table_name))
-        
+
     def __process_drop_user(self):
         usr = self.__parsed_query["drop"][0][1]
         if self.db.checkUserExists(username=usr):
@@ -635,6 +735,8 @@ class vSession(object):
                             self.__parsed_query["from"][0][4][0]["rows"][n][updt[0][5]] = str(updt[2])
                         case 'hex':
                             self.__parsed_query["from"][0][4][0]["rows"][n][updt[0][5]] = hex(updt[2])
+                        case 'datetime':
+                            self.__parsed_query["from"][0][4][0]["rows"][n][updt[0][5]] = updt[2]
         del self.__RowsPosInTables
         self.__add_updated_table(self.__parsed_query["from"][0][4][0])
         return updt_rows_cnt
@@ -667,6 +769,8 @@ class vSession(object):
                     return int(value)
                 case "float":
                     return float(value)
+                case "datetime":
+                    return value
                 case "str":
                     value = str(value)
                     if ((value[0] == '"') and (value[-1] == '"')) or ((value[0] == "'") and (value[-1] == "'")):
@@ -679,6 +783,12 @@ class vSession(object):
             raise vExept(2200, '"{}" as {}'.format(value, type_value))
 
     def __compare_cols(self, c1, c2, oper):
+        if self.__check_STR(c1):
+            if ((c1[0] == '"') and (c1[-1] == '"')) or ((c1[0] == "'") and (c1[-1] == "'")):
+                c1 = c1[1:-1]
+        if self.__check_STR(c2):
+            if ((c2[0] == '"') and (c2[-1] == '"')) or ((c2[0] == "'") and (c2[-1] == "'")):
+                c2 = c2[1:-1]
         match oper:
             case '=':
                 result = bool(c1 == c2)
@@ -689,6 +799,8 @@ class vSession(object):
                     result = bool(int(c1) > int(c2))
                 elif self.__check_HEX(c1) and self.__check_HEX(c2):
                     result = bool(int(c1) > int(c2))
+                elif self.__check_DATETIME(c1) and self.__check_DATETIME(c2):
+                    result = bool(c1 > c2)
                 else:
                     result = bool(c1 > c2)
             case '>=':
@@ -698,6 +810,8 @@ class vSession(object):
                     result = bool(int(c1) >= int(c2))
                 elif self.__check_HEX(c1) and self.__check_HEX(c2):
                     result = bool(int(c1) >= int(c2))
+                elif self.__check_DATETIME(c1) and self.__check_DATETIME(c2):
+                    result = bool(c1 >= c2)
                 else:
                     result = bool(c1 >= c2)
             case '<>':
@@ -711,6 +825,8 @@ class vSession(object):
                     result = bool(int(c1) < int(c2))
                 elif self.__check_HEX(c1) and self.__check_HEX(c2):
                     result = bool(int(c1) < int(c2))
+                elif self.__check_DATETIME(c1) and self.__check_DATETIME(c2):
+                    result = bool(c1 < c2)
                 else:
                     result = bool(c1 < c2)
             case '<=':
@@ -720,6 +836,8 @@ class vSession(object):
                     result = bool(int(c1) <= int(c2))
                 elif self.__check_HEX(c1) and self.__check_HEX(c2):
                     result = bool(int(c1) <= int(c2))
+                elif self.__check_DATETIME(c1) and self.__check_DATETIME(c2):
+                    result = bool(c1 <= c2)
                 else:
                     result = bool(c1 <= c2)
             case 'AND':
@@ -731,43 +849,59 @@ class vSession(object):
         return result
 
     def __check_INT(self, varin):
-        if varin[0] == "'":
-            varin = varin[1:len(varin)]
-        if varin[-1] == "'":
-            varin = varin[0:-1]
-        try:
-            reg = re.search('^[+-]?[0-9]+$', varin)
-            return bool(reg is not None)
-        except Exception as e:
-            return False
+        return isinstance(varin, int)
+        # if varin[0] == "'":
+        #     varin = varin[1:len(varin)]
+        # if varin[-1] == "'":
+        #     varin = varin[0:-1]
+        # try:
+        #     reg = re.search('^[+-]?[0-9]+$', varin)
+        #     return bool(reg is not None)
+        # except Exception as e:
+        #     return False
 
     def __check_STR(self, varin):
-        if (varin[0] == '"') and (varin[-1] == '"'):
-            return True
-        else:
-            return False
+        return isinstance(varin, str)
+        # if ((varin[0] == '"') and (varin[-1] == '"')) or ((varin[0] == "'") and (varin[-1] == "'")):
+        #     return True
+        # else:
+        #     return False
 
     def __check_FLOAT(self, varin):
-        if varin[0] == "'":
-            varin = varin[1:len(varin)]
-        if varin[-1] == "'":
-            varin = varin[0:-1]
-        try:
-            reg = re.search(r"^[-+]?(\d+([.,]\d*)?|[.,]\d+)([eE][-+]?\d+)?$", varin)
-            return bool(reg is not None)
-        except Exception as e:
-            return False
+        return isinstance(varin, float)
+        # if varin[0] == "'":
+        #     varin = varin[1:len(varin)]
+        # if varin[-1] == "'":
+        #     varin = varin[0:-1]
+        # try:
+        #     reg = re.search(r"^[-+]?(\d+([.,]\d*)?|[.,]\d+)([eE][-+]?\d+)?$", varin)
+        #     return bool(reg is not None)
+        # except Exception as e:
+        #     return False
 
     def __check_HEX(self, varin):
-        if varin[0] == "'":
-            varin = varin[1:len(varin)]
-        if varin[-1] == "'":
-            varin = varin[0:-1]
+        if isinstance(varin, str):
+            if varin[0] == "'":
+                varin = varin[1:len(varin)]
+            if varin[-1] == "'":
+                varin = varin[0:-1]
         try:
             reg = re.search(r"^[-+]?(0[xX][\dA-Fa-f]+|0[0-7]*|\d+)$", varin)
             return bool(reg is not None)
         except Exception as e:
             return False
+
+    def __check_DATETIME(self, varin):
+        return isinstance(varin, datetime)
+        # if varin[0] == "'":
+        #     varin = varin[1:len(varin)]
+        # if varin[-1] == "'":
+        #     varin = varin[0:-1]
+        # try:
+        #     reg = datetime.datetime.fromtimestamp(varin, tz=None)
+        #     return bool(reg is not None)
+        # except Exception as e:
+        #     return False
 
     def __validate_tables(self):
         # from: table_alias, schema, table_name, TABLE or CURSOR, {table}
@@ -800,10 +934,21 @@ class vSession(object):
             self.__updated_tables.append(copy.deepcopy(tbl))
 
     def __validate_select(self, result):
-        # select: table_alias, schema, table_name, col_name/value, alias, type(COL, INT, FLOAT, STR, HEX, FUNCTION), table position, position in table, table or cursor, [parameters of function]
+        # select format: 
+        #   0: table_alias
+        #   1: schema
+        #   2: table_name
+        #   3: col_name/value
+        #   4: alias
+        #   5: type(COL, INT, FLOAT, STR, HEX, FUNCTION)
+        #   6: table position
+        #   7: position in table
+        #   8: table or cursor
+        #   9: [-]
         chk = True
         cs = 0
         while chk:
+            # print('ckh', cs, self.__parsed_query["select"][cs])
             if self.__parsed_query["select"][cs][3] == '*':
                 col_mat = self.__searchColsInFromTables(colin=self.__parsed_query["select"][cs][3],
                                                         aliasin=self.__parsed_query["select"][cs][0],
@@ -821,6 +966,7 @@ class vSession(object):
                                                                                                           aliasin=self.__parsed_query["select"][cs][0],
                                                                                                           table_namein=self.__parsed_query["select"][cs][2],
                                                                                                           schemain=self.__parsed_query["select"][cs][1])
+                    # print('ckh0', cs, self.__parsed_query["select"][cs])
                     self.__parsed_query["select"][cs][6] = tf
                     self.__parsed_query["select"][cs][7] = ctf
                     self.__parsed_query["select"][cs][0] = aliasin
@@ -830,6 +976,13 @@ class vSession(object):
                         result["columns"].append([self.__parsed_query["select"][cs][3], ctype])
                     else:
                         result["columns"].append([self.__parsed_query["select"][cs][4], ctype])
+                elif self.__parsed_query["select"][cs][5] == 'FUNCTION':
+                    fct_id = self.__get_function(self.__parsed_query["select"][cs][3])
+                    fct_type = self.__get_function_type(self.__parsed_query['functions'][fct_id][1])
+                    if self.__parsed_query["select"][cs][4] is None:
+                        result["columns"].append([self.__parsed_query["select"][cs][3], fct_type])
+                    else:
+                        result["columns"].append([self.__parsed_query["select"][cs][4], fct_type])
                 else:
                     if self.__parsed_query["select"][cs][4] is None:
                         result["columns"].append([self.__parsed_query["select"][cs][3], self.__parsed_query["select"][cs][5]])
@@ -839,6 +992,40 @@ class vSession(object):
             if cs >= len(self.__parsed_query["select"]):
                 chk = False
         return result
+
+    def __get_function_type(self, fct_name):
+        match fct_name:
+            case 'UPPER'|'LOWER'|'SUBSTR'|'TO_CHAR':
+                return 'str'
+            case _:
+                raise vExept(2304, fct_name)
+
+    def __validate_function(self):
+        # # functions format:
+        #   0: fct_id
+        #   1: fct_name
+        #   2: [
+        #     0: table_alias
+        #     1: schema
+        #     2: table_name
+        #     3: col_name/value
+        #     4: type(COLUMN, INT, FLOAT, STR, HEX, DATAETIME, FUNCTION)
+        #     5: table position
+        #     6: position in table
+        #     7: table or cursor
+        for n in range(len(self.__parsed_query["functions"])):
+            for m in range(len(self.__parsed_query["functions"][n][2])):
+                cblk = self.__parsed_query["functions"][n][2][m]
+                if cblk[4] == 'COLUMN':
+                    colin, aliasin, table_namein, schemain, tf, ctf, ctype = self.__searchColInFromTables(colin=cblk[3],
+                                                                                                          aliasin=cblk[0],
+                                                                                                          table_namein=cblk[2],
+                                                                                                          schemain=cblk[1])
+                    self.__parsed_query["functions"][n][2][m][0] = aliasin
+                    self.__parsed_query["functions"][n][2][m][1] = schemain
+                    self.__parsed_query["functions"][n][2][m][2] = table_namein
+                    self.__parsed_query["functions"][n][2][m][5] = tf
+                    self.__parsed_query["functions"][n][2][m][6] = ctf
 
     def __validate_where(self):
         for n in range (len(self.__parsed_query["parsed_where"])):

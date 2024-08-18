@@ -10,7 +10,7 @@ USERNAME: str
 PASSWORD: str
 FORMAT: { str | int | hex | float }
 GENERIC_COL : [ { [ <SCHEMA>. ] <TABLE_NAME> . | <TAB_ALIAS> . } ] <COLUMN_NAME> [COL_ALIAS]
-SEL_COL : { [ { [ <SCHEMA>. ] <TABLE_NAME> . | <TAB_ALIAS> . } ] { <COLUMN_NAME> [COL_ALIAS] | * } | <CONSTANT> }
+SEL_COL : { [ { [ <SCHEMA>. ] <TABLE_NAME> . | <TAB_ALIAS> . } ] { <COLUMN_NAME> [COL_ALIAS] | * } | <FUNCTION> | <CONSTANT> }
 WHERE_COMPARE : { = | > | < | >= | <= | <> | != }
 WHERE_CMP : [[ ( ]] <SEL_COL> <WHERE_COMPARE> <SEL_COL> [[ ) ]]
 WHERE_BETWEEN : [[ ( ]] <SEL_COL> between <SEL_COL> and <SEL_COL> [[ ) ]]
@@ -18,6 +18,7 @@ LIST_COLS : <SEL_COL> [ , <SEL_COL> ]
 WHERE_IN : [[ ( ]] <SEL_COL> in ( <LIST_COLS> | <SELECT> ) [[ ) ]]
 WHERE_CLAUSE : [[ ( ]] { <WHERE_CMP> | <WHERE_BETWEEN> | <WHERE_IN> } [ { and | or } <WHERE_CLAUSE> ] [[ ) ]]
 INNER_CLAUSE : <GENERIC_COL> <WHERE_COMPARE> <GENERIC_COL>
+FUNCTION : { UPPER|LOWER } ( <SEL_COL> )
 
 SELECT : 
 select <SEL_COL> [ , <SEL_COL> ...]
