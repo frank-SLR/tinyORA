@@ -407,3 +407,16 @@ TO_CHAR(date, 'YYY/MM/DD')
 ```
 
 See: [SEL_COL](#sel_col)
+
+### DECODE
+DECODE compares FIRST_EXPR to each SEARCH value one by one. If FIRST_EXPR is equal to SEARCH, then DECODE returns the corresponding RESULT. If no match is found, then DECODE returns DEFAULT.
+
+```sql
+DECODE ( <FIST_EXPR>, <SEARCH>, <RESULT>, [ <SEARCH>, <RESULT>, ... ] <DEFAULT> )
+```
+
+Example:
+If value is 1 then return 'FIRST', if value is 2 then return 'SECOND', for other values return 'LATE...':
+```sql
+DECODE(value, 1, 'FIRST', 2, 'SECOND', 'LATE...')
+```

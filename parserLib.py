@@ -21,7 +21,7 @@ class vParser():
         self.__intCurSeq = 0
         self.__intFctSeq = 0
         self.__raz()
-        self.__list_of_functions = ['UPPER', 'LOWER', 'SUBSTR', 'TO_CHAR']
+        self.__list_of_functions = ['UPPER', 'LOWER', 'SUBSTR', 'TO_CHAR', 'DECODE']
 
     def __raz(self) -> None:
         self.__parsed_query = {"querytype": None, "select": [], "from": [], "where": [], "orderby": [], "groupby": [], "cursors": [],
@@ -996,49 +996,36 @@ class vParser():
                 del _where[n]
 
     def __check_INT(self, varin):
-        if varin[0] == "'":
-            varin = varin[1:len(varin)]
-        if varin[-1] == "'":
-            varin = varin[0:-1]
-        try:
-            reg = re.search('^[+-]?[0-9]+$', varin)
-            return bool(reg is not None)
-        except Exception as e:
-            return False
+        if (varin[0] == "'") and (varin[-1] == "'") or (varin[0] == '"') and (varin[-1] == '"'):
+            varin = varin[1:-1]
+        return isinstance(varin, int)
 
     def __check_STR(self, varin):
-        if ((varin[0] == '"') and (varin[-1] == '"')) or ((varin[0] == "'") and (varin[-1] == "'")):
-            return True
-        else:
-            return False
+        return isinstance(varin, str)
 
     def __check_FLOAT(self, varin):
-        if varin[0] == "'":
-            varin = varin[1:len(varin)]
-        if varin[-1] == "'":
-            varin = varin[0:-1]
-        try:
-            reg = re.search(r"^[-+]?(\d+([.,]\d*)?|[.,]\d+)([eE][-+]?\d+)?$", varin)
-            return bool(reg is not None)
-        except Exception as e:
-            return False
+        if (varin[0] == "'") and (varin[-1] == "'") or (varin[0] == '"') and (varin[-1] == '"'):
+            varin = varin[1:-1]
+        return isinstance(varin, float)
+        # try:
+        #     reg = re.search(r"^[-+]?(\d+([.,]\d*)?|[.,]\d+)([eE][-+]?\d+)?$", varin)
+        #     return bool(reg is not None)
+        # except Exception as e:
+        #     return False
 
     def __check_HEX(self, varin):
-        if varin[0] == "'":
-            varin = varin[1:len(varin)]
-        if varin[-1] == "'":
-            varin = varin[0:-1]
-        try:
-            reg = re.search(r"^[-+]?(0[xX][\dA-Fa-f]+|0[0-7]*|\d+)$", varin)
-            return bool(reg is not None)
-        except Exception as e:
-            return False
+        if (varin[0] == "'") and (varin[-1] == "'") or (varin[0] == '"') and (varin[-1] == '"'):
+            varin = varin[1:-1]
+        return isinstance(varin, datetime)
+        # try:
+        #     reg = re.search(r"^[-+]?(0[xX][\dA-Fa-f]+|0[0-7]*|\d+)$", varin)
+        #     return bool(reg is not None)
+        # except Exception as e:
+        #     return False
 
     def __check_DATETIME(self, varin):
-        if varin[0] == "'":
-            varin = varin[1:len(varin)]
-        if varin[-1] == "'":
-            varin = varin[0:-1]
+        if (varin[0] == "'") and (varin[-1] == "'") or (varin[0] == '"') and (varin[-1] == '"'):
+            varin = varin[1:-1]
         try:
             reg = datetime.datetime.fromtimestamp(varin, tz=None)
             return bool(reg is not None)

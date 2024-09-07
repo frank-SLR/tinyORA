@@ -346,45 +346,6 @@ class vSession(object):
                             raise vExept(801)
                     self.__result.append(rrow)
 
-    def __compute_function(self, fct_id):
-        fct_num = self.__get_function(fct_id)
-        match self.__parsed_query["functions"][fct_num][1]:
-            case 'UPPER':
-                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
-                return str(value).upper()
-            case 'LOWER':
-                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
-                return str(value).lower()
-            case 'SUBSTR':
-                if len(self.__parsed_query["functions"][fct_num][2]) != 3:
-                    raise vExept(2300, len(self.__parsed_query["functions"][fct_num][2]))
-                strin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
-                sttin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
-                lenin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2])
-                if not self.__check_STR(strin):
-                    raise vExept(2301, strin)
-                if not self.__check_INT(sttin):
-                    raise vExept(2302, sttin)
-                if not self.__check_INT(lenin):
-                    raise vExept(2303, lenin)
-                return strin[sttin:sttin+lenin]
-            case 'TO_CHAR':
-                if len(self.__parsed_query["functions"][fct_num][2]) != 2:
-                    raise vExept(2305, len(self.__parsed_query["functions"][fct_num][2]))
-                dtein = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
-                fmtin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
-                if (not self.__check_DATETIME(dtein)) and (not self.__check_FLOAT(dtein)):
-                    raise vExept(2306, dtein)
-                if not self.__check_STR(fmtin):
-                    raise vExept(2307, fmtin)
-                fmtin = fmtin.replace('YYYY', '%Y').replace('YY', '%y')
-                fmtin = fmtin.replace('MM', '%m').replace('MONTH', '%B').replace('MON', '%'+'b')
-                fmtin = fmtin.replace('DDD', '%j').replace('DD', '%'+'d').replace('DAY', '%A').replace('DY', '%'+'a')
-                fmtin = fmtin.replace('HH24', '%H').replace('HH', '%I')
-                fmtin = fmtin.replace('MI', '%M')
-                fmtin = fmtin.replace('SS', '%S')
-                return datetime.fromtimestamp(dtein).strftime(fmtin)[1:-1]
-
     def __get_function(self, fct_id):
         for n in range(len(self.__parsed_query["functions"])):
             if self.__parsed_query["functions"][n][0] == fct_id:
@@ -890,11 +851,9 @@ class vSession(object):
         return result
 
     def __check_INT(self, varin):
+        if (varin[0] == "'") and (varin[-1] == "'") or (varin[0] == '"') and (varin[-1] == '"'):
+            varin = varin[1:-1]
         return isinstance(varin, int)
-        # if varin[0] == "'":
-        #     varin = varin[1:len(varin)]
-        # if varin[-1] == "'":
-        #     varin = varin[0:-1]
         # try:
         #     reg = re.search('^[+-]?[0-9]+$', varin)
         #     return bool(reg is not None)
@@ -903,17 +862,11 @@ class vSession(object):
 
     def __check_STR(self, varin):
         return isinstance(varin, str)
-        # if ((varin[0] == '"') and (varin[-1] == '"')) or ((varin[0] == "'") and (varin[-1] == "'")):
-        #     return True
-        # else:
-        #     return False
 
     def __check_FLOAT(self, varin):
+        if (varin[0] == "'") and (varin[-1] == "'") or (varin[0] == '"') and (varin[-1] == '"'):
+            varin = varin[1:-1]
         return isinstance(varin, float)
-        # if varin[0] == "'":
-        #     varin = varin[1:len(varin)]
-        # if varin[-1] == "'":
-        #     varin = varin[0:-1]
         # try:
         #     reg = re.search(r"^[-+]?(\d+([.,]\d*)?|[.,]\d+)([eE][-+]?\d+)?$", varin)
         #     return bool(reg is not None)
@@ -922,10 +875,8 @@ class vSession(object):
 
     def __check_HEX(self, varin):
         if isinstance(varin, str):
-            if varin[0] == "'":
-                varin = varin[1:len(varin)]
-            if varin[-1] == "'":
-                varin = varin[0:-1]
+            if (varin[0] == "'") and (varin[-1] == "'") or (varin[0] == '"') and (varin[-1] == '"'):
+                varin = varin[1:-1]
         try:
             reg = re.search(r"^[-+]?(0[xX][\dA-Fa-f]+|0[0-7]*|\d+)$", varin)
             return bool(reg is not None)
@@ -934,10 +885,8 @@ class vSession(object):
 
     def __check_DATETIME(self, varin):
         return isinstance(varin, datetime)
-        # if varin[0] == "'":
-        #     varin = varin[1:len(varin)]
-        # if varin[-1] == "'":
-        #     varin = varin[0:-1]
+        # if (varin[0] == "'") and (varin[-1] == "'") or (varin[0] == '"') and (varin[-1] == '"'):
+        #     varin = varin[1:-1]
         # try:
         #     reg = datetime.datetime.fromtimestamp(varin, tz=None)
         #     return bool(reg is not None)
@@ -1019,7 +968,7 @@ class vSession(object):
                         result["columns"].append([self.__parsed_query["select"][cs][4], ctype])
                 elif self.__parsed_query["select"][cs][5] == 'FUNCTION':
                     fct_id = self.__get_function(self.__parsed_query["select"][cs][3])
-                    fct_type = self.__get_function_type(self.__parsed_query['functions'][fct_id][1])
+                    fct_type = self.__get_function_type(self.__parsed_query['functions'][fct_id][1], self.__parsed_query['functions'][fct_id][2][0][4])
                     if self.__parsed_query["select"][cs][4] is None:
                         result["columns"].append([self.__parsed_query["select"][cs][3], fct_type])
                     else:
@@ -1033,13 +982,6 @@ class vSession(object):
             if cs >= len(self.__parsed_query["select"]):
                 chk = False
         return result
-
-    def __get_function_type(self, fct_name):
-        match fct_name:
-            case 'UPPER'|'LOWER'|'SUBSTR'|'TO_CHAR':
-                return 'str'
-            case _:
-                raise vExept(2304, fct_name)
 
     def __validate_function(self):
         # # functions format:
@@ -1161,3 +1103,70 @@ class vSession(object):
                                     result = True
                                     break
         return result
+
+    def __compute_function(self, fct_id):
+        # functions : [fct_id, fct_name, [[table_alias, schema, table_name, col_name/value, type(COL, INT, FLOAT, STR, HEX, DATAETIME, FUNCTION), table position, position in table, table or cursor]]]
+        fct_num = self.__get_function(fct_id)
+        match self.__parsed_query["functions"][fct_num][1]:
+            case 'UPPER':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return str(value).upper()
+            case 'LOWER':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return str(value).lower()
+            case 'SUBSTR':
+                if len(self.__parsed_query["functions"][fct_num][2]) != 3:
+                    raise vExept(2300, len(self.__parsed_query["functions"][fct_num][2]))
+                strin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                sttin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
+                lenin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2])
+                if not self.__check_STR(strin):
+                    raise vExept(2301, strin)
+                if not self.__check_INT(sttin):
+                    raise vExept(2302, sttin)
+                if not self.__check_INT(lenin):
+                    raise vExept(2303, lenin)
+                return strin[sttin:sttin+lenin]
+            case 'TO_CHAR':
+                if len(self.__parsed_query["functions"][fct_num][2]) != 2:
+                    raise vExept(2305, len(self.__parsed_query["functions"][fct_num][2]))
+                dtein = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                fmtin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
+                if (not self.__check_DATETIME(dtein)) and (not self.__check_FLOAT(dtein)):
+                    raise vExept(2306, dtein)
+                if not self.__check_STR(fmtin):
+                    raise vExept(2307, fmtin)
+                fmtin = fmtin.replace('YYYY', '%Y').replace('YY', '%y')
+                fmtin = fmtin.replace('MM', '%m').replace('MONTH', '%B').replace('MON', '%'+'b')
+                fmtin = fmtin.replace('DDD', '%j').replace('DD', '%'+'d').replace('DAY', '%A').replace('DY', '%'+'a')
+                fmtin = fmtin.replace('HH24', '%H').replace('HH', '%I')
+                fmtin = fmtin.replace('MI', '%M')
+                fmtin = fmtin.replace('SS', '%S')
+                return datetime.fromtimestamp(dtein).strftime(fmtin)[1:-1]
+            case 'DECODE':
+                if len(self.__parsed_query["functions"][fct_num][2]) % 2 != 0:
+                    raise vExept(2308, len(self.__parsed_query["functions"][fct_num][2]))
+                mainval = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                n = 1
+                dont_stop_flg = True
+                while (n+1 < len(self.__parsed_query["functions"][fct_num][2])) and dont_stop_flg:
+                    if self.__get_function_col(self.__parsed_query["functions"][fct_num][2][n]) == mainval:
+                        res = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][n+1])
+                        dont_stop_flg = False
+                    else:
+                        n += 2
+                if dont_stop_flg:
+                    res = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][-1])
+                return res
+
+    def __get_function_type(self, fct_name: str, ref_col_typ: str):
+        match fct_name:
+            case 'UPPER'|'LOWER'|'SUBSTR'|'TO_CHAR':
+                return 'str'
+            case 'DECODE':
+                if ref_col_typ.upper() in ['INT', 'FLOAT', 'STR', 'HEX', 'DATETIME']:
+                    return ref_col_typ.lower()
+                else:
+                    return 'str'
+            case _:
+                raise vExept(2304, fct_name)

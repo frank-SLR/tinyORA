@@ -207,6 +207,8 @@ class vExept(Exception):
                 self.message = '''First argument for TO_CHAR function must have 'datetime' format' ({})'''.format(message)
             case 2307:
                 self.message = '''Second argument for TO_CHAR function must have 'str' format' ({})'''.format(message)
+            case 2308:
+                self.message = '''Incorrect number of arguments for DECODE function: must be even but {} argument(s) provided'''.format(message)
             # ~~~~~BLANK (2500-9899)
             # HTML
             case 9900:

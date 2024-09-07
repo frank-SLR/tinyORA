@@ -19,6 +19,9 @@ LIST_COLS : <SEL_COL> [ , <SEL_COL> ]
 WHERE_CLAUSE : [[ ( ]] { <WHERE_CMP> | <WHERE_BETWEEN> | <WHERE_IN> } [ { and | or } <WHERE_CLAUSE> ] [[ ) ]]
 INNER_CLAUSE : <GENERIC_COL> <WHERE_COMPARE> <GENERIC_COL>
 FUNCTION : { UPPER|LOWER } ( <SEL_COL> )
+           SUBSTR ( <SEL_COL>, <SEL_COL>, <SEL_COL>)
+           TO_CHAR ( <SEL_COL>, <SEL_COL> )
+           DECODE ( <SEL_COL>, <SEL_COL>, <SEL_COL> [, <SEL_COL>, <SEL_COL> ...] )
 
 SELECT : 
 select <SEL_COL> [ , <SEL_COL> ...]
