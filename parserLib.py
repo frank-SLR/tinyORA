@@ -14,6 +14,7 @@ from vExceptLib import vExept
 # parsed_where: item_id, field1, oper, field2
 #            or item_id, ['META', item_id], oper, ['META', item_id]
 #            or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], oper, ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
+#            or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], 'BETWEEN', ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor], ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
 # functions : [fct_id, fct_name, [[table_alias, schema, table_name, col_name/value, type(COL, INT, FLOAT, STR, HEX, DATAETIME, FUNCTION), table position, position in table, table or cursor]]]
 class vParser():
     def __init__(self) -> None:
