@@ -28,6 +28,7 @@ class vSession(object):
         self.__parsed_query = vParser().parse_query(query=_query)
         # print(self.__parsed_query['where'])
         # print(self.__parsed_query['parsed_where'])
+        # print(self.__parsed_query['in'])
         # print(self.__parsed_query['functions'])
 
         if self.__parsed_query["querytype"] in ['SELECT']:
@@ -352,6 +353,12 @@ class vSession(object):
                 return n
         raise vExept(802, fct_id)
 
+    def __get_in(self, in_id):
+        for n in range(len(self.__parsed_query["in"])):
+            if self.__parsed_query["in"][n][0] == in_id:
+                return n
+        raise vExept(803, in_id)
+
     def __get_function_col(self, colblk):
         if colblk[4] == 'COLUMN':
             return self.__parsed_query["from"][colblk[5]][4][0]["rows"][self.__RowsPosInTables[colblk[5]]][colblk[6]]
@@ -366,7 +373,7 @@ class vSession(object):
     def __convert_value(self, varin, fmtin:str):
         try:
             match fmtin.upper():
-                case 'INT'|'FLOAT'|'HEX'|'DATAETIME':
+                case 'INT'|'FLOAT'|'HEX'|'DATETIME':
                     if self.__check_STR(varin):
                         if varin[0] in ['"', "'"]:
                             varin = varin[1:]
@@ -381,7 +388,7 @@ class vSession(object):
                     return str(varin)
                 case 'HEX':
                     return hex(varin)
-                case 'DATAETIME':
+                case 'DATETIME':
                     return datetime(varin)
         except vExept as e:
             raise vExept(2200, "convert {} into '{}'".format(fmtin, fmtin))
@@ -450,6 +457,13 @@ class vSession(object):
                         else:
                             c3 = tst[4][4]
                         result = self.__compare_cols(str(c1), str(c2), '>=') and self.__compare_cols(str(c1), str(c3), '<=')
+                    elif tstoper == 'IN':
+                        in_id = self.__get_in(c2)
+                        result = False
+                        for mbr in self.__parsed_query["in"][in_id][2]:
+                            if c1 == mbr[3]:
+                                result = True
+                                break
                     else:
                         result = self.__compare_cols(str(c1), str(c2), tstoper)
                 else:
@@ -501,16 +515,14 @@ class vSession(object):
                         if tst[1][1] == tab_num:
                             c1 = self.__parsed_query["from"][tst[1][1]][4][0]["rows"][self.__RowsPosInTables[tst[1][1]]][tst[1][2]]
                     elif tst[1][5] == "FUNCTION":
-                        if tst[1][1] == tab_num:
-                            c1 = self.__compute_function(tst[1][4])
+                        c1 = self.__compute_function(tst[1][4])
                     else:
                         c1 = tst[1][4]
                     if tst[3][5] == "COLUMN":
                         if tst[3][1] == tab_num:
                             c2 = self.__parsed_query["from"][tst[3][1]][4][0]["rows"][self.__RowsPosInTables[tst[3][1]]][tst[3][2]]
                     elif tst[3][5] == "FUNCTION":
-                        if tst[3][1] == tab_num:
-                            c2 = self.__compute_function(tst[3][4])
+                        c2 = self.__compute_function(tst[3][4])
                     else:
                         c2 = tst[3][4]
                     tstoper = tst[2]
@@ -535,6 +547,13 @@ class vSession(object):
                                 result = None
                         else:
                             result = None
+                    elif tstoper == 'IN':
+                        in_id = self.__get_in(c2)
+                        result = False
+                        for mbr in self.__parsed_query["in"][in_id][2]:
+                            if c1 == mbr[3]:
+                                result = True
+                                break
                     else:
                         if (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] != "COLUMN") or \
                         (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num) and (tst[1][5] != "COLUMN") or \
@@ -851,32 +870,23 @@ class vSession(object):
         return result
 
     def __check_INT(self, varin):
-        if (varin[0] == "'") and (varin[-1] == "'") or (varin[0] == '"') and (varin[-1] == '"'):
-            varin = varin[1:-1]
-        return isinstance(varin, int)
-        # try:
-        #     reg = re.search('^[+-]?[0-9]+$', varin)
-        #     return bool(reg is not None)
-        # except Exception as e:
-        #     return False
+        try:
+            return isinstance(int(varin), int)
+        except Exception as e:
+            return False
 
     def __check_STR(self, varin):
         return isinstance(varin, str)
 
     def __check_FLOAT(self, varin):
-        if (varin[0] == "'") and (varin[-1] == "'") or (varin[0] == '"') and (varin[-1] == '"'):
-            varin = varin[1:-1]
-        return isinstance(varin, float)
-        # try:
+        try:
+            return isinstance(float(varin), float)
         #     reg = re.search(r"^[-+]?(\d+([.,]\d*)?|[.,]\d+)([eE][-+]?\d+)?$", varin)
         #     return bool(reg is not None)
-        # except Exception as e:
-        #     return False
+        except Exception as e:
+            return False
 
     def __check_HEX(self, varin):
-        if isinstance(varin, str):
-            if (varin[0] == "'") and (varin[-1] == "'") or (varin[0] == '"') and (varin[-1] == '"'):
-                varin = varin[1:-1]
         try:
             reg = re.search(r"^[-+]?(0[xX][\dA-Fa-f]+|0[0-7]*|\d+)$", varin)
             return bool(reg is not None)
@@ -884,14 +894,11 @@ class vSession(object):
             return False
 
     def __check_DATETIME(self, varin):
-        return isinstance(varin, datetime)
-        # if (varin[0] == "'") and (varin[-1] == "'") or (varin[0] == '"') and (varin[-1] == '"'):
-        #     varin = varin[1:-1]
-        # try:
-        #     reg = datetime.datetime.fromtimestamp(varin, tz=None)
-        #     return bool(reg is not None)
-        # except Exception as e:
-        #     return False
+        try:
+            reg = datetime.datetime.fromtimestamp(varin, tz=None)
+            return bool(reg is not None)
+        except Exception as e:
+            return False
 
     def __validate_tables(self):
         # from: table_alias, schema, table_name, TABLE or CURSOR, {table}
@@ -992,7 +999,7 @@ class vSession(object):
         #     1: schema
         #     2: table_name
         #     3: col_name/value
-        #     4: type(COLUMN, INT, FLOAT, STR, HEX, DATAETIME, FUNCTION)
+        #     4: type(COLUMN, INT, FLOAT, STR, HEX, DATETIME, FUNCTION)
         #     5: table position
         #     6: position in table
         #     7: table or cursor
@@ -1105,7 +1112,7 @@ class vSession(object):
         return result
 
     def __compute_function(self, fct_id):
-        # functions : [fct_id, fct_name, [[table_alias, schema, table_name, col_name/value, type(COL, INT, FLOAT, STR, HEX, DATAETIME, FUNCTION), table position, position in table, table or cursor]]]
+        # functions : [fct_id, fct_name, [[table_alias, schema, table_name, col_name/value, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION), table position, position in table, table or cursor]]]
         fct_num = self.__get_function(fct_id)
         match self.__parsed_query["functions"][fct_num][1]:
             case 'UPPER':
@@ -1118,8 +1125,8 @@ class vSession(object):
                 if len(self.__parsed_query["functions"][fct_num][2]) != 3:
                     raise vExept(2300, len(self.__parsed_query["functions"][fct_num][2]))
                 strin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
-                sttin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
-                lenin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2])
+                sttin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1]) # .replace('"', '').replace("'", "")
+                lenin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]) # .replace('"', '').replace("'", "")
                 if not self.__check_STR(strin):
                     raise vExept(2301, strin)
                 if not self.__check_INT(sttin):

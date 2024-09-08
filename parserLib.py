@@ -4,7 +4,7 @@ import datetime
 from vExceptLib import vExept
 
 # querytype: (SELECT, INSERT, UPDATE, DELETE, GRANT, REVOKE, CREATE, DROP, DESCRIBE, COMMIT, ROLLBACK)
-# select: table_alias, schema, table_name, col_name/value, alias, type(COL, INT, FLOAT, STR, HEX, DATAETIME, FUNCTION), table position, position in table, table or cursor, [-]
+# select: table_alias, schema, table_name, col_name/value, alias, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION), table position, position in table, table or cursor, [-]
 # from: table_alias, schema, table_name, TABLE or CURSOR, {table}
 # cursors: cursor_alias, query
 # inner_where: list of items
@@ -15,18 +15,20 @@ from vExceptLib import vExept
 #            or item_id, ['META', item_id], oper, ['META', item_id]
 #            or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], oper, ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
 #            or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], 'BETWEEN', ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor], ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
-# functions : [fct_id, fct_name, [[table_alias, schema, table_name, col_name/value, type(COL, INT, FLOAT, STR, HEX, DATAETIME, FUNCTION), table position, position in table, table or cursor]]]
+# functions : [fct_id, fct_name, [[table_alias, schema, table_name, col_name/value, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION), table position, position in table, table or cursor]]]
+# in : [in_id, (LIST, CURSOR), [[table_alias, schema, table_name, col_name/value, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION), table position, position in table, table or cursor]]]
 class vParser():
     def __init__(self) -> None:
         self.__intCurSeq = 0
         self.__intFctSeq = 0
+        self.__intInSeq = 0
         self.__raz()
         self.__list_of_functions = ['UPPER', 'LOWER', 'SUBSTR', 'TO_CHAR', 'DECODE']
 
     def __raz(self) -> None:
         self.__parsed_query = {"querytype": None, "select": [], "from": [], "where": [], "orderby": [], "groupby": [], "cursors": [],
                                "inner_where": [], "parsed_where": [], "parsed_inner_where": [], "grant": [], "revoke": [], "create": [], "drop": [], "insert": [], "update": [],
-                               "functions": []}
+                               "functions": [], "in": []}
         self.__query = ''
 
     def parse_query(self, query:str) -> dict:
@@ -180,7 +182,7 @@ class vParser():
         #   2: table_name
         #   3: col_name/value
         #   4: alias
-        #   5: type(COL, INT, FLOAT, STR, HEX, DATAETIME, FUNCTION)
+        #   5: type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION)
         #   6: table position
         #   7: position in table
         #   8: table or cursor
@@ -195,12 +197,12 @@ class vParser():
                 self.__parsed_query["select"][n][5] = fmt
                 self.__parsed_query["select"][n][6] = nt
                 self.__parsed_query["select"][n][8] = tc
-        # functions: 
+        # functions:
         #   0: table_alias
         #   1: schema
         #   2: table_name
         #   3: col_name/value
-        #   4: type(COL, INT, FLOAT, STR, HEX, DATAETIME, FUNCTION)
+        #   4: type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION)
         #   5: table position
         #   6: position in table
         #   7: table or cursor
@@ -215,6 +217,26 @@ class vParser():
                     self.__parsed_query["functions"][f][2][n][4] = fmt
                     self.__parsed_query["functions"][f][2][n][5] = nt
                     self.__parsed_query["functions"][f][2][n][7] = tc
+        # in:
+        #   0: table_alias
+        #   1: schema
+        #   2: table_name
+        #   3: col_name/value
+        #   4: type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION)
+        #   5: table position
+        #   6: position in table
+        #   7: table or cursor
+        for f in range(len(self.__parsed_query["in"])):
+            for n in range (len(self.__parsed_query["in"][f][2])):
+                if (self.__parsed_query["in"][f][2][n][4] is None) or (self.__parsed_query["in"][f][2][n][4] == 'COLUMN'):
+                    fmt, al, cn, sh, tn, tc, nt = self.__getColFromTable(self.__parsed_query["in"][f][2][n][3])
+                    self.__parsed_query["in"][f][2][n][0] = al
+                    self.__parsed_query["in"][f][2][n][1] = sh
+                    self.__parsed_query["in"][f][2][n][2] = tn
+                    self.__parsed_query["in"][f][2][n][3] = cn
+                    self.__parsed_query["in"][f][2][n][4] = fmt
+                    self.__parsed_query["in"][f][2][n][5] = nt
+                    self.__parsed_query["in"][f][2][n][7] = tc
         # generate where test
         lst_where = []
         w_idx = 0
@@ -614,7 +636,7 @@ class vParser():
         # 3: table_name
         # 4: col_name/value
         # 5: alias
-        # 6: type(COL, INT, FLOAT, STR, HEX, DATAETIME, FUNCTION)
+        # 6: type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION)
         # 7: table position
         # 8: position in table
         # 9: table or cursor
@@ -652,7 +674,7 @@ class vParser():
         #   2: schema
         #   3: table_name
         #   4: col_name/value
-        #   5: type(COL, INT, FLOAT, STR, HEX, DATAETIME, FUNCTION)
+        #   5: type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION)
         #   6: table position
         #   7: position in table
         #   8: table or cursor]]]
@@ -676,6 +698,39 @@ class vParser():
         if word != ')':
             raise vExept(740, col)
         return fct_id, pos
+
+    def __parse_COL_IN(self, pos):
+        # functions : [fct_id, fct_name, [[
+        #   1: table_alias
+        #   2: schema
+        #   3: table_name
+        #   4: col_name/value
+        #   5: type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION)
+        #   6: table position
+        #   7: position in table
+        #   8: table or cursor]]]
+        in_idx = len(self.__parsed_query["in"])
+        in_id = self.__get_in_name()
+        self.__parsed_query["in"].append([in_id, 'LIST', []]) #   /!\ /!\ other : CURSOR
+        word = ''
+        while word != ')':
+            word, pos = self.__parse_word(pos)
+            if self.__is_function(word.upper()):
+                col, pos = self.__parse_word(pos)
+                if col != '(':
+                    raise vExept(739, col)
+                sub_fct, pos = self.__parse_COL_FCT(word.upper(), pos)
+                self.__parsed_query["in"][in_idx][2].append([None, None, None, sub_fct, 'FUNCTION', None, None, None])
+            else:
+                if (word[0] == "'") and (word[-1] == "'") or (word[0] == '"') and (word[-1] == '"'):
+                    word = word[1:-1]
+                self.__parsed_query["in"][in_idx][2].append([None, None, None, str(word), 'STR', None, None, None])
+            word, pos = self.__parse_word(pos)
+            if (word != ',') and (word != ')'):
+                raise vExept(702, word)
+        if word != ')':
+            raise vExept(740, col)
+        return in_id, pos
         
     def __parse_FROM_OBJ(self, pos):
         col, pos = self.__parse_word(pos)
@@ -828,7 +883,14 @@ class vParser():
                         if par != '(':
                             raise vExept(739, par)
                         v2, pos = self.__parse_COL_FCT(v2.upper(), pos)
-                    self.__parsed_query["where"].append([m1, op, v1, btwand, v2])
+                    self.__parsed_query["where"].append([m1, 'BETWEEN', v1, 'AND', v2])
+                    m1, op = None, None
+                elif op.upper() == 'IN':
+                    par, pos = self.__parse_word(pos)
+                    if par != '(':
+                        raise vExept(739, par)
+                    col_lst_name, pos = self.__parse_COL_IN(pos)
+                    self.__parsed_query["where"].append([m1, 'IN', col_lst_name])
                     m1, op = None, None
             else:
                 self.__parsed_query["where"].append([m1, op, word])
@@ -930,6 +992,8 @@ class vParser():
                     fmt1, alias1, col1, schema1, table_name1, tab_cur1, num_tab1 = self.__getColFromTable(x[0])
                 if self.__is_parsed_function(x[2]):
                     fmt2, alias2, col2, schema2, table_name2, tab_cur2, num_tab2 = 'FUNCTION', None, x[2], None, None, None, None
+                elif x[1].upper() == 'IN':
+                    list2 = x[2]
                 else:
                     fmt2, alias2, col2, schema2, table_name2, tab_cur2, num_tab2 = self.__getColFromTable(x[2])
                 if (len(x) == 5) and (x[1].upper() == 'BETWEEN') and (x[3].upper() == 'AND'):
@@ -938,6 +1002,8 @@ class vParser():
                     else:
                         fmt3, alias3, col3, schema3, table_name3, tab_cur3, num_tab3 = self.__getColFromTable(x[4])
                     lst_where.append([v_idx, ['TST', num_tab1, None, alias1, col1, fmt1, schema1, table_name1, tab_cur1], 'BETWEEN', ['TST', num_tab2, None, alias2, col2, fmt2, schema2, table_name2, tab_cur2], ['TST', num_tab3, None, alias3, col3, fmt3, schema3, table_name3, tab_cur3]])
+                elif (x[1].upper() == 'IN'):
+                    lst_where.append([v_idx, ['TST', num_tab1, None, alias1, col1, fmt1, schema1, table_name1, tab_cur1], 'IN', ['TST', None, None, None, list2, None, None, None, None]])
                 else:
                     lst_where.append([v_idx, ['TST', num_tab1, None, alias1, col1, fmt1, schema1, table_name1, tab_cur1], x[1], ['TST', num_tab2, None, alias2, col2, fmt2, schema2, table_name2, tab_cur2]])
                 # x.insert(0, v_idx)
@@ -981,13 +1047,14 @@ class vParser():
         elif self.__check_HEX(varin):
             return 'HEXA'
         elif self.__check_STR(varin):
-            return 'STR'
+            if ((varin[0] == '"') and (varin[-1] == '"') or (varin[0] == "'") and (varin[-1] == "'")):
+                return 'STR'
+            else:
+                return 'COLUMN'
         elif self.__check_DATETIME(varin):
             return 'DATETIME'
         elif self.__is_function(varin):
             return 'FUNCTION'
-        else:
-            return 'COLUMN'
 
     def __remove_parenthesis(self, _where:list):
         for n in range(len(_where)-1, -1, -1):
@@ -996,36 +1063,30 @@ class vParser():
                 del _where[n]
 
     def __check_INT(self, varin):
-        if (varin[0] == "'") and (varin[-1] == "'") or (varin[0] == '"') and (varin[-1] == '"'):
-            varin = varin[1:-1]
-        return isinstance(varin, int)
+        try:
+            return isinstance(int(varin), int)
+        except Exception as e:
+            return False
 
     def __check_STR(self, varin):
         return isinstance(varin, str)
 
     def __check_FLOAT(self, varin):
-        if (varin[0] == "'") and (varin[-1] == "'") or (varin[0] == '"') and (varin[-1] == '"'):
-            varin = varin[1:-1]
-        return isinstance(varin, float)
-        # try:
+        try:
+            return isinstance(float(varin), float)
         #     reg = re.search(r"^[-+]?(\d+([.,]\d*)?|[.,]\d+)([eE][-+]?\d+)?$", varin)
         #     return bool(reg is not None)
-        # except Exception as e:
-        #     return False
+        except Exception as e:
+            return False
 
     def __check_HEX(self, varin):
-        if (varin[0] == "'") and (varin[-1] == "'") or (varin[0] == '"') and (varin[-1] == '"'):
-            varin = varin[1:-1]
-        return isinstance(varin, datetime)
-        # try:
-        #     reg = re.search(r"^[-+]?(0[xX][\dA-Fa-f]+|0[0-7]*|\d+)$", varin)
-        #     return bool(reg is not None)
-        # except Exception as e:
-        #     return False
+        try:
+            reg = re.search(r"^[-+]?(0[xX][\dA-Fa-f]+|0[0-7]*|\d+)$", varin)
+            return bool(reg is not None)
+        except Exception as e:
+            return False
 
     def __check_DATETIME(self, varin):
-        if (varin[0] == "'") and (varin[-1] == "'") or (varin[0] == '"') and (varin[-1] == '"'):
-            varin = varin[1:-1]
         try:
             reg = datetime.datetime.fromtimestamp(varin, tz=None)
             return bool(reg is not None)
@@ -1047,6 +1108,11 @@ class vParser():
     def __get_fct_name(self):
         result = 'FCT_{}{}'.format(self.__intFctSeq, random.randint(1, 99999999))
         self.__intFctSeq += 1
+        return result
+
+    def __get_in_name(self):
+        result = 'IN_{}{}'.format(self.__intInSeq, random.randint(1, 99999999))
+        self.__intInSeq += 1
         return result
 
 # a = vParser()

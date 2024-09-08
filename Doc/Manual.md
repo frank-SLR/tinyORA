@@ -333,8 +333,14 @@ Comparison of one object between two other objects.
 See: [SEL_COL](#sel_col)
 
 ## WHERE_IN
+Comparison of one object between content of list.
 
-Not yet implemented.
+```
+<SEL_COL> IN ( <CONSTANT>, [ <CONSTANT>, ...] )
+```
+
+See: [SEL_COL](#sel_col)
+
 
 ## FUNCTION
 Functions convert supplied data to a specific format

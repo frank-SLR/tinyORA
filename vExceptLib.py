@@ -149,6 +149,8 @@ class vExept(Exception):
                 self.message = 'Internal error on column name in SELECT clause'
             case 802:
                 self.message = 'Internal error on unknown function ID ({})'.format(message)
+            case 803:
+                self.message = 'Internal error on unknown list ID ({})'.format(message)
             case 888:
                 self.message = 'INTERNAL ERROR: {}'.format(message)
             case 899:
