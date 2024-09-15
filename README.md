@@ -10,6 +10,8 @@ This doc explains the installation procedure.
 
 [SSL](#ssl)
 
+[Parameters file](#parameters-file)
+
 [Start server](#start-server)
 
 ---
@@ -35,6 +37,7 @@ Following modules are mandatory:
 - time
 - shutil
 - tabulate
+- concurrent
 
 You can install them with:
 
@@ -45,6 +48,7 @@ pip install uvicorn[standard]
 pip install cryptography
 pip install requests
 pip install tabulate
+pip install concurrent
 ```
 
 ## SSL
