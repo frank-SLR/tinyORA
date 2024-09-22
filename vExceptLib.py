@@ -138,9 +138,19 @@ class vExept(Exception):
                 self.message = 'Syntax error: reserved word "SET" expected but "{}" found'.format(message)
             case 738:
                 self.message = 'Syntax error: reserved word "WHERE" expected but "{}" found'.format(message)
+            case 739:
+                self.message = 'Syntax error: expect open parenthesis but found "{}"'.format(message)
+            case 740:
+                self.message = 'Syntax error: expect closing parenthesis but found "{}"'.format(message)
+            case 741:
+                self.message = 'Syntax error: reserved word "AND" expected but "{}" found'.format(message)
             # INTERNAL ERROR (800-899)
             case 801:
                 self.message = 'Internal error on column name in SELECT clause'
+            case 802:
+                self.message = 'Internal error on unknown function ID ({})'.format(message)
+            case 803:
+                self.message = 'Internal error on unknown list ID ({})'.format(message)
             case 888:
                 self.message = 'INTERNAL ERROR: {}'.format(message)
             case 899:
@@ -180,7 +190,28 @@ class vExept(Exception):
             # FORMAT (2200-2299)
             case 2200:
                 self.message = 'Invalid format for value ({})'.format(message)
-            # ~~~~~BLANK (2300-9899)
+            case 2201:
+                self.message = 'Invalid type ({})'.format(message)
+            # FUNCTION (2300-2499)
+            case 2300:
+                self.message = 'Bad arguments number for SUBSTR function: {} supplied argument(s) but needs 3'.format(message)
+            case 2301:
+                self.message = '''First argument for SUBSTR function must have 'str' format' ({})'''.format(message)
+            case 2302:
+                self.message = '''Second argument for SUBSTR function must have 'int' format' ({})'''.format(message)
+            case 2303:
+                self.message = '''Third argument for SUBSTR function must have 'int' format' ({})'''.format(message)
+            case 2304:
+                self.message = '''Function does not exist ({})'''.format(message)
+            case 2305:
+                self.message = 'Bad arguments number for TO_CHAR function: {} supplied argument(s) but needs 2'.format(message)
+            case 2306:
+                self.message = '''First argument for TO_CHAR function must have 'datetime' format' ({})'''.format(message)
+            case 2307:
+                self.message = '''Second argument for TO_CHAR function must have 'str' format' ({})'''.format(message)
+            case 2308:
+                self.message = '''Incorrect number of arguments for DECODE function: must be even but {} argument(s) provided'''.format(message)
+            # ~~~~~BLANK (2500-9899)
             # HTML
             case 9900:
                 self.message = 'TABLE parameter has an unexpected value ({})'.format(message)

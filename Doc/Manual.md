@@ -30,6 +30,8 @@ TinyORA is a small database engine. It allows you to manage data using SQL.
 
 [ROLLBACK](#rollback)
 
+[FUNCTION](#function)
+
 ---
 
 > **[]** indicate an optional object
@@ -215,22 +217,52 @@ Invalidates all previous queries.
 ## SEL_COL
 In SELECT statement, the column is identified with:
 
-Single column with optional alias:
+### Single column with optional alias
 ```
 [[<SCHEMA>.]<TABLE_NAME>.]<COLUMN_NAME> [<COL_ALIAS>]
 [<TABLE_ALIAS>.]<COLUMN_NAME> [<COL_ALIAS>]
 ```
+Example:
+Select name and age columns from table using his alias:
+```sql
+select t1.name, t1.age from emp_with_dep t1 where emp_id=12;
+```
 
-All columns from table or cursor:
+### All columns from table or cursor
 ```
 [[<SCHEMA>.]<TABLE_NAME>.]*
 [<TABLE_ALIAS>.]*
+```
+Example:
+Select all columns from table using his alias:
+```sql
+select t1.* from emp_with_dep t1 where emp_id=12;
 ```
 
 Data, can have various formats (string, number,...):
 ```
 <CONSTANT>
 ```
+Example:
+Select constant plus name column from table using his alias:
+```sql
+select 'The name :', t1.name from emp_with_dep t1 where emp_id=12;
+```
+
+### Function to convert one or more columns or function or constant to a specific format
+```
+{ UPPER|LOWER } ( <SEL_COL> )
+```
+UPPER convert to uppercase the data between parentheses
+LOWER convert to lowercase the data between parentheses
+
+Example:
+Select name column in uppercase from table using his alias:
+```sql
+select UPPER(t1.name) from emp_with_dep t1 where emp_id=12;
+```
+
+See: [FUNCTION](#function)
 
 ## FROM_OBJ
 In FROM clause, objects can be tables or sub-queries
@@ -292,10 +324,105 @@ Comparison between two objects.
 See: [SEL_COL](#sel_col), [WHERE_COMPARE](#where_compare)
 
 ## WHERE_BETWEEN
+Comparison of one object between two other objects.
 
-Not yet implemented.
+```
+<SEL_COL> BETWEEN <SEL_COL> AND <SEL_COL>
+```
+
+See: [SEL_COL](#sel_col)
 
 ## WHERE_IN
+Comparison of one object between content of list.
 
-Not yet implemented.
+```
+<SEL_COL> IN ( <CONSTANT>, [ <CONSTANT>, ...] )
+```
 
+See: [SEL_COL](#sel_col)
+
+
+## FUNCTION
+Functions convert supplied data to a specific format
+
+### UPPER
+Convert data to uppercase.
+Output format is 'str'.
+
+```sql
+UPPER ( <SEL_COL> )
+```
+See: [SEL_COL](#sel_col)
+
+### LOWER
+Convert data to lowercase.
+Output format is 'str'.
+
+```sql
+LOWER ( <SEL_COL> )
+```
+See: [SEL_COL](#sel_col)
+
+### SUBSTR
+Extract substring of supplied data.
+Output format is 'str'.
+
+```sql
+SUBSTR ( <SEL_COL>, <FIRST_CHAR_INDEX>, <LENGTH> )
+```
+<SEL_COL>: Input string from witch substring has to been extracted.
+<FIRST_CHAR_INDEX>: Index of first character of the substring. Fist character has index '0'.
+<LENGTH>: Length of the substring.
+
+Example:
+Extract substring 'DEFG' from string 'ABCDEFGH':
+```sql
+SUBSTR('ABCDEFGH', 3, 4)
+```
+
+### TO_CHAR
+Convert datetime to string with fixed format.
+Output format is 'str'.
+
+```sql
+TO_CHAR ( <DATE>, <OUTPUT_FORMAT> )
+```
+<DATE>: Input date to convert.
+<OUTPUT_FORMAT>: Length of the substring.
+
+Formatcoes are:
+|Code|Description|
+| --- | :--- |
+|YYYY|Year with 4 digits|
+|YY|Year with 2 digits|
+|MONTH|Full month name|
+|MON|Abbreviated name of month|
+|MM|Month (01-12; January = 01)|
+|DDD|Day of year (1-366)|
+|DAY|Name of Day|
+|DY|Abbreviated name of day|
+|HH24|Hour of day (0-23)|
+|HH|Hour of day (1-12)|
+|MI|Minute|
+|ss|Second|
+
+Example:
+convert date to YYYY/MM/DD format:
+```sql
+TO_CHAR(date, 'YYY/MM/DD')
+```
+
+See: [SEL_COL](#sel_col)
+
+### DECODE
+DECODE compares FIRST_EXPR to each SEARCH value one by one. If FIRST_EXPR is equal to SEARCH, then DECODE returns the corresponding RESULT. If no match is found, then DECODE returns DEFAULT.
+
+```sql
+DECODE ( <FIST_EXPR>, <SEARCH>, <RESULT>, [ <SEARCH>, <RESULT>, ... ] <DEFAULT> )
+```
+
+Example:
+If value is 1 then return 'FIRST', if value is 2 then return 'SECOND', for other values return 'LATE...':
+```sql
+DECODE(value, 1, 'FIRST', 2, 'SECOND', 'LATE...')
+```
