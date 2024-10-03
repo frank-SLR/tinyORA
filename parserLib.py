@@ -4,7 +4,7 @@ import datetime
 from vExceptLib import vExept
 
 # querytype: (SELECT, INSERT, UPDATE, DELETE, GRANT, REVOKE, CREATE, DROP, DESCRIBE, COMMIT, ROLLBACK)
-# select: table_alias, schema, table_name, col_name/value, alias, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION), table position, position in table, table or cursor, [-]
+# select: table_alias, schema, table_name, col_name/value, alias, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS), table position, position in table, table or cursor, [-]
 # from: table_alias, schema, table_name, TABLE or CURSOR, {table}
 # cursors: cursor_alias, query
 # inner_where: list of items
@@ -15,23 +15,30 @@ from vExceptLib import vExept
 #            or item_id, ['META', item_id], oper, ['META', item_id]
 #            or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], oper, ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
 #            or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], 'BETWEEN', ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor], ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
-# functions : [fct_id, fct_name, [[table_alias, schema, table_name, col_name/value, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION), table position, position in table, table or cursor]]]
-# in : [in_id, (LIST, CURSOR), [[table_alias, schema, table_name, col_name/value, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION), table position, position in table, table or cursor]]]
+# functions : [fct_id, fct_name, [[table_alias, schema, table_name, col_name/value, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS), table position, position in table, table or cursor]]]
+# in : [in_id, (LIST, CURSOR), [[table_alias, schema, table_name, col_name/value, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS), table position, position in table, table or cursor]]]
+# connect : oper, value
+# maths : maths_id, [[[table_alias, schema, table_name, col_name/value, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS), table position, position in table, table or cursor]]], [
+#                    item_id, ['META', item_id], oper, ['META', item_id]
+#                 or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], oper, ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
+#                   ...]
 class vParser():
     def __init__(self) -> None:
         self.__intCurSeq = 0
         self.__intFctSeq = 0
         self.__intInSeq = 0
+        self.__intMathsSeq = 0
         self.__raz()
-        self.__list_of_functions = ['UPPER', 'LOWER', 'SUBSTR', 'TO_CHAR', 'DECODE']
+        self.__list_of_functions = ['UPPER', 'LOWER', 'SUBSTR', 'TO_CHAR', 'DECODE', 'CHAR']
 
     def __raz(self) -> None:
         self.__parsed_query = {"querytype": None, "select": [], "from": [], "where": [], "orderby": [], "groupby": [], "cursors": [],
                                "inner_where": [], "parsed_where": [], "parsed_inner_where": [], "grant": [], "revoke": [], "create": [], "drop": [], "insert": [], "update": [],
-                               "functions": [], "in": []}
+                               "functions": [], "in": [], "connect": [], "maths": []}
         self.__query = ''
 
     def parse_query(self, query:str) -> dict:
+        # print(query)
         self.__raz()
         if len(query) > 0:
             self.__query = query.strip()
@@ -91,6 +98,11 @@ class vParser():
                         pos += 1
                         if len(result) > 0:
                             __continue = False
+                    case '+' | '-' | '/' | '*':
+                        if len(result) == 0:
+                            result = self.__query[pos]
+                            pos += 1
+                        __continue = False
                     case '(' | ')' | ',' | '=':
                         if len(result) == 0:
                             result = self.__query[pos]
@@ -152,8 +164,9 @@ class vParser():
     def __parse_select(self, pos):
         word = ''
         # SELECT
-        while word.upper() != 'FROM':
+        while (word.upper() != 'FROM') and (pos < len(self.__query)):
             word, pos = self.__parse_SEL_COL(pos)
+        # print(self.__parsed_query)
         # FROM
         while (word.upper() not in self.__list_of_word(['FROM'])) and (pos < len(self.__query)):
             word, pos = self.__parse_FROM_OBJ(pos)
@@ -171,6 +184,8 @@ class vParser():
                 pass
         if (word.upper() == 'WHERE') and (pos < len(self.__query)):
             word, pos = self.__parse_WHERE_CLAUSE(pos)
+        if (word.upper() == 'CONNECT') and (pos < len(self.__query)):
+            word, pos = self.__parse_CONNECT_BY_VALUE(pos)
         if (word.upper() == 'ORDER') and (pos < len(self.__query)):
             pass
         if (word.upper() == 'GROUP') and (pos < len(self.__query)):
@@ -190,13 +205,7 @@ class vParser():
         for n in range(len(self.__parsed_query["select"])):
             if (self.__parsed_query["select"][n][5] is None) or (self.__parsed_query["select"][n][5] == 'COLUMN'):
                 fmt, al, cn, sh, tn, tc, nt = self.__getColFromTable(self.__parsed_query["select"][n][3])
-                self.__parsed_query["select"][n][0] = al
-                self.__parsed_query["select"][n][1] = sh
-                self.__parsed_query["select"][n][2] = tn
-                self.__parsed_query["select"][n][3] = cn
-                self.__parsed_query["select"][n][5] = fmt
-                self.__parsed_query["select"][n][6] = nt
-                self.__parsed_query["select"][n][8] = tc
+                self.__parsed_query["select"][n] = [al, sh, tn, cn, None, fmt, nt, None, tc]
         # functions:
         #   0: table_alias
         #   1: schema
@@ -210,19 +219,13 @@ class vParser():
             for n in range (len(self.__parsed_query["functions"][f][2])):
                 if (self.__parsed_query["functions"][f][2][n][4] is None) or (self.__parsed_query["functions"][f][2][n][4] == 'COLUMN'):
                     fmt, al, cn, sh, tn, tc, nt = self.__getColFromTable(self.__parsed_query["functions"][f][2][n][3])
-                    self.__parsed_query["functions"][f][2][n][0] = al
-                    self.__parsed_query["functions"][f][2][n][1] = sh
-                    self.__parsed_query["functions"][f][2][n][2] = tn
-                    self.__parsed_query["functions"][f][2][n][3] = cn
-                    self.__parsed_query["functions"][f][2][n][4] = fmt
-                    self.__parsed_query["functions"][f][2][n][5] = nt
-                    self.__parsed_query["functions"][f][2][n][7] = tc
+                    self.__parsed_query["functions"][f][2][n] = [al, sh, tn, cn, fmt, nt, None, tc]
         # in:
         #   0: table_alias
         #   1: schema
         #   2: table_name
         #   3: col_name/value
-        #   4: type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION)
+        #   4: type(COL, INT, FLOAT, STR, HEX, DATETIME, COLUMN, FUNCTION)
         #   5: table position
         #   6: position in table
         #   7: table or cursor
@@ -230,13 +233,44 @@ class vParser():
             for n in range (len(self.__parsed_query["in"][f][2])):
                 if (self.__parsed_query["in"][f][2][n][4] is None) or (self.__parsed_query["in"][f][2][n][4] == 'COLUMN'):
                     fmt, al, cn, sh, tn, tc, nt = self.__getColFromTable(self.__parsed_query["in"][f][2][n][3])
-                    self.__parsed_query["in"][f][2][n][0] = al
-                    self.__parsed_query["in"][f][2][n][1] = sh
-                    self.__parsed_query["in"][f][2][n][2] = tn
-                    self.__parsed_query["in"][f][2][n][3] = cn
-                    self.__parsed_query["in"][f][2][n][4] = fmt
-                    self.__parsed_query["in"][f][2][n][5] = nt
-                    self.__parsed_query["in"][f][2][n][7] = tc
+                    self.__parsed_query["in"][f][2][n] = [al, sh, tn, cn, fmt, nt, None, tc]
+        # maths
+        #   0: (TST, META)
+        #   1: table_alias
+        #   2: schema
+        #   3: table_name
+        #   4: col_name/value
+        #   5: type(COL, INT, FLOAT, STR, HEX, DATETIME, COLUMN, FUNCTION)
+        #   6: table position
+        #   7: position in table
+        #   8: table or cursor
+        for f in range(len(self.__parsed_query["maths"])):
+            for n in range (len(self.__parsed_query["maths"][f][1])):
+                val = self.__parsed_query["maths"][f][1][n]
+                if val in ['+', '-', '*', '/']:
+                    self.__parsed_query["maths"][f][1][n] = [val]
+                elif val in ['(', ')']:
+                    self.__parsed_query["maths"][f][1][n] = [val]
+                elif self.__check_INT(val):
+                    self.__parsed_query["maths"][f][1][n] = [None, None, None, val, 'INT', None, None, None]
+                elif self.__check_FLOAT(val):
+                    self.__parsed_query["maths"][f][1][n] = [None, None, None, val, 'FLOAT', None, None, None]
+                else:
+                    flg, _ = self.__get_function(val)
+                    if flg:
+                        self.__parsed_query["maths"][f][1][n] = [None, None, None, val, 'FUNCTION', None, None, None]
+                    else:
+                        fmt, al, cn, sh, tn, tc, nt = self.__getColFromTable(val)
+                        self.__parsed_query["maths"][f][1][n] = [al, sh, tn, cn, fmt, nt, None, tc]
+        # generate maths
+        for f in range(len(self.__parsed_query["maths"])):
+            lst_maths = []
+            m_idx = 0
+            bracket = 0
+            v_idx = 0
+            for im in self.__parsed_query["maths"][f][1]:
+                m_idx, lst_maths, v_idx, bracket = self.__compute_maths(self.__parsed_query["maths"][f][1], m_idx, lst_maths, v_idx, None, bracket)
+            self.__parsed_query["maths"][f][2] = lst_maths
         # generate where test
         lst_where = []
         w_idx = 0
@@ -254,6 +288,12 @@ class vParser():
             while w_idx < len(iw):
                 w_idx, lst_where, v_idx, bracket = self.__compute_where(iw, w_idx, lst_where, v_idx, 'AND', bracket)
             self.__parsed_query['parsed_inner_where'].append(lst_where)
+
+    def __get_function(self, fct_id):
+        for n in range(len(self.__parsed_query["functions"])):
+            if self.__parsed_query["functions"][n][0] == fct_id:
+                return True, n
+        return False, None
 
     def __parse_insert(self, pos):
         word, pos = self.__parse_word(pos)
@@ -636,7 +676,7 @@ class vParser():
         # 3: table_name
         # 4: col_name/value
         # 5: alias
-        # 6: type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION)
+        # 6: type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS)
         # 7: table position
         # 8: position in table
         # 9: table or cursor
@@ -647,6 +687,13 @@ class vParser():
         word, pos = self.__parse_word(pos)
         if word.upper() in [',', 'FROM']:
             self.__parsed_query["select"].append([None, None, None, col, None, None, None, None, None, []])
+        elif word.upper() in ['+', '-', '*', '/'] or col == '(':
+            word, maths_id, pos = self.__parse_maths(col, word, pos)
+            if word.upper() in [',', 'FROM']:
+                self.__parsed_query["select"].append([None, None, None, maths_id, None, 'MATHS', None, None, None, []])
+            else:
+                self.__parsed_query["select"].append([None, None, None, maths_id, word, 'MATHS', None, None, None, []])
+                word, pos = self.__parse_word(pos)
         else:
             if self.__is_function(col.upper()):
                 if word != '(':
@@ -665,6 +712,53 @@ class vParser():
                 raise vExept(702, word)
         return word, pos
 
+    def __parse_maths(self, col, word, pos):
+        # maths : maths_id, [[element1, type(INT, FLOAT, MATHS), ...], [
+        #                    item_id, ['META', item_id], oper, ['META', item_id]
+        #                 or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], oper, ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
+        #                   ...]
+        lvl = 0
+        maths_id = self.__get_maths_name()
+        tmpM = [maths_id, [col, word], []]
+        if col == '(':
+            lvl += 1
+        encore = True
+        wait_for_sign = False
+        while encore  and (pos < len(self.__query)):
+            word, pos = self.__parse_word(pos)
+            encore = bool((word.upper() not in ['FROM', ',']))
+            if word == '(':
+                lvl += 1
+            elif word == ')':
+                if lvl > 0:
+                    lvl -= 1
+                else:
+                    encore = False
+            elif word.upper() in ['CONNECT', 'IN', 'BETWEEN', '>', '>=', '=', '<', '<=', '!=', '<>']:
+                encore = False
+            if encore:
+                if self.__is_function(word.upper()):
+                    col, pos = self.__parse_word(pos)
+                    if col != '(':
+                        raise vExept(739, word)
+                    fct_col, pos = self.__parse_COL_FCT(word.upper(), pos)
+                    tmpM[1].append(fct_col)
+                    wait_for_sign = not wait_for_sign
+                else:
+                    if wait_for_sign:
+                        if word in ['+', '-', '*', '/']:
+                            tmpM[1].append(word)
+                            wait_for_sign = not wait_for_sign
+                        else:
+                            encore = False
+                    else:
+                        tmpM[1].append(word)
+                        wait_for_sign = not wait_for_sign
+        if lvl > 0:
+            raise vExept(740, word)
+        self.__parsed_query["maths"].append(tmpM)
+        return word, maths_id, pos
+
     def __is_function(self, fct_name):
         return bool(fct_name.upper() in self.__list_of_functions)
 
@@ -674,7 +768,7 @@ class vParser():
         #   2: schema
         #   3: table_name
         #   4: col_name/value
-        #   5: type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION)
+        #   5: type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS)
         #   6: table position
         #   7: position in table
         #   8: table or cursor]]]
@@ -682,7 +776,7 @@ class vParser():
         fct_id = self.__get_fct_name()
         self.__parsed_query["functions"].append([fct_id, fct_name, []])
         word = ''
-        while word != ')':
+        while (word != ')') and (pos < len(self.__query)):
             word, pos = self.__parse_word(pos)
             if self.__is_function(word.upper()):
                 col, pos = self.__parse_word(pos)
@@ -690,11 +784,23 @@ class vParser():
                     raise vExept(739, col)
                 sub_fct, pos = self.__parse_COL_FCT(word.upper(), pos)
                 self.__parsed_query["functions"][fct_idx][2].append([None, None, None, sub_fct, 'FUNCTION', None, None, None])
+                word, pos = self.__parse_word(pos)
+                if (word != ',') and (word != ')'):
+                    raise vExept(702, word)
             else:
-                self.__parsed_query["functions"][fct_idx][2].append([None, None, None, word, None, None, None, None])
-            word, pos = self.__parse_word(pos)
-            if (word != ',') and (word != ')'):
-                raise vExept(702, word)
+                elem = word
+                word, pos = self.__parse_word(pos)
+                if word in ['+', '-', '*', '/']:
+                    word, maths_id, pos = self.__parse_maths(elem, word, pos)
+                    self.__parsed_query["functions"][fct_idx][2].append([None, None, None, maths_id, 'MATHS', None, None, None])
+                    if (word != ',') and (word != ')'):
+                        raise vExept(702, word)
+                elif (word != ',') and (word != ')'):
+                    raise vExept(702, word)
+                else:
+                    self.__parsed_query["functions"][fct_idx][2].append([None, None, None, elem, None, None, None, None])
+                    if (word != ',') and (word != ')'):
+                        raise vExept(702, word)
         if word != ')':
             raise vExept(740, col)
         return fct_id, pos
@@ -855,14 +961,23 @@ class vParser():
     def __parse_WHERE_CLAUSE(self, pos):
         word, pos = self.__parse_word(pos)
         m1, op = None, None
-        while (word.upper() not in ['GROUP', 'ORDER']) and (pos < len(self.__query)):
+        while (word.upper() not in ['GROUP', 'ORDER', 'CONNECT']) and (pos < len(self.__query)):
             if self.__is_function(word.upper()):
                 par, pos = self.__parse_word(pos)
                 if par != '(':
                     raise vExept(739, par)
                 word, pos = self.__parse_COL_FCT(word.upper(), pos)
-            if word.upper() in ['(', ')', 'AND', 'OR']:
+            if word.upper() in [')', 'AND', 'OR']:
                 self.__parsed_query["where"].append([word])
+            elif word == '(':
+                if m1 is None:
+                    self.__parsed_query["where"].append([word])
+                else:
+                    word, maths_id, pos = self.__parse_maths(m1, word, pos)
+                    if word == ')':
+                        m1 = maths_id
+                    else:
+                        raise vExept(740, word)
             elif m1 is None:
                 m1 = word
             elif op is None:
@@ -892,6 +1007,8 @@ class vParser():
                     col_lst_name, pos = self.__parse_COL_IN(pos)
                     self.__parsed_query["where"].append([m1, 'IN', col_lst_name])
                     m1, op = None, None
+                elif op in ['+', '-', '*', '/']:
+                    op, m1, pos = self.__parse_maths(m1, op, pos)
             else:
                 self.__parsed_query["where"].append([m1, op, word])
                 m1, op = None, None
@@ -902,6 +1019,22 @@ class vParser():
         self.__remove_parenthesis(_where = self.__parsed_query["where"])
         return word, pos
 
+    def __parse_CONNECT_BY_VALUE(self, pos):
+        word, pos = self.__parse_word(pos)
+        if word.upper() != 'BY':
+            raise vExept(742, word)
+        word, pos = self.__parse_word(pos)
+        if word.upper() != 'LEVEL':
+            raise vExept(743, word)
+        oper, pos = self.__parse_word(pos)
+        if oper not in ['<', '<=']:
+            raise vExept(744, oper)
+        value, pos = self.__parse_word(pos)
+        if not self.__check_INT(value):
+            raise vExept(745, value)
+        self.__parsed_query["connect"] = [oper, int(value)]
+        return word, pos
+        
     def __getCursor(self, curin):
         found = False
         if len(self.__parsed_query["cursors"]) > 0:
@@ -988,10 +1121,14 @@ class vParser():
                 # 9: table or cursor
                 if self.__is_parsed_function(x[0]):
                     fmt1, alias1, col1, schema1, table_name1, tab_cur1, num_tab1 = 'FUNCTION', None, x[0], None, None, None, None
+                elif self.__is_parsed_maths(x[0]):
+                    fmt1, alias1, col1, schema1, table_name1, tab_cur1, num_tab1 = 'MATHS', None, x[0], None, None, None, None
                 else:
                     fmt1, alias1, col1, schema1, table_name1, tab_cur1, num_tab1 = self.__getColFromTable(x[0])
                 if self.__is_parsed_function(x[2]):
                     fmt2, alias2, col2, schema2, table_name2, tab_cur2, num_tab2 = 'FUNCTION', None, x[2], None, None, None, None
+                elif self.__is_parsed_maths(x[2]):
+                    fmt2, alias2, col2, schema2, table_name2, tab_cur2, num_tab2 = 'MATHS', None, x[2], None, None, None, None
                 elif x[1].upper() == 'IN':
                     list2 = x[2]
                 else:
@@ -1033,9 +1170,55 @@ class vParser():
                 v_idx += 1
         return w_idx, lst_where, v_idx, bracket
 
+    def __compute_maths(self, parsed_where, w_idx, lst_where:list, v_idx, oper, bracket):
+        while w_idx < len(parsed_where):
+            x : list = parsed_where[w_idx]
+            w_idx += 1
+            if len(x) > 1:
+                # 1: 'TST'
+                # 2: num_table
+                # 3: num_col
+                # 4: alias1
+                # 5: field1
+                # 6: type
+                # 7: schema
+                # 8: table_name
+                # 9: table or cursor
+                lst_where.append([v_idx, ['TST', x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7]]])
+                current_v_idx = v_idx
+                v_idx += 1
+            elif w_idx < len(parsed_where):    
+                if (x[0] in ['*', '/']) and ((oper == '*/') or (oper is None)):
+                    w_idx, lst_where, v_idx, bracket = self.__compute_maths(parsed_where, w_idx, lst_where, v_idx, '*/', bracket)
+                    lst_where.append([v_idx, ['META', current_v_idx], x[0], ['META', v_idx-1]])
+                    current_v_idx = v_idx
+                    v_idx += 1
+                elif (x[0] in ['+', '-']) and ((oper == '+-') or (oper is None)):
+                    w_idx, lst_where, v_idx, bracket = self.__compute_maths(parsed_where, w_idx, lst_where, v_idx, '+-', bracket)
+                    lst_where.append([v_idx, ['META', current_v_idx], x[0], ['META', v_idx-1]])
+                    current_v_idx = v_idx
+                    v_idx += 1
+                elif x[0] == '(':
+                    bracket += 1
+                    current_v_idx = v_idx-1
+                    w_idx, lst_where, v_idx, bracket = self.__compute_maths(parsed_where, w_idx, lst_where, v_idx, None, bracket)
+                elif x[0] == ')':
+                    bracket -= 1
+                    return w_idx, lst_where, v_idx, bracket
+                else:
+                    w_idx -= 1
+                    return w_idx, lst_where, v_idx, bracket
+        return w_idx, lst_where, v_idx, bracket
+
     def __is_parsed_function(self, fct_id):
         for n in range(len(self.__parsed_query["functions"])):
             if self.__parsed_query["functions"][n][0] == fct_id:
+                return True
+        return False
+
+    def __is_parsed_maths(self, maths_id):
+        for n in range(len(self.__parsed_query["maths"])):
+            if self.__parsed_query["maths"][n][0] == maths_id:
                 return True
         return False
 
@@ -1094,7 +1277,7 @@ class vParser():
             return False
         
     def __list_of_word(self, except_this:list):
-        lst = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'FROM', 'INNER', 'LEFT', 'RIGHT', 'WHERE', 'GROUP', 'ORDER', 'CREATE', 'DROP', 'TABLE', 'INDEX']
+        lst = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'FROM', 'INNER', 'LEFT', 'RIGHT', 'WHERE', 'GROUP', 'ORDER', 'CREATE', 'DROP', 'TABLE', 'INDEX', 'CONNECT']
         for et in except_this:
             if et in lst:
                 del lst[lst.index(et)]
@@ -1113,6 +1296,11 @@ class vParser():
     def __get_in_name(self):
         result = 'IN_{}{}'.format(self.__intInSeq, random.randint(1, 99999999))
         self.__intInSeq += 1
+        return result
+
+    def __get_maths_name(self):
+        result = 'MATHS_{}{}'.format(self.__intMathsSeq, random.randint(1, 99999999))
+        self.__intMathsSeq += 1
         return result
 
 # a = vParser()

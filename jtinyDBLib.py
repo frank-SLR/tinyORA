@@ -409,20 +409,31 @@ class JSONtinyDB():
     def getTable(self, owner, table_name):
         count = 0
         result = None
-        for t in self.db["Tables"]:
-            if (t["table_name"] == table_name) and (((owner is not None) and (t["schema"] == owner)) or (owner is None)):
-                count += 1
-                result = copy.deepcopy(t)
-        if count == 0:
-            if owner is None:
-                raise vExept(210, table_name)
-            else:
-                raise vExept(210, '{}.{}'.format(owner, table_name))
-        elif count > 1:
-            if owner is None:
-                raise vExept(211, table_name)
-            else:
-                raise vExept(211, '{}.{}'.format(owner, table_name))
+        if table_name == 'DUAL':
+            result = {
+                "table_name": "DUAL",
+                "schema": owner,
+                "columns": [
+                    ["LEVEL", "int"],
+                    ["X", "str"]
+                ],
+                "rows": []
+                }
+        else:
+            for t in self.db["Tables"]:
+                if (t["table_name"] == table_name) and (((owner is not None) and (t["schema"] == owner)) or (owner is None)):
+                    count += 1
+                    result = copy.deepcopy(t)
+            if count == 0:
+                if owner is None:
+                    raise vExept(210, table_name)
+                else:
+                    raise vExept(210, '{}.{}'.format(owner, table_name))
+            elif count > 1:
+                if owner is None:
+                    raise vExept(211, table_name)
+                else:
+                    raise vExept(211, '{}.{}'.format(owner, table_name))
         return result
 
     def checkTableExists(self, owner, table_name):

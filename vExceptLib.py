@@ -144,6 +144,14 @@ class vExept(Exception):
                 self.message = 'Syntax error: expect closing parenthesis but found "{}"'.format(message)
             case 741:
                 self.message = 'Syntax error: reserved word "AND" expected but "{}" found'.format(message)
+            case 742:
+                self.message = 'Syntax error: reserved word "BY" expected but "{}" found'.format(message)
+            case 743:
+                self.message = 'Syntax error: reserved word "LEVEL" expected but "{}" found'.format(message)
+            case 744:
+                self.message = 'Syntax error: comparator expected (< or <=) but "{}" found'.format(message)
+            case 745:
+                self.message = 'Syntax error: integer expected but "{}" found'.format(message)
             # INTERNAL ERROR (800-899)
             case 801:
                 self.message = 'Internal error on column name in SELECT clause'
@@ -151,6 +159,8 @@ class vExept(Exception):
                 self.message = 'Internal error on unknown function ID ({})'.format(message)
             case 803:
                 self.message = 'Internal error on unknown list ID ({})'.format(message)
+            case 804:
+                self.message = 'Internal error on unknown maths ID ({})'.format(message)
             case 888:
                 self.message = 'INTERNAL ERROR: {}'.format(message)
             case 899:
@@ -211,6 +221,8 @@ class vExept(Exception):
                 self.message = '''Second argument for TO_CHAR function must have 'str' format' ({})'''.format(message)
             case 2308:
                 self.message = '''Incorrect number of arguments for DECODE function: must be even but {} argument(s) provided'''.format(message)
+            case 2309:
+                self.message = '''Incorrect number of arguments for CHAR function: must be 1 but {} argument(s) provided'''.format(message)
             # ~~~~~BLANK (2500-9899)
             # HTML
             case 9900:

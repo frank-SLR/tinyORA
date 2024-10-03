@@ -26,10 +26,13 @@ class vSession(object):
 
     def submit_query(self, _query:str):
         self.__parsed_query = vParser().parse_query(query=_query)
-        # print(self.__parsed_query['where'])
-        # print(self.__parsed_query['parsed_where'])
+        print(self.__parsed_query['select'])
+        print(self.__parsed_query['where'])
+        print(self.__parsed_query['parsed_where'])
         # print(self.__parsed_query['in'])
         # print(self.__parsed_query['functions'])
+        print(self.__parsed_query['connect'])
+        print(self.__parsed_query['maths'])
 
         if self.__parsed_query["querytype"] in ['SELECT']:
             result = {"columns": [], "rows": []}
@@ -343,6 +346,8 @@ class vSession(object):
                             rrow.append(s[3][1:-1])
                         elif s[5] == 'FUNCTION':
                             rrow.append(self.__compute_function(s[3]))
+                        elif s[5] == 'MATHS':
+                            rrow.append(self.__compute_maths(s[3]))
                         else:
                             raise vExept(801)
                     self.__result.append(rrow)
@@ -352,6 +357,12 @@ class vSession(object):
             if self.__parsed_query["functions"][n][0] == fct_id:
                 return n
         raise vExept(802, fct_id)
+
+    def __get_maths(self, maths_id):
+        for n in range(len(self.__parsed_query["maths"])):
+            if self.__parsed_query["maths"][n][0] == maths_id:
+                return n
+        raise vExept(804, maths_id)
 
     def __get_in(self, in_id):
         for n in range(len(self.__parsed_query["in"])):
@@ -364,6 +375,8 @@ class vSession(object):
             return self.__parsed_query["from"][colblk[5]][4][0]["rows"][self.__RowsPosInTables[colblk[5]]][colblk[6]]
         elif colblk[4] == 'FUNCTION':
             return self.__compute_function(colblk[3])
+        elif colblk[4] == 'MATHS':
+            return self.__compute_maths(colblk[3])
         else:
             if colblk[4] is None:
                 return colblk[3]
@@ -440,12 +453,16 @@ class vSession(object):
                         c1 = self.__parsed_query["from"][tst[1][1]][4][0]["rows"][self.__RowsPosInTables[tst[1][1]]][tst[1][2]]
                     elif tst[1][5] == "FUNCTION":
                         c1 = self.__compute_function(tst[1][4])
+                    elif tst[1][5] == 'MATHS':
+                        c1 = self.__compute_maths(tst[1][4])
                     else:
                         c1 = tst[1][4]
                     if tst[3][5] == "COLUMN":
                         c2 = self.__parsed_query["from"][tst[3][1]][4][0]["rows"][self.__RowsPosInTables[tst[3][1]]][tst[3][2]]
                     elif tst[3][5] == "FUNCTION":
                         c2 = self.__compute_function(tst[3][4])
+                    elif tst[3][5] == 'MATHS':
+                        c2 = self.__compute_maths(tst[3][4])
                     else:
                         c2 = tst[3][4]
                     tstoper = tst[2]
@@ -454,6 +471,8 @@ class vSession(object):
                             c3 = self.__parsed_query["from"][tst[4][1]][4][0]["rows"][self.__RowsPosInTables[tst[4][1]]][tst[4][2]]
                         elif tst[4][5] == "FUNCTION":
                             c3 = self.__compute_function(tst[4][4])
+                        elif tst[4][5] == 'MATHS':
+                            c3 = self.__compute_maths(tst[4][4])
                         else:
                             c3 = tst[4][4]
                         result = self.__compare_cols(str(c1), str(c2), '>=') and self.__compare_cols(str(c1), str(c3), '<=')
@@ -585,6 +604,8 @@ class vSession(object):
         result = self.__validate_select(result)
         # generate columns for functions
         self.__validate_function()
+        # generate columns for maths
+        self.__validate_maths()
         # generate data for where clause
         self.__validate_where()
         # generate data for where clause of inner join
@@ -918,7 +939,15 @@ class vSession(object):
                 # print('table locale: ', table_name)
                 return copy.deepcopy(ut)
         # print('table de la base: ', table_name)
-        return copy.deepcopy(self.db.getTable(owner=owner, table_name=table_name))
+        tbl = copy.deepcopy(self.db.getTable(owner=owner, table_name=table_name))
+        if len(self.__parsed_query['connect']) == 2:
+            if self.__parsed_query['connect'][0] == '<':
+                for n in range(self.__parsed_query['connect'][1]-1):
+                    tbl["rows"].append([n+1, None])
+            else:
+                for n in range(self.__parsed_query['connect'][1]):
+                    tbl["rows"].append([n+1, None])
+        return tbl
 
     def __add_updated_table(self, tbl):
         found = False
@@ -989,6 +1018,21 @@ class vSession(object):
             if cs >= len(self.__parsed_query["select"]):
                 chk = False
         return result
+
+    def __validate_maths(self):
+        for n in range(len(self.__parsed_query["maths"])):
+            for m in range(len(self.__parsed_query["maths"][n][2])):
+                cblk = self.__parsed_query["maths"][n][2][m]
+                if (len(cblk) == 2) and (cblk[1][5] == 'COLUMN'):
+                    colin, aliasin, table_namein, schemain, tf, ctf, ctype = self.__searchColInFromTables(colin=cblk[1][4],
+                                                                                                          aliasin=cblk[1][1],
+                                                                                                          table_namein=cblk[1][3],
+                                                                                                          schemain=cblk[1][2])
+                    self.__parsed_query["maths"][n][2][m][1][1] = aliasin
+                    self.__parsed_query["maths"][n][2][m][1][2] = schemain
+                    self.__parsed_query["maths"][n][2][m][1][3] = table_namein
+                    self.__parsed_query["maths"][n][2][m][1][6] = tf
+                    self.__parsed_query["maths"][n][2][m][1][7] = ctf
 
     def __validate_function(self):
         # # functions format:
@@ -1088,12 +1132,15 @@ class vSession(object):
                     break
             match str(grant_needed).upper():
                 case 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE':
-                    for grant in grants[str(grant_needed).upper()]:
-                        if (((grant[1] == str(owner).upper()) and (grant[0] == 'SCHEMA')) or \
-                           ((grant[1] == '{}.{}'.format(owner, obj_name).upper()) and (grant[0] == 'TABLE'))) and \
-                           (admin == 'NO' or admin == grant[2]):
-                            result = True
-                            break
+                    if str(grant_needed).upper() == 'SELECT' and  obj_name == 'DUAL':
+                        result = True
+                    else:
+                        for grant in grants[str(grant_needed).upper()]:
+                            if (((grant[1] == str(owner).upper()) and (grant[0] == 'SCHEMA')) or \
+                            ((grant[1] == '{}.{}'.format(owner, obj_name).upper()) and (grant[0] == 'TABLE'))) and \
+                            (admin == 'NO' or admin == grant[2]):
+                                result = True
+                                break
                 case 'CREATE' | 'DROP' :
                     for grant in grants[str(grant_needed).upper()]:
                         match grant[0]:
@@ -1110,6 +1157,43 @@ class vSession(object):
                                     result = True
                                     break
         return result
+
+    def __compute_maths(self, maths_id):
+        # maths
+        #   0: (TST, META)
+        #   1: table_alias
+        #   2: schema
+        #   3: table_name
+        #   4: col_name/value
+        #   5: type(COL, INT, FLOAT, STR, HEX, DATETIME, COLUMN, FUNCTION)
+        #   6: table position
+        #   7: position in table
+        #   8: table or cursor
+        maths_num = self.__get_maths(maths_id)
+        tmp_res = []
+        for blk in self.__parsed_query["maths"][maths_num][2]:
+            # print('__compute_maths', blk)
+            if blk[1][0] == 'TST':
+                match blk[1][5]:
+                    case 'INT':
+                        tmp_res.append(int(blk[1][4]))
+                    case 'FLOAT':
+                        tmp_res.append(float(blk[1][4]))
+                    case 'FUNCTION':
+                        tmp_res.append(self.__compute_function(blk[1][4]))
+                    case 'COLUMN':
+                        tmp_res.append(self.__parsed_query["from"][blk[1][6]][4][0]["rows"][self.__RowsPosInTables[blk[1][6]]][blk[1][7]])
+            else:
+                match blk[2]:
+                    case '+':
+                        tmp_res.append(tmp_res[blk[1][1]] + tmp_res[blk[3][1]])
+                    case '-':
+                        tmp_res.append(tmp_res[blk[1][1]] - tmp_res[blk[3][1]])
+                    case '*':
+                        tmp_res.append(tmp_res[blk[1][1]] * tmp_res[blk[3][1]])
+                    case '/':
+                        tmp_res.append(tmp_res[blk[1][1]] / tmp_res[blk[3][1]])
+        return tmp_res[-1]
 
     def __compute_function(self, fct_id):
         # functions : [fct_id, fct_name, [[table_alias, schema, table_name, col_name/value, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION), table position, position in table, table or cursor]]]
@@ -1165,10 +1249,14 @@ class vSession(object):
                 if dont_stop_flg:
                     res = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][-1])
                 return res
+            case 'CHAR':
+                if len(self.__parsed_query["functions"][fct_num][2]) != 1:
+                    raise vExept(2309, len(self.__parsed_query["functions"][fct_num][2]))
+                return str(chr(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])))
 
     def __get_function_type(self, fct_name: str, ref_col_typ: str):
         match fct_name:
-            case 'UPPER'|'LOWER'|'SUBSTR'|'TO_CHAR':
+            case 'UPPER'|'LOWER'|'SUBSTR'|'TO_CHAR'|'CHAR':
                 return 'str'
             case 'DECODE':
                 if ref_col_typ.upper() in ['INT', 'FLOAT', 'STR', 'HEX', 'DATETIME']:
