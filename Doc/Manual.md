@@ -64,6 +64,21 @@ inner join hr.site s on d.site_id=s.site_id
 where s.site_name='San Francisco';
 ```
 
+### Special SELECT
+Generate range of integer with following syntax:
+
+```sql
+select level
+from dual
+connect by level < <INTEGER>;
+```
+or 
+```sql
+select level
+from dual
+connect by level <= <INTEGER>;
+```
+
 See: [SEL_COL](#sel_col), [FROM_OBJ](#from_obj), [INNER_CLAUSE](#inner_clause), [WHERE_CLAUSE](#where_clause)
 
 ## DESC | DESCRIBE:
