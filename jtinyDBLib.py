@@ -2,7 +2,7 @@ import json
 import copy
 import time
 import os, copy
-from vExceptLib import vExept
+from vExceptLib import vExcept
 
 
 # JSON DB
@@ -20,7 +20,7 @@ class JSONtinyDB():
                 self.__file_db = '{}/db.json'.format(self.__db_base_dir)
                 self.__loadDB()
             else:
-                raise vExept(12, str(self.__db_base_dir))
+                raise vExcept(12, str(self.__db_base_dir))
 
     def create_db(self, _db_base_dir, admin_password):
         try:
@@ -56,7 +56,7 @@ class JSONtinyDB():
                     self.saveDB()
                     self.__loadDB()
             else:
-                raise vExept(16, _db_base_dir)
+                raise vExcept(16, _db_base_dir)
         except:
             pass
 
@@ -84,13 +84,13 @@ class JSONtinyDB():
                             tbl_file_id.close()
                         else:
                             __id_db.close()
-                            raise vExept(24, str('{}.{}'.format(__USR, __TBL)))
+                            raise vExcept(24, str('{}.{}'.format(__USR, __TBL)))
                 else:
                     __id_db.close()
-                    raise vExept(13, str(__USR))
+                    raise vExcept(13, str(__USR))
             __id_db.close()
         else:
-            raise vExept(23, str(self.__file_db))
+            raise vExcept(23, str(self.__file_db))
 
     def save(self, obj_to_commit):
         if self.__DB_enable:
@@ -106,7 +106,7 @@ class JSONtinyDB():
                     json.dump(self.db["Tables"][n], indent=4, fp=tbl_file_id)
                     tbl_file_id.close()
         else:
-            raise vExept(15)
+            raise vExcept(15)
 
     def add_lock(self, session_id, owner, name, lock_type):
         # return 0 => lock acquired
@@ -141,7 +141,7 @@ class JSONtinyDB():
             # print(self.__locks)
             return 0
         else:
-            raise vExept(15)
+            raise vExcept(15)
 
     def del_locks(self, session_id, lock_type, owner=None, name=None):
         if self.__DB_enable:
@@ -158,7 +158,7 @@ class JSONtinyDB():
                         del self.__locks[n]
             self.__latchcnt -= 1
         else:
-            raise vExept(15)
+            raise vExcept(15)
 
     def AddTableFile(self, owner, table_name, table_data):
         if self.__DB_enable:
@@ -169,19 +169,19 @@ class JSONtinyDB():
             json.dump(table_data, indent=4, fp=tbl_file_id)
             tbl_file_id.close()
         else:
-            raise vExept(15)
+            raise vExcept(15)
 
     def AddTableToMeta(self, owner, table_name):
         if self.__DB_enable:
             self.__meta_db["Tables"][str(owner).upper()].append(table_name.upper())
         else:
-            raise vExept(15)
+            raise vExcept(15)
 
     def AddTableToDB(self, table_data):
         if self.__DB_enable:
             self.db["Tables"].append(table_data)
         else:
-            raise vExept(15)
+            raise vExcept(15)
 
     def UpdTableToDB(self, table_data):
         if self.__DB_enable:
@@ -190,7 +190,7 @@ class JSONtinyDB():
                     self.db["Tables"][n] = copy.deepcopy(table_data)
                     break
         else:
-            raise vExept(15)
+            raise vExcept(15)
 
     def DelTableFromMeta(self, owner, table_name):
         if self.__DB_enable:
@@ -216,7 +216,7 @@ class JSONtinyDB():
                        (self.__meta_db["Accounts"][aID]["grants"]["DELETE"][sID][1] == '{}.{}'.format(owner, table_name)):
                         del self.__meta_db["Accounts"][aID]["grants"]["DELETE"][sID]
         else:
-            raise vExept(15)
+            raise vExcept(15)
 
     def DelTableFromDB(self, owner, table_name):
         if self.__DB_enable:
@@ -242,7 +242,7 @@ class JSONtinyDB():
                        (self.db["Accounts"][aID]["grants"]["DELETE"][sID][1] == '{}.{}'.format(owner, table_name)):
                         del self.db["Accounts"][aID]["grants"]["DELETE"][sID]
         else:
-            raise vExept(15)
+            raise vExcept(15)
 
     def DelTableFile(self, owner, table_name):
         if self.__DB_enable:
@@ -250,9 +250,9 @@ class JSONtinyDB():
             if os.path.isfile(file_path_name):
                 os.remove(file_path_name)
             else:
-                raise vExept(14, '{}.{}'.format(owner, table_name))
+                raise vExcept(14, '{}.{}'.format(owner, table_name))
         else:
-            raise vExept(15)
+            raise vExcept(15)
 
     def AddGrantToMeta(self, grant, granted, grant_bloc):
         if self.__DB_enable:
@@ -280,7 +280,7 @@ class JSONtinyDB():
                 # self.__meta_db[grant_bloc["username"]] = []
                 # print(self.__meta_db)
         else:
-            raise vExept(15)
+            raise vExcept(15)
         return notfound or updated
 
     def DelGrantFromMeta(self, grant, granted, grant_bloc):
@@ -300,7 +300,7 @@ class JSONtinyDB():
                         deleted = True
                         break
         else:
-            raise vExept(15)
+            raise vExcept(15)
         return deleted
 
     def AddAccountToMeta(self, account_bloc):
@@ -314,14 +314,14 @@ class JSONtinyDB():
                 self.__meta_db["Accounts"].append(account_bloc)
                 self.__meta_db["Tables"][account_bloc["username"].upper()] = []
         else:
-            raise vExept(15)
+            raise vExcept(15)
         return notfound
 
     def AddAccountToDB(self, account_bloc):
         if self.__DB_enable:
             self.db["Accounts"].append(account_bloc)
         else:
-            raise vExept(15)
+            raise vExcept(15)
 
     def DelAccountFromMeta(self, username):
         if self.__DB_enable:
@@ -350,7 +350,7 @@ class JSONtinyDB():
             if os.path.exists(dir_path):
                 os.rmdir(dir_path)
         else:
-            raise vExept(15)
+            raise vExcept(15)
 
     def DelAccountFromDB(self, username):
         if self.__DB_enable:
@@ -376,16 +376,16 @@ class JSONtinyDB():
                 if self.db["Tables"][n]["schema"] == username.upper():
                     del self.db["Tables"][n]
         else:
-            raise vExept(15)
+            raise vExcept(15)
 
     def getAccountID(self, username):
         if self.__DB_enable:
             for n in range(len(self.__meta_db["Accounts"])):
                 if self.__meta_db["Accounts"][n]["username"] == username:
                     return n
-            raise vExept(1800, username)
+            raise vExcept(1800, username)
         else:
-            raise vExept(15)
+            raise vExcept(15)
 
     def saveDB(self):
         if self.__DB_enable:
@@ -397,14 +397,14 @@ class JSONtinyDB():
                 if not os.path.exists(dir_path):
                     os.makedirs(dir_path)
         else:
-            raise vExept(15)
+            raise vExcept(15)
 
     def reload(self):
         if self.__DB_enable:
             self.__RAZ()
             self.__loadDB()
         else:
-            raise vExept(15)
+            raise vExcept(15)
 
     def getTable(self, owner, table_name):
         count = 0
@@ -426,14 +426,14 @@ class JSONtinyDB():
                     result = copy.deepcopy(t)
             if count == 0:
                 if owner is None:
-                    raise vExept(210, table_name)
+                    raise vExcept(210, table_name)
                 else:
-                    raise vExept(210, '{}.{}'.format(owner, table_name))
+                    raise vExcept(210, '{}.{}'.format(owner, table_name))
             elif count > 1:
                 if owner is None:
-                    raise vExept(211, table_name)
+                    raise vExcept(211, table_name)
                 else:
-                    raise vExept(211, '{}.{}'.format(owner, table_name))
+                    raise vExcept(211, '{}.{}'.format(owner, table_name))
         return result
 
     def checkTableExists(self, owner, table_name):

@@ -1,4 +1,4 @@
-class vExept(Exception):
+class vExcept(Exception):
 
     def __init__(self, errcode, message="Internal error"):
         self.errcode = errcode
@@ -6,128 +6,128 @@ class vExept(Exception):
         match errcode:
             # PATH, Files (0-99)
             case 12:
-                self.message = 'Invalid PATH for DB_BASE_DIR ({})'.format(message)
+                self.message = f'Invalid PATH for DB_BASE_DIR ({message})'
             case 13:
-                self.message = 'Invalid PATH for DB_SCHEMA_DIR ({})'.format(message)
+                self.message = f'Invalid PATH for DB_SCHEMA_DIR ({message})'
             case 14:
-                self.message = 'INTERNAL ERROR:: file for table ({}) not found'.format(message)
+                self.message = f'INTERNAL ERROR:: file for table ({message}) not found'
             case 15:
                 self.message = 'Database not open'
             case 16:
-                self.message = 'Unable to create directory ({}) for new DB'.format(message)
+                self.message = f'Unable to create directory ({message}) for new DB'
             case 23:
-                self.message = 'Invalid PATH and file name for DB ({})'.format(message)
+                self.message = f'Invalid PATH and file name for DB ({message})'
             case 24:
-                self.message = 'Invalid PATH and file name for TABLE ({})'.format(message)
+                self.message = f'Invalid PATH and file name for TABLE ({message})'
             # Users (100-199)
             case 109:
                 self.message = 'Invalid username or password'
             # Tables (200-299)
             case 209:
-                self.message = 'Invalid table name ({})'.format(message)
+                self.message = f'Invalid table name ({message})'
             case 210:
-                self.message = 'Table ({}) does not exists'.format(message)
+                self.message = f'Table ({message}) does not exists'
             case 211:
-                self.message = 'Table is not unique in query ({})'.format(message)
+                self.message = f'Table is not unique in query ({message})'
             case 212:
                 self.message = 'Table already exists'
             # Columns (300-399)
             case 310:
                 self.message = 'Invalid columns number'
             case 311:
-                self.message = 'Invalid column name ({})'.format(message)
+                self.message = f'Invalid column name ({message})'
             case 312:
-                self.message = 'Invalid columns number in sub-query'
+                self.message = f'Invalid columns number in sub-query'
             case 313:
-                self.message = 'Ambiguous column name ({})'.format(message)
+                self.message = f'Ambiguous column name ({message})'
             # SELECT clause (400-499)
             # WHERE clause (500-599)
             case 510:
-                self.message = 'Invalid operator ({})'.format(message)
+                self.message = f'Invalid operator ({message})'
             # DB (600-679)
             case 600:
-                self.message = 'Invalid database name'
+                self.message = f'Invalid database name'
             case 601:
-                self.message = 'Database ({}) already exists'.format(message)
+                self.message = f'Database ({message}) already exists'
             case 602:
-                self.message = 'Invalid parameters file ({})'.format(message)
+                self.message = f'Invalid parameters file ({message})'
             case 603:
-                self.message = 'Parameters file is missing'.format(message)
+                self.message = f'Parameters file is missing'
             # SERVER MANAGMENT (660-679)
             case 660:
                 self.message = 'Invalid Manager password'
             # IP (680-699)
             case 680:
-                self.message = 'Invlid client IP ({})'.format(message)
+                self.message = f'Invlid client IP ({message})'
             # SYNTAX ERROR (700-899)
             case 700:
-                self.message = 'Syntax error: quotes are not matching'
+                self.message = f'Syntax error: quotes are not matching'
             case 701:
-                self.message = 'Syntax error: found comma instead of argument in position {}'.format(message)
+                self.message = f'Syntax error: found comma instead of argument in position {message}'
             case 702:
-                self.message = 'Syntax error: found argument ({}) instead of comma'.format(message)
+                self.message = f'Syntax error: found argument ({message}) instead of comma'
             case 703:
-                self.message = 'Syntax error: found ({}) instead of alias for sub-query'.format(message)
+                self.message = f'Syntax error: found ({message}) instead of alias for sub-query'
             case 704:
                 self.message = 'Syntax error: parenthesis are not matching'
             case 705:
-                self.message = 'Syntax error: reserved word "JOIN" expected but "{}" found'.format(message)
+                self.message = f'Syntax error: reserved word "JOIN" expected but "{message}" found'
             case 706:
-                self.message = 'Syntax error: reserved word "ON" expected but "{}" found'.format(message)
+                self.message = f'Syntax error: reserved word "ON" expected but "{message}" found'
             case 707:
                 self.message = 'Syntax error: semicolon does not terminate query'
             case 708:
                 self.message = 'Syntax error: DESCRIBE accepts only one table name as parameter'
             case 709:
-                self.message = 'Syntax error: reserved word "AS" expected but "{}" found'.format(message)
+                self.message = f'Syntax error: reserved word "AS" expected but "{message}" found'
             case 710:
-                self.message = 'Syntax error: missing open parenthesis for sub query with alias "{}"'.format(message)
+                self.message = f'Syntax error: missing open parenthesis for sub query with alias "{message}"'
             case 711:
-                self.message = 'Syntax error: bad object (schema or schema.table_name), found "{}"'.format(message)
+                self.message = f'Syntax error: bad object (schema or schema.table_name), found "{message}"'
             case 712:
-                self.message = 'Syntax error: reserved word "TO" expected but "{}" found'.format(message)
+                self.message = f'Syntax error: reserved word "TO" expected but "{message}" found'
             case 713:
-                self.message = 'Syntax error: reserved word "WITH" expected but "{}" found'.format(message)
+                self.message = f'Syntax error: reserved word "WITH" expected but "{message}" found'
             case 714:
-                self.message = 'Syntax error: reserved word "ADMIN" expected but "{}" found'.format(message)
+                self.message = f'Syntax error: reserved word "ADMIN" expected but "{message}" found'
             case 715:
-                self.message = 'Syntax error: reserved word "OPTION" expected but "{}" found'.format(message)
+                self.message = f'Syntax error: reserved word "OPTION" expected but "{message}" found'
             case 716:
-                self.message = 'Syntax error: reserved word "TABLE" or "INDEX" or "USER" expected but "{}" found'.format(message)
+                self.message = f'Syntax error: reserved word "TABLE" or "INDEX" or "USER" expected but "{message}" found'
             case 717:
-                self.message = 'Syntax error: bad object, expect "schema name", found "{}"'.format(message)
+                self.message = f'Syntax error: bad object, expect "schema name", found "{message}"'
             case 718:
-                self.message = 'Syntax error: reserved word "FROM" expected but "{}" found'.format(message)
+                self.message = f'Syntax error: reserved word "FROM" expected but "{message}" found'
             case 719:
-                self.message = 'Syntax error: end of query reached but "{}" found'.format(message)
+                self.message = f'Syntax error: end of query reached but "{message}" found'
             case 720:
-                self.message = 'Syntax error: "{}" is not a grant right'.format(message)
+                self.message = f'Syntax error: "{message}" is not a grant right'
             case 721:
-                self.message = 'Syntax error: expect "TABLE" or "USER" found "{}"'.format(message)
+                self.message = f'Syntax error: expect "TABLE" or "USER" found "{message}"'
             case 722:
-                self.message = 'Syntax error: invalid table name "{}"'.format(message)
+                self.message = f'Syntax error: invalid table name "{message}"'
             case 723:
-                self.message = 'Syntax error: invalid column name "{}"'.format(message)
+                self.message = f'Syntax error: invalid column name "{message}"'
             case 724:
-                self.message = 'Syntax error: invalid column type "{}"'.format(message)
+                self.message = f'Syntax error: invalid column type "{message}"'
             case 725:
-                self.message = 'Syntax error: expect comma or parenthesis but found "{}"'.format(message)
+                self.message = f'Syntax error: expect comma or parenthesis but found "{message}"'
             case 726:
-                self.message = 'Syntax error: invalid user name "{}"'.format(message)
+                self.message = f'Syntax error: invalid user name "{message}"'
             case 727:
-                self.message = 'Syntax error: reserved word "IDENTIFIED" expected but "{}" found'.format(message)
+                self.message = f'Syntax error: reserved word "IDENTIFIED" expected but "{message}" found'
             case 728:
-                self.message = 'Syntax error: reserved word "BY" expected but "{}" found'.format(message)
+                self.message = f'Syntax error: reserved word "BY" expected but "{message}" found'
             case 729:
-                self.message = 'Syntax error: reserved word "INTO" expected but "{}" found'.format(message)
+                self.message = f'Syntax error: reserved word "INTO" expected but "{message}" found'
             case 730:
-                self.message = 'Syntax error: table name expected but "{}" found'.format(message)
+                self.message = f'Syntax error: table name expected but "{message}" found'
             case 731:
-                self.message = 'Syntax error: missing column name at position {}'.format(message)
+                self.message = f'Syntax error: missing column name at position {message}'
             case 732:
-                self.message = 'Syntax error: parenthesys expexted but "{}" found'.format(message)
+                self.message = f'Syntax error: parenthesys expexted but "{message}" found'
             case 733:
-                self.message = 'Syntax error: missing value at position {}'.format(message)
+                self.message = f'Syntax error: missing value at position {message}'
             case 734:
                 self.message = 'Syntax error: numbers of olomns and values does not mmatch'
             case 735:
@@ -135,36 +135,48 @@ class vExept(Exception):
             case 736:
                 self.message = 'Syntax error: ROLLBACK does not support parameters'
             case 737:
-                self.message = 'Syntax error: reserved word "SET" expected but "{}" found'.format(message)
+                self.message = f'Syntax error: reserved word "SET" expected but "{message}" found'
             case 738:
-                self.message = 'Syntax error: reserved word "WHERE" expected but "{}" found'.format(message)
+                self.message = f'Syntax error: reserved word "WHERE" expected but "{message}" found'
             case 739:
-                self.message = 'Syntax error: expect open parenthesis but found "{}"'.format(message)
+                self.message = f'Syntax error: expect open parenthesis but found "{message}"'
             case 740:
-                self.message = 'Syntax error: expect closing parenthesis but found "{}"'.format(message)
+                self.message = f'Syntax error: expect closing parenthesis but found "{message}"'
             case 741:
-                self.message = 'Syntax error: reserved word "AND" expected but "{}" found'.format(message)
+                self.message = f'Syntax error: reserved word "AND" expected but "{message}" found'
             case 742:
-                self.message = 'Syntax error: reserved word "BY" expected but "{}" found'.format(message)
+                self.message = f'Syntax error: reserved word "BY" expected but "{message}" found'
             case 743:
-                self.message = 'Syntax error: reserved word "LEVEL" expected but "{}" found'.format(message)
+                self.message = f'Syntax error: reserved word "LEVEL" expected but "{message}" found'
             case 744:
-                self.message = 'Syntax error: comparator expected (< or <=) but "{}" found'.format(message)
+                self.message = f'Syntax error: comparator expected (< or <=) but "{message}" found'
             case 745:
-                self.message = 'Syntax error: integer expected but "{}" found'.format(message)
+                self.message = f'Syntax error: integer expected but "{message}" found'
+            case 746:
+                self.message = f'Syntax error: symbol "|" expected but "{message}" found'
+            case 747:
+                self.message = 'Syntax error: query can not end with symbol "|"'
+            case 748:
+                self.message = f'Syntax error: symbol "||" can not be followed by "{message}"'
+            case 749:
+                self.message = f'Syntax error: symbol "||" can not be followed by "||"'
+            case 750:
+                self.message = f'Syntax error: DATETIME can not been concatened with "||"'
             # INTERNAL ERROR (800-899)
             case 801:
                 self.message = 'Internal error on column name in SELECT clause'
             case 802:
-                self.message = 'Internal error on unknown function ID ({})'.format(message)
+                self.message = f'Internal error on unknown function ID ({message})'
             case 803:
-                self.message = 'Internal error on unknown list ID ({})'.format(message)
+                self.message = f'Internal error on unknown list ID ({message})'
             case 804:
-                self.message = 'Internal error on unknown maths ID ({})'.format(message)
+                self.message = f'Internal error on unknown maths ID ({message})'
+            case 805:
+                self.message = f'Internal error on unknown pipe ID ({message})'
             case 888:
-                self.message = 'INTERNAL ERROR: {}'.format(message)
+                self.message = f'INTERNAL ERROR: {message}'
             case 899:
-                self.message = 'INTERNAL ERROR: test labels does not match ({})'.format(message)
+                self.message = f'INTERNAL ERROR: test labels does not match ({message})'
             # GRANT missing (900-999)
             case 900:
                 self.message = 'It miss rights to define this new right'
@@ -174,58 +186,63 @@ class vExept(Exception):
                 self.message = 'Unable to drop object'
             # SESSION (1000-1099)
             case 1000:
-                self.message = 'Invalid SESSION_ID ({})'.format(message)
+                self.message = f'Invalid SESSION_ID ({message})'
             case 1001:
                 self.message = 'No query submitted or previous result already fetched'
             # ~~~~~BLANK (1100-1699)
             # COLUMN format (1700-1799)
             case 1700:
-                self.message = 'Invalid column format ({})'.format(message)
+                self.message = f'Invalid column format ({message})'
             case 1701:
-                self.message = 'Invalid table name for column ({})'.format(message)
+                self.message = f'Invalid table name for column ({message})'
             # USER (1800-1899)
             case 1800:
-                self.message = 'Username/Schema does not exist ({})'.format(message)
+                self.message = f'Username/Schema does not exist ({message})'
             case 1801:
-                self.message = 'User already exists ({})'.format(message)
+                self.message = f'User already exists ({message})'
             # LOCKs (1900-1999)
             case 1900:
-                self.message = 'Unable to catch lock on {}'.format(message)
+                self.message = f'Unable to catch lock on {message}'
             # CREATE table (2000-2099)
             # CURSOR (2100-2199)
             case 2100:
-                self.message = 'Cursor ({}) not found'.format(message)
+                self.message = f'Cursor ({message}) not found'
             case 2101:
-                self.message = 'Duplicate name for cursor ({})'.format(message)
+                self.message = f'Duplicate name for cursor ({message})'
             # FORMAT (2200-2299)
             case 2200:
-                self.message = 'Invalid format for value ({})'.format(message)
+                self.message = f'Invalid format for value ({message})'
             case 2201:
-                self.message = 'Invalid type ({})'.format(message)
+                self.message = f'Invalid type ({message})'
             # FUNCTION (2300-2499)
             case 2300:
-                self.message = 'Bad arguments number for SUBSTR function: {} supplied argument(s) but needs 3'.format(message)
+                self.message = f'Bad arguments number for SUBSTR function: {message} supplied argument(s) but needs 3'
             case 2301:
-                self.message = '''First argument for SUBSTR function must have 'str' format' ({})'''.format(message)
+                self.message = f'''First argument for SUBSTR function must have 'str' format' ({message})'''
             case 2302:
-                self.message = '''Second argument for SUBSTR function must have 'int' format' ({})'''.format(message)
+                self.message = f'''Second argument for SUBSTR function must have 'int' format' ({message})'''
             case 2303:
-                self.message = '''Third argument for SUBSTR function must have 'int' format' ({})'''.format(message)
+                self.message = f'''Third argument for SUBSTR function must have 'int' format' ({message})'''
             case 2304:
-                self.message = '''Function does not exist ({})'''.format(message)
+                self.message = f'''Function does not exist ({message})'''
             case 2305:
-                self.message = 'Bad arguments number for TO_CHAR function: {} supplied argument(s) but needs 2'.format(message)
+                self.message = f'Bad arguments number for TO_CHAR function: {message} supplied argument(s) but needs 2'
             case 2306:
-                self.message = '''First argument for TO_CHAR function must have 'datetime' format' ({})'''.format(message)
+                self.message = f'''First argument for TO_CHAR function must have 'datetime' format' ({message})'''
             case 2307:
-                self.message = '''Second argument for TO_CHAR function must have 'str' format' ({})'''.format(message)
+                self.message = f'''Second argument for TO_CHAR function must have 'str' format' ({message})'''
             case 2308:
-                self.message = '''Incorrect number of arguments for DECODE function: must be even but {} argument(s) provided'''.format(message)
+                self.message = f'''Incorrect number of arguments for DECODE function: must be even but {message} argument(s) provided'''
             case 2309:
-                self.message = '''Incorrect number of arguments for CHAR function: must be 1 but {} argument(s) provided'''.format(message)
-            # ~~~~~BLANK (2500-9899)
+                self.message = f'''Incorrect number of arguments for CHAR function: must be 1 but {message} argument(s) provided'''
+            case 2310:
+                self.message = f'''Incorrect parameter for CHAR function ({message})'''
+            # MATHS (2500-2599)
+            case 2500:
+                self.message = '''Division by zero'''
+            # ~~~~~BLANK (2600-9899)
             # HTML
             case 9900:
-                self.message = 'TABLE parameter has an unexpected value ({})'.format(message)
+                self.message = f'TABLE parameter has an unexpected value ({message})'
 
         super().__init__(self.message)
