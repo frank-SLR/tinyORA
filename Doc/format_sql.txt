@@ -22,6 +22,7 @@ FUNCTION : { UPPER|LOWER } ( <SEL_COL> )
            SUBSTR ( <SEL_COL>, <SEL_COL>, <SEL_COL>)
            TO_CHAR ( <SEL_COL>, <SEL_COL> )
            DECODE ( <SEL_COL>, <SEL_COL>, <SEL_COL> [, <SEL_COL>, <SEL_COL> ...] )
+           CHAR ( <SEL_COL> )
 
 SELECT : 
 select <SEL_COL> [ , <SEL_COL> ...]

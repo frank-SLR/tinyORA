@@ -1,5 +1,5 @@
 # python server.py -s d:/Python/OpenSSL -p 1521 -l warning -d D:/Python/data/pfile.json
-from vExceptLib import vExept
+from vExceptLib import vExcept
 import argparse
 import uvicorn
 import os
@@ -17,12 +17,12 @@ if __name__ == "__main__":
                             help="Log level for server")
         args = parser.parse_args()
         if args.db_parameters_file is None:
-            raise vExept(603)
+            raise vExcept(603)
         else:
             if os.path.isfile(args.db_parameters_file):
                 copyfile(args.db_parameters_file, "./parameters.json")
             else:
-                raise vExept(602, args.db_parameters_file)
+                raise vExcept(602, args.db_parameters_file)
         if args.ssl_path is None:
             uvicorn.run("tinyORA:app",
                         host=args.address,
@@ -39,7 +39,7 @@ if __name__ == "__main__":
                         ssl_keyfile="{}/key.pem".format(args.ssl_path),
                         ssl_certfile="{}/cert.pem".format(args.ssl_path),
                         log_level=args.log_level)
-    except vExept as e:
+    except vExcept as e:
         print("error code: {}".format(e.errcode))
         for s in e.message.split("\n"):
             print("  {}".format(s))
