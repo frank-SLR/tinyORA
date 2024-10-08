@@ -1,10 +1,12 @@
 # TinyORA
 
 TinyORA is a small database engine. It allows you to manage data using SQL.
-> Queries have to use the syntax decribe below.
+> Queries have to use the syntax decribe below. [^1]
 
 ---
 # Table of content
+
+[TOC]
 
 [SELECT](#select)
 
@@ -32,6 +34,13 @@ TinyORA is a small database engine. It allows you to manage data using SQL.
 
 [FUNCTION](#function)
 
+  [CHR](#chr)
+  [LOWER](#lower)
+  [SUBSTR](#substr)
+  [UPPER](#upper)
+  [TO_CHAR](#to_char)
+
+
 ---
 
 > **[]** indicate an optional object
@@ -39,7 +48,7 @@ TinyORA is a small database engine. It allows you to manage data using SQL.
 > **{}** indicate multiple objects delimited by |. Only one object is used for query
 > **[[]]** indicate optional parentheses at the begin and the end of object
 
-## SELECT
+# SELECT
 SELECT statement is formatted as :
 
 ```
@@ -64,7 +73,7 @@ inner join hr.site s on d.site_id=s.site_id
 where s.site_name='San Francisco';
 ```
 
-### Special SELECT
+## Special SELECT
 Generate range of integer with following syntax:
 
 ```sql
@@ -81,12 +90,12 @@ connect by level <= <INTEGER>;
 
 See: [SEL_COL](#sel_col), [FROM_OBJ](#from_obj), [INNER_CLAUSE](#inner_clause), [WHERE_CLAUSE](#where_clause)
 
-## DESC | DESCRIBE:
+# DESC | DESCRIBE:
 Supply table definition.
 
 `desc [ <SCHEMA>. ] <TABLE_NAME>`
 
-## WITH
+# WITH
 The WITH clause associates one or more subqueries with the query.
 
 ```
@@ -111,7 +120,7 @@ inner join ds on e.dep_id=ds.dep_id
 
 See: [SELECT](#select)
 
-## GRANT
+# GRANT
 
 ```
 grant { select | insert | update | delete } on <SCHEMA> [ . <TABLE_NAME> ] to <USERNAME> [ with admin option ]
@@ -125,7 +134,7 @@ Example:
 grant select on hr.emp to john_doo with admin option;
 ```
 
-## REVOKE
+# REVOKE
 
 ```
 revoke { select | insert | update | delete } on <SCHEMA> [ . <TABLE_NAME> ] from <USERNAME>
@@ -139,7 +148,7 @@ Example:
 revoke select on hr.emp from john_doo;
 ```
 
-## CREATE
+# CREATE
 
 ```
 create table [ <SCHEMA>. ] <TABLE_NAME> ( <COLUMN_NAME> <FORMAT> [ , <COLUMN_NAME> <FORMAT> ...])
@@ -169,7 +178,7 @@ inner join hr.site s on d.site_id=s.site_id
 create user max_planck identified by mp%1234;
 ```
 
-## DROP
+# DROP
 
 ```
 drop table [ <SCHEMA>. ] <TABLE_NAME>
@@ -182,7 +191,7 @@ Example:
 drop table emp_with_dep;
 ```
 
-## INSERT
+# INSERT
 
 ```
 insert into [ <SCHEMA>. ] <TABLE_NAME> [ ( <COLUMN_NAME> [ , <COLUMN_NAME> ...] ) ] { <WITH> | <SELECT> }
@@ -195,7 +204,7 @@ Example:
 insert into emp_with_dep values(12, 55, 'Max', 'Planck', 'Research');
 ```
 
-## UPDATE
+# UPDATE
 
 ```
 update [ <SCHEMA>. ] <TABLE_NAME> set <COLUMN_NAME>=<CONSTANT> [ , <COLUMN_NAME>=<CONSTANT> ...] where <WHERE_CLAUSE>
@@ -209,7 +218,7 @@ Example:
 update emp_with_dep set dep_name='Research/Quantum' where emp_id=12;
 ```
 
-## DELETE
+# DELETE
 
 ```
 delete from [ <SCHEMA>. ] <TABLE_NAME> where <WHERE_CLAUSE>
@@ -223,11 +232,13 @@ Example:
 delete from emp_with_dep where emp_id=12;
 ```
 
-## COMMIT
+# COMMIT
 Validates all previous queries.
 
-## ROLLBACK
+# ROLLBACK
 Invalidates all previous queries.
+
+# Objects of queries
 
 ## SEL_COL
 In SELECT statement, the column is identified with:
@@ -264,7 +275,11 @@ Select constant plus name column from table using his alias:
 select 'The name :', t1.name from emp_with_dep t1 where emp_id=12;
 ```
 
-### Function to convert one or more columns or function or constant to a specific format
+## Function to convert one or more columns or function or constant to a specific format
+There is a lot of functions for convertion, see [FUNCTION](#function).
+
+For example, convert string in uppercase or lowercase:
+
 ```
 { UPPER|LOWER } ( <SEL_COL> )
 ```
@@ -291,6 +306,7 @@ If it is a subquery, it must be enclosed by parentheses.
 See: [FROM_TAB](#from_tab), [CUR_ALIAS](#cur_alias), [SELECT](#select)
 
 ## INNER_CLAUSE
+Comparison between columns of different tables used by INNER JOIN.
 
 ```
 <GENERIC_COL> <WHERE_COMPARE> <GENERIC_COL>
@@ -299,6 +315,7 @@ See: [FROM_TAB](#from_tab), [CUR_ALIAS](#cur_alias), [SELECT](#select)
 See: [GENERIC_COL](#generic_col) [WHERE_COMPARE](#where_compare)
 
 ## WHERE_CLAUSE
+List of tests between columns, constants and results of functions used to define eligible data for query result.
 
 ```
 [[ ( ]] { <WHERE_CMP> | <WHERE_BETWEEN> | <WHERE_IN> } [ { and | or } <WHERE_CLAUSE> ] [[ ) ]]
@@ -307,6 +324,7 @@ See: [GENERIC_COL](#generic_col) [WHERE_COMPARE](#where_compare)
 See: [WHERE_CMP](#where_cmp), [WHERE_BETWEEN](#where_between), [WHERE_IN](#where_in)
 
 ## FROM_TAB
+Table used in query.
 
 ```
 { [ <SCHEMA>. ] <TABLE_NAME> [ <TAB_ALIAS> ] | <CURSOR_NAME> [ <CUR_ALIAS> ] }
@@ -316,7 +334,7 @@ See: [WHERE_CMP](#where_cmp), [WHERE_BETWEEN](#where_between), [WHERE_IN](#where
 Defines an alias for a cursor.
 
 ## GENERIC_COL
-Defines a column.
+Table's column used by query.
 
 ```
 [ { [ <SCHEMA>. ] <TABLE_NAME> . | <TAB_ALIAS> . } ] <COLUMN_NAME> [COL_ALIAS]
@@ -357,19 +375,49 @@ Comparison of one object between content of list.
 See: [SEL_COL](#sel_col)
 
 
-## FUNCTION
+# FUNCTION
 Functions convert supplied data to a specific format
 
-### UPPER
-Convert data to uppercase.
-Output format is 'str'.
+## ABS
+Retruns absolute value of parameter.
 
 ```sql
-UPPER ( <SEL_COL> )
+ABS ( <NUMERIC_VALUE> )
 ```
-See: [SEL_COL](#sel_col)
 
-### LOWER
+Example:
+Obtain absolute value of -12.2:
+```sql
+ABS(-12.2)
+```
+
+## CHR
+Converts an ASCII code, which is a number from 0 to 255, to a character.
+
+```sql
+CHR ( <ASCII_CODE> )
+```
+
+Example:
+Obtain character "A":
+```sql
+CHR(65)
+```
+
+## DECODE
+DECODE compares FIRST_EXPR to each SEARCH value one by one. If FIRST_EXPR is equal to SEARCH, then DECODE returns the corresponding RESULT. If no match is found, then DECODE returns DEFAULT.
+
+```sql
+DECODE ( <FIST_EXPR>, <SEARCH>, <RESULT>, [ <SEARCH>, <RESULT>, ... ] <DEFAULT> )
+```
+
+Example:
+If value is 1 then return 'FIRST', if value is 2 then return 'SECOND', for other values return 'LATE...':
+```sql
+DECODE(value, 1, 'FIRST', 2, 'SECOND', 'LATE...')
+```
+
+## LOWER
 Convert data to lowercase.
 Output format is 'str'.
 
@@ -378,7 +426,7 @@ LOWER ( <SEL_COL> )
 ```
 See: [SEL_COL](#sel_col)
 
-### SUBSTR
+## SUBSTR
 Extract substring of supplied data.
 Output format is 'str'.
 
@@ -395,7 +443,7 @@ Extract substring 'DEFG' from string 'ABCDEFGH':
 SUBSTR('ABCDEFGH', 3, 4)
 ```
 
-### TO_CHAR
+## TO_CHAR
 Convert datetime to string with fixed format.
 Output format is 'str'.
 
@@ -424,20 +472,19 @@ Formatcoes are:
 Example:
 convert date to YYYY/MM/DD format:
 ```sql
-TO_CHAR(date, 'YYY/MM/DD')
+TO_CHAR(date, 'YYYY/MM/DD')
 ```
 
 See: [SEL_COL](#sel_col)
 
-### DECODE
-DECODE compares FIRST_EXPR to each SEARCH value one by one. If FIRST_EXPR is equal to SEARCH, then DECODE returns the corresponding RESULT. If no match is found, then DECODE returns DEFAULT.
+## UPPER
+Convert data to uppercase.
+Output format is 'str'.
 
 ```sql
-DECODE ( <FIST_EXPR>, <SEARCH>, <RESULT>, [ <SEARCH>, <RESULT>, ... ] <DEFAULT> )
+UPPER ( <SEL_COL> )
 ```
+See: [SEL_COL](#sel_col)
 
-Example:
-If value is 1 then return 'FIRST', if value is 2 then return 'SECOND', for other values return 'LATE...':
-```sql
-DECODE(value, 1, 'FIRST', 2, 'SECOND', 'LATE...')
-```
+
+[^1]: test 

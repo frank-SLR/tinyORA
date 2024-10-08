@@ -24,8 +24,8 @@ class vSession(object):
         self.__updated_tables = []
         super().__init__()
 
-    def submit_query(self, _query:str):
-        self.__parsed_query = vParser().parse_query(query=_query)
+    def submit_query(self, _query:str, bind:dict = []):
+        self.__parsed_query = vParser().parse_query(query=_query, bind=bind)
         # print(self.__parsed_query['select'])
         # print(self.__parsed_query['from'])
         # print(self.__parsed_query['where'])
@@ -35,6 +35,7 @@ class vSession(object):
         # print(self.__parsed_query['connect'])
         # print(self.__parsed_query['maths'])
         # print(self.__parsed_query['pipe'])
+        # print(self.__parsed_query['bind'])
 
         if self.__parsed_query["querytype"] in ['SELECT']:
             result = {"columns": [], "rows": []}
@@ -346,13 +347,13 @@ class vSession(object):
                         elif s[5] == 'DATETIME':
                             rrow.append(s[3])
                         elif s[5] == 'STR':
-                            rrow.append(s[3][1:-1])
+                            rrow.append(self.__remove_quote(s[3]).replace("''", "'"))
                         elif s[5] == 'FUNCTION':
                             rrow.append(self.__compute_function(s[3]))
                         elif s[5] == 'MATHS':
                             rrow.append(self.__compute_maths(s[3]))
                         elif s[5] == 'PIPE':
-                            rrow.append(self.__compute_pipe(s[3]))
+                            rrow.append(self.__remove_quote(self.__compute_pipe(s[3])).replace("''", "'"))
                         else:
                             raise vExcept(801)
                     self.__result.append(rrow)
@@ -381,6 +382,12 @@ class vSession(object):
                 return n
         raise vExcept(803, in_id)
 
+    def __remove_quote(self, strin):
+        if self.__check_STR(strin) and (len(strin) >= 2):
+            if (strin[0] == '"' and strin[-1] == '"') or (strin[0] == "'" and strin[-1] == "'"):
+                strin = strin[1:-1]
+        return strin
+
     def __convert_value(self, varin, fmtin:str):
         try:
             match fmtin.upper():
@@ -406,6 +413,14 @@ class vSession(object):
         raise vExcept(2201, fmtin)
 
     def __check_cols_name(self, result):
+        """If multiple columns have the same name, tey are renamed
+
+        Args:
+            result (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """        
         for x, name1 in enumerate(result["columns"]):
             cpt = 1
             for y, name2 in enumerate(result["columns"]):
@@ -995,6 +1010,8 @@ class vSession(object):
                                                         aliasin=self.__parsed_query["select"][cs][0],
                                                         table_namein=self.__parsed_query["select"][cs][2],
                                                         schemain=self.__parsed_query["select"][cs][1])
+                # print(f'__validate_select self.__parsed_query["select"][cs]={self.__parsed_query["select"][cs]}')
+                # print(f'__validate_select col_mat={col_mat}')
                 # [colin, aliasin, table_namein, schemain, memtf, memctf, ctype, tab_cur]
                 del self.__parsed_query["select"][cs]
                 for cm in range(len(col_mat)):
@@ -1024,6 +1041,16 @@ class vSession(object):
                         result["columns"].append([self.__parsed_query["select"][cs][3], fct_type])
                     else:
                         result["columns"].append([self.__parsed_query["select"][cs][4], fct_type])
+                elif self.__parsed_query["select"][cs][5] == 'PIPE':
+                    if self.__parsed_query["select"][cs][4] is None:
+                        result["columns"].append([self.__parsed_query["select"][cs][3], 'str'])
+                    else:
+                        result["columns"].append([self.__parsed_query["select"][cs][4], 'str'])
+                elif self.__parsed_query["select"][cs][5] == 'MATHS':
+                    if self.__parsed_query["select"][cs][4] is None:
+                        result["columns"].append([self.__parsed_query["select"][cs][3], 'float'])
+                    else:
+                        result["columns"].append([self.__parsed_query["select"][cs][4], 'float'])
                 else:
                     if self.__parsed_query["select"][cs][4] is None:
                         result["columns"].append([self.__parsed_query["select"][cs][3], self.__parsed_query["select"][cs][5]])
@@ -1068,6 +1095,7 @@ class vSession(object):
                                                                                                           aliasin=cblk[0],
                                                                                                           table_namein=cblk[2],
                                                                                                           schemain=cblk[1])
+                    # print(f'__validate_pipe colin={colin}, aliasin={aliasin}, table_namein={table_namein}, schemain={schemain}, tf={tf}, ctf={ctf}, ctype={ctype}')
                     self.__parsed_query["pipe"][n][1][m][0] = aliasin
                     self.__parsed_query["pipe"][n][1][m][1] = schemain
                     self.__parsed_query["pipe"][n][1][m][2] = table_namein
@@ -1255,13 +1283,13 @@ class vSession(object):
         for blk in self.__parsed_query["pipe"][pipe_num][1]:
             match blk[5]:
                 case 'STR':
-                    tmp_res = tmp_res + blk[3]
+                    tmp_res = tmp_res + self.__remove_quote(blk[3])
                 case 'FUNCTION':
-                    tmp_res = tmp_res + self.__compute_function(blk[3])
+                    tmp_res = tmp_res + self.__remove_quote(self.__compute_function(blk[3]))
                 case 'MATHS':
                     tmp_res = tmp_res + self.__compute_maths(blk[3])
                 case 'COLUMN':
-                    tmp_res.append(self.__parsed_query["from"][blk[6]][4][0]["rows"][self.__RowsPosInTables[blk[6]]][blk[7]])
+                    tmp_res = tmp_res + self.__remove_quote(self.__parsed_query["from"][blk[6]][4][0]["rows"][self.__RowsPosInTables[blk[6]]][blk[7]])
         return tmp_res
 
     def __get_function_col(self, colblk):
@@ -1333,7 +1361,23 @@ class vSession(object):
                 if dont_stop_flg:
                     res = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][-1])
                 return res
-            case 'CHAR':
+            case 'ABS':
+                if len(self.__parsed_query["functions"][fct_num][2]) != 1:
+                    raise vExcept(2311, len(self.__parsed_query["functions"][fct_num][2]))
+                val_int = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                if self.__parsed_query['functions'][fct_num][2][0][4].upper() == 'INT':
+                    return abs(int(val_int))
+                elif self.__parsed_query['functions'][fct_num][2][0][4].upper() == 'FLOAT':
+                    return abs(float(val_int))
+                elif self.__parsed_query['functions'][fct_num][2][0][4].upper() == 'MATHS':
+                    maths_num = self.__get_maths(self.__parsed_query['functions'][fct_num][2][0][3])
+                    if self.__parsed_query["maths"][maths_num][3] == 'INT':
+                        return abs(int(val_int))
+                    else:
+                        return abs(float(val_int))
+                else:
+                    raise vExcept(2312, f'{val_int} [{self.__parsed_query['functions'][fct_num][2][0][4].upper()}]')
+            case 'CHR':
                 if len(self.__parsed_query["functions"][fct_num][2]) != 1:
                     raise vExcept(2309, len(self.__parsed_query["functions"][fct_num][2]))
                 val_int = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
@@ -1344,8 +1388,13 @@ class vSession(object):
 
     def __get_function_type(self, fct_name: str, ref_col_typ: str):
         match fct_name:
-            case 'UPPER'|'LOWER'|'SUBSTR'|'TO_CHAR'|'CHAR':
+            case 'UPPER'|'LOWER'|'SUBSTR'|'TO_CHAR'|'CHR':
                 return 'str'
+            case 'ABS':
+                if ref_col_typ.upper() in ['INT', 'FLOAT']:
+                    return ref_col_typ.lower()
+                else:
+                    return 'float'
             case 'DECODE':
                 if ref_col_typ.upper() in ['INT', 'FLOAT', 'STR', 'HEX', 'DATETIME']:
                     return ref_col_typ.lower()

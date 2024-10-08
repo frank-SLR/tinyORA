@@ -20,10 +20,11 @@ from vExceptLib import vExcept
 # connect : oper, value
 # maths : maths_id, [[table_alias, schema, table_name, col_name/value, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS, PIPE), table position, position in table, table or cursor]], [
 #                    item_id, ['META', item_id], oper, ['META', item_id]
-#                 or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], oper, ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
+#                 or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], oper, ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor],
+#                   , type_maths(INT, FLOAT)
 #                   ...]
 # pipe : pipe_id, [[table_alias, schema, table_name, col_name/value, alias, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS, PIPE), table position, position in table, table or cursor]]
-
+# bind : [[name, value] ...]
 
 class vParser():
     def __init__(self) -> None:
@@ -33,17 +34,18 @@ class vParser():
         self.__intMathsSeq = 0
         self.__intPipeSeq = 0
         self.__raz()
-        self.__list_of_functions = ['UPPER', 'LOWER', 'SUBSTR', 'TO_CHAR', 'DECODE', 'CHAR']
+        self.__list_of_functions = ['UPPER', 'LOWER', 'SUBSTR', 'TO_CHAR', 'DECODE', 'CHR', 'ABS']
 
     def __raz(self) -> None:
         self.__parsed_query = {"querytype": None, "select": [], "from": [], "where": [], "orderby": [], "groupby": [], "cursors": [],
                                "inner_where": [], "parsed_where": [], "parsed_inner_where": [], "grant": [], "revoke": [], "create": [], "drop": [], "insert": [], "update": [],
-                               "functions": [], "in": [], "connect": [], "maths": [], "pipe": []}
+                               "functions": [], "in": [], "connect": [], "maths": [], "pipe": [], "bind":{}}
         self.__query = ''
 
-    def parse_query(self, query:str) -> dict:
+    def parse_query(self, query:str, bind:dict = []) -> dict:
         # print(query)
         self.__raz()
+        self.__parsed_query["bind"] = bind
         if len(query) > 0:
             self.__query = query.strip()
             if self.__query[-1] == ';':
@@ -113,7 +115,7 @@ class vParser():
                             pos += 1
                             __continue = False
                         elif result[-1] == '.':
-                            result = self.__query[pos]
+                            result = result + self.__query[pos]
                             pos += 1
                         else:
                             __continue = False
@@ -167,11 +169,23 @@ class vParser():
                                 n = -n
                         if n == 1:
                             raise vExcept(700)
+                    case ':':
+                        result += self.__query[pos]
+                        # print(f'__parse_word result={result}')
+                        pos += 1
                     case _:
                         result += self.__query[pos]
+                        # print(f'__parse_word result={result}')
                         pos += 1
             else:
                 __continue = False
+        if (len(result) > 0) and (result[0] == ':'):
+            # print(f'__parse_word result={result}')
+            if result[1:] in self.__parsed_query["bind"]:
+                result = str(self.__parsed_query["bind"][result[1:]])
+            else:
+                raise vExcept(1100, result[1:])
+            # print(f'__parse_word result={result}')
         return result, pos
 
     def __parse_parenthesis(self, pos):
@@ -280,6 +294,7 @@ class vParser():
                     self.__parsed_query["maths"][f][1][n] = [None, None, None, val, 'INT', None, None, None]
                 elif self.__check_FLOAT(val):
                     self.__parsed_query["maths"][f][1][n] = [None, None, None, val, 'FLOAT', None, None, None]
+                    self.__parsed_query["maths"][f][3] = 'FLOAT'
                 else:
                     flg, _ = self.__get_function(val)
                     if flg:
@@ -301,6 +316,9 @@ class vParser():
             for n in range(len(self.__parsed_query["pipe"][f][1])):
                 if self.__parsed_query["pipe"][f][1][n][5] in ['FUNCTION', 'MATHS']:
                     pass
+                elif self.__parsed_query["pipe"][f][1][n][5] == 'COLUMN':
+                    fmt, al, cn, sh, tn, tc, nt = self.__getColFromTable(self.__parsed_query["pipe"][f][1][n][3])
+                    self.__parsed_query["pipe"][f][1][n] = [al, sh, tn, cn, None, fmt, nt, None, tc]
                 elif self.__check_DATETIME(self.__parsed_query["pipe"][f][1][n][3]):
                     raise vExcept(750)
                 elif self.__check_INT(self.__parsed_query["pipe"][f][1][n][3]):
@@ -314,9 +332,6 @@ class vParser():
                     self.__parsed_query["pipe"][f][1][n][3] = str(self.__parsed_query["pipe"][f][1][n][3])
                 elif self.__check_STR(self.__parsed_query["pipe"][f][1][n][3]):
                     self.__parsed_query["pipe"][f][1][n][5] = 'STR'
-                elif (self.__parsed_query["pipe"][f][1][n][5] is None) or (self.__parsed_query["pipe"][f][1][n][5] == 'COLUMN'):
-                    fmt, al, cn, sh, tn, tc, nt = self.__getColFromTable(self.__parsed_query["pipe"][f][1][n][3])
-                    self.__parsed_query["pipe"][f][1][n] = [al, sh, tn, cn, None, fmt, nt, None, tc]
         # generate maths
         for f in range(len(self.__parsed_query["maths"])):
             lst_maths = []
@@ -739,11 +754,11 @@ class vParser():
         word=''
         while (word.upper() != 'FROM') and (pos < len(self.__query)):
             col, pos = self.__parse_word(pos)
-            # print(f'__parse_SEL_COL  col={col}')
+            # print(f'__parse_SEL_COL 1  col={col}')
             if col == ',':
                 raise vExcept(701, pos)
             word, pos = self.__parse_word(pos)
-            # print(f'__parse_SEL_COL  word={word}')
+            # print(f'__parse_SEL_COL 2  word={word}')
             if word.upper() in [',', 'FROM']:
                 self.__parsed_query["select"].append([None, None, None, col, None, None, None, None, None, []])
             elif word in ['+', '-', '*', '/'] or col == '(':
@@ -764,7 +779,7 @@ class vParser():
                 if self.__is_function(col.upper()):
                     if word != '(':
                         raise vExcept(739, word)
-                    # print (f'__parse_SEL_COL avant __parse_COL_FCT  word={word}')
+                    # print (f'__parse_SEL_COL avant __parse_COL_FCT  col={col} word={word}')
                     fct_col, pos = self.__parse_COL_FCT(col.upper(), pos)
                     word, pos = self.__parse_word(pos)
                     # print (f'__parse_SEL_COL apres __parse_COL_FCT  fct_col={fct_col} word={word}')
@@ -776,8 +791,10 @@ class vParser():
                 else:
                     if word.upper() not in [',', 'FROM']:
                         self.__parsed_query["select"].append([None, None, None, col, word, None, None, None, None, []])
+                        # print(f'__parse_SEL_COL 3  col={col} word={word}')
                         word, pos = self.__parse_word(pos)
                     else:
+                        # print(f'__parse_SEL_COL 4  col={col} word={word}')
                         self.__parsed_query["select"].append([None, None, None, col, None, None, None, None, None, []])
                 if word.upper() not in [',', 'FROM']:
                     raise vExcept(702, word)
@@ -799,7 +816,7 @@ class vParser():
         if word == col:
             tmpP = [pipe_id, [[None, None, None, word, None, 'COLUMN', None, None, None]]]
         else:
-            tmpP = [pipe_id, [[None, None, None, word, None, 'STR', None, None, None]]]
+            tmpP = [pipe_id, [[None, None, None, self.__remove_quote(word), None, 'STR', None, None, None]]]
         encore = True
         last_is_pipe = True
         while encore  and (pos < len(self.__query)):
@@ -825,7 +842,7 @@ class vParser():
                     if word == col:
                         tmpP[1].append([None, None, None, word, None, 'COLUMN', None, None, None])
                     else:
-                        tmpP[1].append([None, None, None, col, None, 'STR', None, None, None])
+                        tmpP[1].append([None, None, None, self.__remove_quote(col), None, 'STR', None, None, None])
                     last_is_pipe = False
                 else:
                     encore = False
@@ -835,7 +852,7 @@ class vParser():
         return word, pipe_id, pos
 
     def __remove_quote(self, strin):
-        if self.__check_STR(strin):
+        if self.__check_STR(strin) and (len(strin) >= 2):
             if (strin[0] == '"' and strin[-1] == '"') or (strin[0] == "'" and strin[-1] == "'"):
                 strin = strin[1:-1]
         return strin
@@ -844,10 +861,11 @@ class vParser():
         # maths : maths_id, [[element1, type(INT, FLOAT, MATHS), ...], [
         #                    item_id, ['META', item_id], oper, ['META', item_id]
         #                 or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], oper, ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
+        #                   , type_maths(INT, FLOAT)
         #                   ...]
         lvl = 0
         maths_id = self.__get_maths_name()
-        tmpM = [maths_id, [col, word], []]
+        tmpM = [maths_id, [col, word], [], 'INT']
         if col == '(':
             lvl += 1
         encore = True
@@ -906,6 +924,7 @@ class vParser():
         word = ''
         while (word != ')') and (pos < len(self.__query)):
             word, pos = self.__parse_word(pos)
+            # print(f'__parse_COL_FCT 1 word={word}')
             if self.__is_function(word.upper()):
                 col, pos = self.__parse_word(pos)
                 if col != '(':
@@ -916,10 +935,15 @@ class vParser():
                 if (word != ',') and (word != ')'):
                     raise vExcept(702, word)
             else:
-                elem = word
-                word, pos = self.__parse_word(pos)
+                if word in ['-', '+']:
+                    elem = '0'
+                else:
+                    elem = word
+                    word, pos = self.__parse_word(pos)
                 if word in ['+', '-', '*', '/']:
+                    # print(f'__parse_COL_FCT 2 word={word}')
                     word, maths_id, pos = self.__parse_maths(elem, word, pos)
+                    # print(f'__parse_COL_FCT word={word} maths_id={maths_id}')
                     self.__parsed_query["functions"][fct_idx][2].append([None, None, None, maths_id, 'MATHS', None, None, None])
                     if (word != ',') and (word != ')'):
                         raise vExcept(702, word)
@@ -931,6 +955,7 @@ class vParser():
                 elif (word != ',') and (word != ')'):
                     raise vExcept(702, word)
                 else:
+                    # print(f'__parse_COL_FCT 3 elem={elem}')
                     self.__parsed_query["functions"][fct_idx][2].append([None, None, None, elem, None, None, None, None])
                     if (word != ',') and (word != ')'):
                         raise vExcept(702, word)
@@ -964,7 +989,7 @@ class vParser():
                 word = self.__remove_quote(word)
                 # if (word[0] == "'") and (word[-1] == "'") or (word[0] == '"') and (word[-1] == '"'):
                 #     word = word[1:-1]
-                self.__parsed_query["in"][in_idx][2].append([None, None, None, str(word), 'STR', None, None, None])
+                self.__parsed_query["in"][in_idx][2].append([None, None, None, self.__remove_quote(str(word)), 'STR', None, None, None])
             word, pos = self.__parse_word(pos)
             if (word != ',') and (word != ')'):
                 raise vExcept(702, word)
@@ -1151,7 +1176,7 @@ class vParser():
                     self.__parsed_query["where"].append([m1, 'IN', col_lst_name])
                     m1, op = None, None
                     word, pos = self.__parse_word(pos)
-                    print(f'__parse_WHERE_CLAUSE  5 word={word}')
+                    # print(f'__parse_WHERE_CLAUSE  5 word={word}')
                 elif op in ['+', '-', '*', '/']:
                     word, m1, pos = self.__parse_maths(m1, op, pos)
                     op = None

@@ -189,7 +189,10 @@ class vExcept(Exception):
                 self.message = f'Invalid SESSION_ID ({message})'
             case 1001:
                 self.message = 'No query submitted or previous result already fetched'
-            # ~~~~~BLANK (1100-1699)
+            # BIND (1100-1199)
+            case 1100:
+                self.message = f'Bind error: bind variable ({message}) in query is not supplied'
+            # ~~~~~BLANK (1200-1699)
             # COLUMN format (1700-1799)
             case 1700:
                 self.message = f'Invalid column format ({message})'
@@ -237,6 +240,10 @@ class vExcept(Exception):
                 self.message = f'''Incorrect number of arguments for CHAR function: must be 1 but {message} argument(s) provided'''
             case 2310:
                 self.message = f'''Incorrect parameter for CHAR function ({message})'''
+            case 2311:
+                self.message = f'''Incorrect number of arguments for ABS function: must be 1 but {message} argument(s) provided'''
+            case 2312:
+                self.message = f'''Incorrect parameter for ABS function ({message})'''
             # MATHS (2500-2599)
             case 2500:
                 self.message = '''Division by zero'''
