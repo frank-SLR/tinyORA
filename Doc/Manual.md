@@ -1,7 +1,7 @@
 # TinyORA
 
 TinyORA is a small database engine. It allows you to manage data using SQL.
-> Queries have to use the syntax decribe below. [^1]
+> Queries have to use the syntax decribe below.
 
 ---
 # Table of content
@@ -396,6 +396,28 @@ If value is 1 then return 'FIRST', if value is 2 then return 'SECOND', for other
 DECODE(value, 1, 'FIRST', 2, 'SECOND', 'LATE...')
 ```
 
+## INSTR
+Return position of SUBSTRING in STRING. Search start at POSITION and stops at OCCURENCE.
+POSITION and OCCURENCE parameters are optionnal.
+
+```sql
+INSTR ( <SEL_COL>, <SEL_COL> [, <POSITION>, [ <OCCURENCE> ] ] )
+```
+
+*SEL_COL*: Input string from witch substring has to been extracted.
+*POSITON*: Index of character where search starts. First character has index '1'.
+*OCCURENCE*: Occurence of SUBSTRING searched in STRING.
+
+If no data matches, function return 0.
+
+Example:
+Result of function is 15:
+```sql
+INSTR('My tailor is rich', 'i', 7, 2)
+```
+
+See: [SEL_COL](#sel_col)
+
 ## LOWER
 Convert data to lowercase.
 Output format is 'str'.
@@ -412,15 +434,18 @@ Output format is 'str'.
 ```sql
 SUBSTR ( <SEL_COL>, <FIRST_CHAR_INDEX>, <LENGTH> )
 ```
-<SEL_COL>: Input string from witch substring has to been extracted.
-<FIRST_CHAR_INDEX>: Index of first character of the substring. Fist character has index '0'.
-<LENGTH>: Length of the substring.
+
+*SEL_COL*: Input string from witch substring has to been extracted.
+*FIRST_CHAR_INDEX*: Index of first character of the substring. Fist character has index '1'.
+*LENGTH*: Length of the substring.
 
 Example:
-Extract substring 'DEFG' from string 'ABCDEFGH':
+Extract substring 'CDEF' from string 'ABCDEFGH':
 ```sql
 SUBSTR('ABCDEFGH', 3, 4)
 ```
+
+See: [SEL_COL](#sel_col)
 
 ## TO_CHAR
 Convert datetime to string with fixed format.
@@ -429,10 +454,10 @@ Output format is 'str'.
 ```sql
 TO_CHAR ( <DATE>, <OUTPUT_FORMAT> )
 ```
-<DATE>: Input date to convert.
-<OUTPUT_FORMAT>: Length of the substring.
+*DATE*: Input date to convert.
+*OUTPUT_FORMAT*: Length of the substring.
 
-Formatcoes are:
+Format codes are:
 |Code|Description|
 | --- | :--- |
 |YYYY|Year with 4 digits|
@@ -464,6 +489,3 @@ Output format is 'str'.
 UPPER ( <SEL_COL> )
 ```
 See: [SEL_COL](#sel_col)
-
-
-[^1]: test 

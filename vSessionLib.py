@@ -1320,9 +1320,12 @@ class vSession(object):
             case 'SUBSTR':
                 if len(self.__parsed_query["functions"][fct_num][2]) != 3:
                     raise vExcept(2300, len(self.__parsed_query["functions"][fct_num][2]))
-                strin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
-                sttin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1]) # .replace('"', '').replace("'", "")
-                lenin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]) # .replace('"', '').replace("'", "")
+                strin = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
+                sttin = int(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])) - 1
+                if sttin < 0:
+                    sttin = 0
+                lenin = int(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]))
+                print(f'__compute_function SUBSTR strin={strin} sttin={sttin} lenin={lenin}')
                 if not self.__check_STR(strin):
                     raise vExcept(2301, strin)
                 if not self.__check_INT(sttin):
@@ -1385,11 +1388,47 @@ class vSession(object):
                     return str(chr(int(val_int)))
                 else:
                     raise vExcept(2310, val_int)
+            case 'INSTR':
+                if len(self.__parsed_query["functions"][fct_num][2]) not in [2, 3, 4]:
+                    raise vExcept(2313, len(self.__parsed_query["functions"][fct_num][2]))
+                instr = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
+                insubstr = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1]))
+                match len(self.__parsed_query["functions"][fct_num][2]):
+                    case 2:
+                        inposition = 0
+                        inoccurence = 1
+                    case 3:
+                        inposition = int(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]))
+                        inoccurence = 1
+                    case 4:
+                        inposition = int(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]))
+                        inoccurence = int(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][3]))
+                if (inposition >= len(instr)) or (inoccurence < 1):
+                    return 0
+                while inposition < len(instr):
+                    print(f'__compute_function instr={instr[inposition:]} insubstr={insubstr} inposition={inposition} inoccurence={inoccurence}')
+                    try:
+                        foundin = instr[inposition:].index(insubstr)
+                        if foundin >= 0:
+                            print(f'__compute_function found')
+                            if inoccurence == 1:
+                                print(f'__compute_function trouve')
+                                return foundin+inposition+1
+                            else:
+                                print(f'__compute_function continu')
+                                inoccurence -= 1
+                                inposition = inposition+foundin+1
+                        else:
+                            return 0
+                    except ValueError:
+                        return 0
 
     def __get_function_type(self, fct_name: str, ref_col_typ: str):
         match fct_name:
             case 'UPPER'|'LOWER'|'SUBSTR'|'TO_CHAR'|'CHR':
                 return 'str'
+            case 'INSTR':
+                return 'int'
             case 'ABS':
                 if ref_col_typ.upper() in ['INT', 'FLOAT']:
                     return ref_col_typ.lower()

@@ -244,6 +244,8 @@ class vExcept(Exception):
                 self.message = f'''Incorrect number of arguments for ABS function: must be 1 but {message} argument(s) provided'''
             case 2312:
                 self.message = f'''Incorrect parameter for ABS function ({message})'''
+            case 2313:
+                self.message = f'''Incorrect number of arguments for INSTR function: must be 2 or 3 or 4 but {message} argument(s) provided'''
             # MATHS (2500-2599)
             case 2500:
                 self.message = '''Division by zero'''
