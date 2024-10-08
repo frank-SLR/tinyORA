@@ -8,39 +8,6 @@ TinyORA is a small database engine. It allows you to manage data using SQL.
 
 [TOC]
 
-[SELECT](#select)
-
-[WITH](#with)
-
-[DESC](#desc--describe)
-
-[GRANT](#grant)
-
-[REVOKE](#revoke)
-
-[CREATE](#create)
-
-[DROP](#drop)
-
-[INSERT](#insert)
-
-[UPDATE](#update)
-
-[DELETE](#delete)
-
-[COMMIT](#commit)
-
-[ROLLBACK](#rollback)
-
-[FUNCTION](#function)
-
-  [CHR](#chr)
-  [LOWER](#lower)
-  [SUBSTR](#substr)
-  [UPPER](#upper)
-  [TO_CHAR](#to_char)
-
-
 ---
 
 > **[]** indicate an optional object
@@ -273,6 +240,18 @@ Example:
 Select constant plus name column from table using his alias:
 ```sql
 select 'The name :', t1.name from emp_with_dep t1 where emp_id=12;
+```
+
+### Bind variable
+Bind variable is replaced in query with his value while parsing.
+Bind varaible mus been supplied with the query and has format :
+```
+:NAME_Of_BIND
+```
+Example:
+Concatenate bind variable VAR1 with column NAME:
+```sql
+select :VAR1 || t1.name from emp_with_dep t1 where emp_id=12;
 ```
 
 ## Function to convert one or more columns or function or constant to a specific format
