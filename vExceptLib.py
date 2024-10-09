@@ -246,6 +246,22 @@ class vExcept(Exception):
                 self.message = f'''Incorrect parameter for ABS function ({message})'''
             case 2313:
                 self.message = f'''Incorrect number of arguments for INSTR function: must be 2 or 3 or 4 but {message} argument(s) provided'''
+            case 2314:
+                self.message = f'''Incorrect number of arguments for NVL function: must be 2 but {message} argument(s) provided'''
+            case 2315:
+                self.message = f'''Incorrect number of arguments for NVL2 function: must be 3 but {message} argument(s) provided'''
+            case 2316:
+                self.message = f'''Incorrect number of arguments for LPAD function: must be 2 or 3 but {message} argument(s) provided'''
+            case 2317:
+                self.message = f'''Incorrect arguments for LPAD function: second parameter must be integer but {message} is supplied'''
+            case 2318:
+                self.message = f'''Incorrect number of arguments for RPAD function: must be 2 or 3 but {message} argument(s) provided'''
+            case 2319:
+                self.message = f'''Incorrect arguments for RPAD function: second parameter must be integer but {message} is supplied'''
+            case 2320:
+                self.message = f'''Incorrect number of arguments for LTRIM function: must be 1 or 2 but {message} argument(s) provided'''
+            case 2321:
+                self.message = f'''Incorrect number of arguments for RTRIM function: must be 1 or 2 but {message} argument(s) provided'''
             # MATHS (2500-2599)
             case 2500:
                 self.message = '''Division by zero'''

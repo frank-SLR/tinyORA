@@ -427,6 +427,69 @@ LOWER ( <SEL_COL> )
 ```
 See: [SEL_COL](#sel_col)
 
+## LPAD
+Return first parameter left padded to second parameter lenght. if third parameter is provide, padded part is filled with it.
+
+```sql
+LPAD ( <SEL_COL>, <SEL_COL> [, <SEL_COL>] )
+```
+
+Example:
+Result of function is '---John':
+```sql
+LPAD('John', 7, '-')
+```
+
+See: [SEL_COL](#sel_col)
+
+## LTRIM
+LTRIM removes from the left end of first parameter all of the characters contained in second parameter. If second parameter is not provided, it defaults to a single blank.
+
+```sql
+LTRIM ( <SEL_COL> [, <SEL_COL>] )
+```
+
+Example:
+Result of function is 'John':
+```sql
+LPAD('-------John', '-')
+```
+
+See: [SEL_COL](#sel_col)
+
+## NVL
+NVL returns first parameter if it is not null, else NVL returns second parameter
+
+```sql
+NVL ( <SEL_COL>, <SEL_COL> )
+```
+
+See: [SEL_COL](#sel_col)
+
+## NVL2
+NVL2 returns third parameter if first parameter is not null, else NVL2 returns second parameter
+
+```sql
+NVL ( <SEL_COL>, <SEL_COL>, <SEL_COL> )
+```
+
+See: [SEL_COL](#sel_col)
+
+## RPAD
+Return first parameter right padded to second parameter lenght. if third parameter is provide, padded part is filled with it.
+
+```sql
+RPAD ( <SEL_COL>, <SEL_COL> [, <SEL_COL>] )
+```
+
+Example:
+Result of function is 'John---':
+```sql
+RPAD('John', 7, '-')
+```
+
+See: [SEL_COL](#sel_col)
+
 ## SUBSTR
 Extract substring of supplied data.
 Output format is 'str'.

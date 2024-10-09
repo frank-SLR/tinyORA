@@ -1406,26 +1406,89 @@ class vSession(object):
                 if (inposition >= len(instr)) or (inoccurence < 1):
                     return 0
                 while inposition < len(instr):
-                    print(f'__compute_function instr={instr[inposition:]} insubstr={insubstr} inposition={inposition} inoccurence={inoccurence}')
                     try:
                         foundin = instr[inposition:].index(insubstr)
                         if foundin >= 0:
-                            print(f'__compute_function found')
                             if inoccurence == 1:
-                                print(f'__compute_function trouve')
                                 return foundin+inposition+1
                             else:
-                                print(f'__compute_function continu')
                                 inoccurence -= 1
                                 inposition = inposition+foundin+1
                         else:
                             return 0
                     except ValueError:
                         return 0
+            case 'NVL':
+                if len(self.__parsed_query["functions"][fct_num][2]) != 2:
+                    raise vExcept(2314, len(self.__parsed_query["functions"][fct_num][2]))
+                v1 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
+                v2 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1]))
+                if (v1 is None) or (v1 == ''):
+                    return v2
+                else:
+                    return v1
+            case 'NVL2':
+                if len(self.__parsed_query["functions"][fct_num][2]) != 3:
+                    raise vExcept(2315, len(self.__parsed_query["functions"][fct_num][2]))
+                v1 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
+                v2 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1]))
+                v3 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]))
+                if (v1 is None) or (v1 == ''):
+                    return v3
+                else:
+                    return v2
+            case 'LPAD':
+                if len(self.__parsed_query["functions"][fct_num][2]) not in [2, 3]:
+                    raise vExcept(2316, len(self.__parsed_query["functions"][fct_num][2]))
+                v1 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
+                v2 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1]))
+                if not self.__check_INT(v2):
+                    raise vExcept(2317, v2)
+                if len(self.__parsed_query["functions"][fct_num][2]) == 3:
+                    v3 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]))
+                else:
+                    v3 = ' '
+                vbegin = str(v3 * v2)[0:v2-len(v1)]
+                return str(vbegin + v1)
+            case 'RPAD':
+                if len(self.__parsed_query["functions"][fct_num][2]) not in [2, 3]:
+                    raise vExcept(2318, len(self.__parsed_query["functions"][fct_num][2]))
+                v1 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
+                v2 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1]))
+                if not self.__check_INT(v2):
+                    raise vExcept(2319, v2)
+                if len(self.__parsed_query["functions"][fct_num][2]) == 3:
+                    v3 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]))
+                else:
+                    v3 = ' '
+                vbegin = str(v3 * v2)[0:v2-len(v1)]
+                return str(v1 + vbegin)
+            case 'LTRIM':
+                if len(self.__parsed_query["functions"][fct_num][2]) not in [1, 2]:
+                    raise vExcept(2320, len(self.__parsed_query["functions"][fct_num][2]))
+                v1 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
+                if len(self.__parsed_query["functions"][fct_num][2]) == 2:
+                    v2 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1]))
+                else:
+                    v2 = ' '
+                while v1[0:len(v2)] == v2:
+                    v1 = v1[len(v2):]
+                return v1
+            case 'RTRIM':
+                if len(self.__parsed_query["functions"][fct_num][2]) not in [1, 2]:
+                    raise vExcept(2321, len(self.__parsed_query["functions"][fct_num][2]))
+                v1 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
+                if len(self.__parsed_query["functions"][fct_num][2]) == 2:
+                    v2 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1]))
+                else:
+                    v2 = ' '
+                while v1[-len(v2):] == v2:
+                    v1 = v1[:-len(v2)]
+                return v1
 
     def __get_function_type(self, fct_name: str, ref_col_typ: str):
         match fct_name:
-            case 'UPPER'|'LOWER'|'SUBSTR'|'TO_CHAR'|'CHR':
+            case 'CHR'|'LOWER'|'LPAD'|'LTRIM'|'RPAD'|'RTRIM'|'SUBSTR'|'TO_CHAR'|'UPPER':
                 return 'str'
             case 'INSTR':
                 return 'int'
@@ -1434,7 +1497,7 @@ class vSession(object):
                     return ref_col_typ.lower()
                 else:
                     return 'float'
-            case 'DECODE':
+            case 'DECODE'|'NVL'|'NVL2':
                 if ref_col_typ.upper() in ['INT', 'FLOAT', 'STR', 'HEX', 'DATETIME']:
                     return ref_col_typ.lower()
                 else:

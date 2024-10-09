@@ -34,8 +34,8 @@ CHR                 ok
 CONCAT              
 INITCAP             
 LOWER               ok
-LPAD                
-LTRIM               
+LPAD                ok
+LTRIM               ok
 NLS_INITCAP         
 NLS_LOWER           
 NLSSORT             
@@ -43,8 +43,8 @@ NLS_UPPER
 REGEXP_REPLACE      
 REGEXP_SUBSTR       
 REPLACE             
-RPAD                
-RTRIM               
+RPAD                ok
+RTRIM               ok
 SOUNDEX             
 SUBSTR              ok
 TRANSLATE           
@@ -53,10 +53,10 @@ TRIM
 UPPER               ok
 
 Character Functions Returning Number Values
-ASCII             
-INSTR             
-LENGTH            
-REGEXP_INSTR      
+ASCII               
+INSTR               ok
+LENGTH              
+REGEXP_INSTR        
 
 Datetime Functions
 ADD_MONTHS          
@@ -82,11 +82,11 @@ TO_DATE
 
 Miscellaneous Single-Row Functions
 COALESCE            
-DECODE              
+DECODE              ok
 DEPTH               
 DUMP                
 LEAST               
 LNNVL               
 NULLIF              
-NVL                 
-NVL2                
+NVL                 ok
+NVL2                ok
