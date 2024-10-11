@@ -34,7 +34,7 @@ class vParser():
         self.__intMathsSeq = 0
         self.__intPipeSeq = 0
         self.__raz()
-        self.__list_of_functions = ['ABS', 'CHR', 'DECODE', 'INSTR', 'LOWER', 'LPAD', 'LTRIM', 'NVL', 'NVL2', 
+        self.__list_of_functions = ['ABS', 'CHR', 'DECODE', 'INSTR', 'LENGTH', 'LOWER', 'LPAD', 'LTRIM', 'NVL', 'NVL2', 
                                     'RPAD', 'RTRIM', 'SUBSTR', 'TO_CHAR', 'UPPER']
 
     def __raz(self) -> None:
@@ -100,6 +100,7 @@ class vParser():
         result = ''
         while __continue:
             if pos < len(self.__query):
+                # print(f'__parse_word char={self.__query[pos]}')
                 match self.__query[pos]:
                     case ' ':
                         pos += 1
@@ -183,10 +184,23 @@ class vParser():
         if (len(result) > 0) and (result[0] == ':'):
             # print(f'__parse_word result={result}')
             if result[1:] in self.__parsed_query["bind"]:
-                result = str(self.__parsed_query["bind"][result[1:]])
+                tmpbind = self.__parsed_query["bind"][result[1:]]
+                rtype = self.__get_format(tmpbind)
+                # print(f'__parse_word tmpbind={tmpbind}  rtype={rtype}')
+                match rtype:
+                    case 'STR'|'HEX':
+                        result = f"""'{self.__remove_quote(tmpbind)}'"""
+                        # print(f'__parse_word result={result}')
+                    case _:
+                        result = f'{tmpbind}'
+                        # print(f'__parse_word result={result}')
             else:
                 raise vExcept(1100, result[1:])
             # print(f'__parse_word result={result}')
+        # if pos < len(self.__query):
+        #     print(f'__parse_word result={result} pos={pos} char={self.__query[pos]}')
+        # else:
+        #     print(f'__parse_word result={result} pos={pos} char=--fin_de_chaine--')
         return result, pos
 
     def __parse_parenthesis(self, pos):
@@ -798,6 +812,7 @@ class vParser():
                         # print(f'__parse_SEL_COL 4  col={col} word={word}')
                         self.__parsed_query["select"].append([None, None, None, col, None, None, None, None, None, []])
                 if word.upper() not in [',', 'FROM']:
+                    print(f'__parse_SEL_COL word={word}')
                     raise vExcept(702, word)
         return word, pos
 
@@ -925,7 +940,7 @@ class vParser():
         word = ''
         while (word != ')') and (pos < len(self.__query)):
             word, pos = self.__parse_word(pos)
-            # print(f'__parse_COL_FCT 1 word={word}')
+            # print(f'__parse_COL_FCT 0 word={word}')
             if self.__is_function(word.upper()):
                 col, pos = self.__parse_word(pos)
                 if col != '(':
@@ -934,6 +949,7 @@ class vParser():
                 self.__parsed_query["functions"][fct_idx][2].append([None, None, None, sub_fct, 'FUNCTION', None, None, None])
                 word, pos = self.__parse_word(pos)
                 if (word != ',') and (word != ')'):
+                    # print(f'__parse_COL_FCT 1 word={word}')
                     raise vExcept(702, word)
             else:
                 if word in ['-', '+']:
@@ -941,24 +957,29 @@ class vParser():
                 else:
                     elem = word
                     word, pos = self.__parse_word(pos)
+                    # print(f'__parse_COL_FCT 2 elem={elem} word={word}')
                 if word in ['+', '-', '*', '/']:
-                    # print(f'__parse_COL_FCT 2 word={word}')
+                    # print(f'__parse_COL_FCT 3 word={word}')
                     word, maths_id, pos = self.__parse_maths(elem, word, pos)
                     # print(f'__parse_COL_FCT word={word} maths_id={maths_id}')
                     self.__parsed_query["functions"][fct_idx][2].append([None, None, None, maths_id, 'MATHS', None, None, None])
                     if (word != ',') and (word != ')'):
+                        # print(f'__parse_COL_FCT 4 word={word}')
                         raise vExcept(702, word)
                 elif word == '||':
                     word, pipe_id, pos = self.__parse_pipe(elem, word, pos)
                     if (word != ',') and (word != ')'):
+                        # print(f'__parse_COL_FCT 5 word={word}')
                         raise vExcept(702, word)
                     self.__parsed_query["functions"][fct_idx][2].append([None, None, None, pipe_id, 'PIPE', None, None, None])
                 elif (word != ',') and (word != ')'):
+                    # print(f'__parse_COL_FCT 6 word={word}')
                     raise vExcept(702, word)
                 else:
                     # print(f'__parse_COL_FCT 3 elem={elem}')
                     self.__parsed_query["functions"][fct_idx][2].append([None, None, None, elem, None, None, None, None])
                     if (word != ',') and (word != ')'):
+                        # print(f'__parse_COL_FCT 7 word={word}')
                         raise vExcept(702, word)
         if word != ')':
             raise vExcept(740, col)
@@ -993,6 +1014,7 @@ class vParser():
                 self.__parsed_query["in"][in_idx][2].append([None, None, None, self.__remove_quote(str(word)), 'STR', None, None, None])
             word, pos = self.__parse_word(pos)
             if (word != ',') and (word != ')'):
+                # print(f'__parse_COL_IN word={word}')
                 raise vExcept(702, word)
         if word != ')':
             raise vExcept(740, col)
@@ -1036,6 +1058,7 @@ class vParser():
                     raise vExcept(209, col)
                 word, pos = self.__parse_word(pos)
                 if (word.upper() not in [',', '']) and (word.upper() not in self.__list_of_word(['NONE'])):
+                    # print(f'__parse_FROM_OBJ word={word}')
                     raise vExcept(702, word)
         return word, pos
 
@@ -1133,23 +1156,28 @@ class vParser():
                 self.__parsed_query["where"].append([word])
                 m1, op = None, None
                 word, pos = self.__parse_word(pos)
-                # print(f'__parse_WHERE_CLAUSE  5 word={word}')
+                # print(f'__parse_WHERE_CLAUSE  3 word={word}')
             elif word == '(':
                 if m1 is None:
                     self.__parsed_query["where"].append([word])
                 else:
                     word, maths_id, pos = self.__parse_maths(m1, word, pos)
                     if word == ')':
-                        m1 = maths_id
+                        if m1 is None:
+                            m1 = maths_id
+                        else:
+                            self.__parsed_query["where"].append([m1, op, maths_id])
+                            m1, op = None, None
+                            word, pos = self.__parse_word(pos)
                     else:
                         raise vExcept(740, word)
             elif m1 is None:
                 m1 = word
                 word, pos = self.__parse_word(pos)
-                # print(f'__parse_WHERE_CLAUSE  3 m1={m1}')
+                # print(f'__parse_WHERE_CLAUSE  4 m1={m1}')
             elif op is None:
                 op = word
-                # print(f'__parse_WHERE_CLAUSE  4 op={op}')
+                # print(f'__parse_WHERE_CLAUSE  5 op={op}')
                 if op.upper() == 'BETWEEN':
                     v1, pos = self.__parse_word(pos)
                     if self.__is_function(v1.upper()):
@@ -1177,7 +1205,7 @@ class vParser():
                     self.__parsed_query["where"].append([m1, 'IN', col_lst_name])
                     m1, op = None, None
                     word, pos = self.__parse_word(pos)
-                    # print(f'__parse_WHERE_CLAUSE  5 word={word}')
+                    # print(f'__parse_WHERE_CLAUSE  6 word={word}')
                 elif op in ['+', '-', '*', '/']:
                     word, m1, pos = self.__parse_maths(m1, op, pos)
                     op = None
@@ -1229,7 +1257,14 @@ class vParser():
 
     def __getColFromTable(self, colin:str):
         fmt1 = self.__get_item_format(colin)
-        if fmt1 == 'COLUMN':
+        if colin.upper() == 'ROWNUM':
+            alias1 = None
+            schema1 = None
+            table_name1 = None
+            col1 = 'ROWNUM'
+            tab_cur1 = None
+            num_tab = None
+        elif fmt1 == 'COLUMN':
             tmp1=colin.upper().split('.')
             if len(tmp1) == 1:
                 alias1 = None
@@ -1472,7 +1507,21 @@ class vParser():
             return bool(reg is not None)
         except Exception as e:
             return False
-        
+
+    def __get_format(self, varin):
+        if self.__check_INT(varin):
+            return 'INT'
+        elif self.__check_FLOAT(varin):
+            return 'FLOAT'
+        elif self.__check_DATETIME(varin):
+            return 'DATETIME'
+        elif self.__check_HEX(varin):
+            return 'HEX'
+        elif self.__check_STR(varin):
+            return 'STR'
+        else:
+            raise vExcept(2202, varin)
+
     def __list_of_word(self, except_this:list):
         lst = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'FROM', 'INNER', 'LEFT', 'RIGHT', 'WHERE', 'GROUP', 'ORDER', 'CREATE', 'DROP', 'TABLE', 'INDEX', 'CONNECT']
         for et in except_this:

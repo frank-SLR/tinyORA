@@ -269,17 +269,53 @@ class vSession(object):
         self.__updated_tables = []
 
     def __searchColInFromTables(self, colin, aliasin, table_namein, schemain):
-        count = 0
-        # print('__searchColInFromTables in', colin, aliasin, table_namein, schemain)
-        for tf in range(len(self.__parsed_query["from"])):
-            # print(self.__parsed_query["from"][tf][0:3])
-            if (aliasin is not None) and (aliasin == self.__parsed_query["from"][tf][0]) or \
-               ((aliasin is None) and ( (table_namein is None) or (\
-               (table_namein is not None) and (table_namein == self.__parsed_query["from"][tf][2]) \
-               and ((schemain is None) or (schemain == self.__parsed_query["from"][tf][1]))))):
-                for ctf in range(len(self.__parsed_query["from"][tf][4][0]["columns"])):
-                    if colin == self.__parsed_query["from"][tf][4][0]["columns"][ctf][0]:
-                        count += 1
+        if colin == 'ROWNUM':
+            count = 1
+            memtf, memctf, ctype = None, None, 'INT'
+        else:
+            count = 0
+            # print('__searchColInFromTables in', colin, aliasin, table_namein, schemain)
+            for tf in range(len(self.__parsed_query["from"])):
+                # print(self.__parsed_query["from"][tf][0:3])
+                if (aliasin is not None) and (aliasin == self.__parsed_query["from"][tf][0]) or \
+                ((aliasin is None) and ( (table_namein is None) or (\
+                (table_namein is not None) and (table_namein == self.__parsed_query["from"][tf][2]) \
+                and ((schemain is None) or (schemain == self.__parsed_query["from"][tf][1]))))):
+                    for ctf in range(len(self.__parsed_query["from"][tf][4][0]["columns"])):
+                        if colin == self.__parsed_query["from"][tf][4][0]["columns"][ctf][0]:
+                            count += 1
+                            if aliasin is None:
+                                aliasin = self.__parsed_query["from"][tf][0]
+                            if schemain is None:
+                                schemain = self.__parsed_query["from"][tf][1]
+                            if table_namein is None:
+                                table_namein = self.__parsed_query["from"][tf][2]
+                            memtf = tf
+                            memctf = ctf
+                            ctype = self.__parsed_query["from"][tf][4][0]["columns"][ctf][1]
+                            # print('__searchColInFromTables trouve:', colin, aliasin, table_namein, schemain, memtf, memctf, ctype)
+                            break
+        if count == 0:
+            raise vExcept(311, colin)
+        elif count == 1:
+            return colin, aliasin, table_namein, schemain, memtf, memctf, ctype
+        else:
+            raise vExcept(313, colin)
+
+    def __searchColsInFromTables(self, colin, aliasin, table_namein, schemain):
+        result = []
+        if colin == 'ROWNUM':
+            count = 1
+            result.append([colin, aliasin, None, None, None, None, 'INT', None])
+        else:
+            count = 0
+            for tf in range(len(self.__parsed_query["from"])):
+                if (aliasin is not None) and (aliasin == self.__parsed_query["from"][tf][0]) or \
+                ((aliasin is None) and ( (table_namein is None) or (\
+                (table_namein is not None) and (table_namein == self.__parsed_query["from"][tf][2]) \
+                and ((schemain is None) or (schemain == self.__parsed_query["from"][tf][1]))))):
+                    count += 1
+                    for ctf in range(len(self.__parsed_query["from"][tf][4][0]["columns"])):
                         if aliasin is None:
                             aliasin = self.__parsed_query["from"][tf][0]
                         if schemain is None:
@@ -289,37 +325,9 @@ class vSession(object):
                         memtf = tf
                         memctf = ctf
                         ctype = self.__parsed_query["from"][tf][4][0]["columns"][ctf][1]
-                        # print('__searchColInFromTables trouve:', colin, aliasin, table_namein, schemain, memtf, memctf, ctype)
-                        break
-        if count == 0:
-            raise vExcept(311, colin)
-        elif count == 1:
-            return colin, aliasin, table_namein, schemain, memtf, memctf, ctype
-        else:
-            raise vExcept(313, colin)
-
-    def __searchColsInFromTables(self, colin, aliasin, table_namein, schemain):
-        count = 0
-        result = []
-        for tf in range(len(self.__parsed_query["from"])):
-            if (aliasin is not None) and (aliasin == self.__parsed_query["from"][tf][0]) or \
-               ((aliasin is None) and ( (table_namein is None) or (\
-               (table_namein is not None) and (table_namein == self.__parsed_query["from"][tf][2]) \
-               and ((schemain is None) or (schemain == self.__parsed_query["from"][tf][1]))))):
-                count += 1
-                for ctf in range(len(self.__parsed_query["from"][tf][4][0]["columns"])):
-                    if aliasin is None:
-                        aliasin = self.__parsed_query["from"][tf][0]
-                    if schemain is None:
-                        schemain = self.__parsed_query["from"][tf][1]
-                    if table_namein is None:
-                        table_namein = self.__parsed_query["from"][tf][2]
-                    memtf = tf
-                    memctf = ctf
-                    ctype = self.__parsed_query["from"][tf][4][0]["columns"][ctf][1]
-                    colin = self.__parsed_query["from"][tf][4][0]["columns"][ctf][0]
-                    tab_cur = self.__parsed_query["from"][tf][3]
-                    result.append([colin, aliasin, table_namein, schemain, memtf, memctf, ctype, tab_cur])
+                        colin = self.__parsed_query["from"][tf][4][0]["columns"][ctf][0]
+                        tab_cur = self.__parsed_query["from"][tf][3]
+                        result.append([colin, aliasin, table_namein, schemain, memtf, memctf, ctype, tab_cur])
         if count == 0:
             raise vExcept(311, colin)
         elif count == 1:
@@ -328,6 +336,7 @@ class vSession(object):
             raise vExcept(313, colin)
 
     def __get_rows(self, cur_idx):
+        # print(f'__get_rows cur_idx={cur_idx} nblignes={len(self.__parsed_query["from"][cur_idx][4][0]["rows"])}')
         for n in range(len(self.__parsed_query["from"][cur_idx][4][0]["rows"])):
             self.__RowsPosInTables[cur_idx] = n
             if cur_idx < len(self.__parsed_query["from"])-1:
@@ -337,7 +346,10 @@ class vSession(object):
                     rrow = []
                     for s in self.__parsed_query['select']:
                         if s[5] == 'COLUMN':
-                            rrow.append(self.__parsed_query["from"][s[6]][4][0]["rows"][self.__RowsPosInTables[s[6]]][s[7]])
+                            if s[3] == 'ROWNUM':
+                                rrow.append(len(self.__result))
+                            else:
+                                rrow.append(self.__parsed_query["from"][s[6]][4][0]["rows"][self.__RowsPosInTables[s[6]]][s[7]])
                         elif s[5] == 'INT':
                             rrow.append(int(s[3]))
                         elif s[5] == 'FLOAT':
@@ -436,12 +448,12 @@ class vSession(object):
                 Validate_prefetch_process = False
                 for tst in self.__parsed_query['parsed_where']:
                     if tst[1][0] == "TST":
-                        if (tst[1][5] == "COLUMN") and (tst[1][1] == cur_idx) and (tst[3][5] != "COLUMN") or \
-                           (tst[3][5] == "COLUMN") and (tst[3][1] == cur_idx) and (tst[1][5] != "COLUMN") or \
+                        if (tst[1][5] == "COLUMN") and (tst[1][1] == cur_idx) and (tst[3][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]) or \
+                           (tst[3][5] == "COLUMN") and (tst[3][1] == cur_idx) and (tst[1][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]) or \
                            (tst[1][5] == "COLUMN") and (tst[1][1] == cur_idx) and (tst[3][5] == "COLUMN") and (tst[3][1] == cur_idx):
                             Validate_prefetch_process = True
                             break
-                # print ('__prefetch_get_rows', self.__parsed_query["from"][cur_idx][2], Validate_prefetch_process)
+                # print (f'__prefetch_get_rows {self.__parsed_query["from"][cur_idx][2]}  {Validate_prefetch_process}')
                 if Validate_prefetch_process:
                     tmp_rows = []
                     for n in range(len(self.__parsed_query["from"][cur_idx][4][0]["rows"])):
@@ -464,7 +476,10 @@ class vSession(object):
                         raise vExcept(899, tst)
                 if tst[1][0] == "TST":
                     if tst[1][5] == "COLUMN":
-                        c1 = self.__parsed_query["from"][tst[1][1]][4][0]["rows"][self.__RowsPosInTables[tst[1][1]]][tst[1][2]]
+                        if tst[1][4] == "ROWNUM":
+                            c1 = len(self.__result)
+                        else:
+                            c1 = self.__parsed_query["from"][tst[1][1]][4][0]["rows"][self.__RowsPosInTables[tst[1][1]]][tst[1][2]]
                     elif tst[1][5] == "FUNCTION":
                         c1 = self.__compute_function(tst[1][4])
                     elif tst[1][5] == 'MATHS':
@@ -474,7 +489,10 @@ class vSession(object):
                     else:
                         c1 = tst[1][4]
                     if tst[3][5] == "COLUMN":
-                        c2 = self.__parsed_query["from"][tst[3][1]][4][0]["rows"][self.__RowsPosInTables[tst[3][1]]][tst[3][2]]
+                        if tst[3][4] == "ROWNUM":
+                            c2 = len(self.__result)
+                        else:
+                            c2 = self.__parsed_query["from"][tst[3][1]][4][0]["rows"][self.__RowsPosInTables[tst[3][1]]][tst[3][2]]
                     elif tst[3][5] == "FUNCTION":
                         c2 = self.__compute_function(tst[3][4])
                     elif tst[3][5] == 'MATHS':
@@ -486,7 +504,10 @@ class vSession(object):
                     tstoper = tst[2]
                     if len(tst) == 5:
                         if tst[4][5] == "COLUMN":
-                            c3 = self.__parsed_query["from"][tst[4][1]][4][0]["rows"][self.__RowsPosInTables[tst[4][1]]][tst[4][2]]
+                            if tst[4][4] == "ROWNUM":
+                                c3 = len(self.__result)
+                            else:
+                                c3 = self.__parsed_query["from"][tst[4][1]][4][0]["rows"][self.__RowsPosInTables[tst[4][1]]][tst[4][2]]
                         elif tst[4][5] == "FUNCTION":
                             c3 = self.__compute_function(tst[4][4])
                         elif tst[4][5] == 'MATHS':
@@ -496,6 +517,7 @@ class vSession(object):
                         else:
                             c3 = tst[4][4]
                         result = self.__compare_cols(str(c1), str(c2), '>=') and self.__compare_cols(str(c1), str(c3), '<=')
+                        # print(f'__process_tests c1={c1} BETWEEN c2={c2} AND c3={c3}  result={result}')
                     elif tstoper == 'IN':
                         in_id = self.__get_in(c2)
                         result = False
@@ -505,6 +527,7 @@ class vSession(object):
                                 break
                     else:
                         result = self.__compare_cols(str(c1), str(c2), tstoper)
+                        # print(f'__process_tests c1={c1} {tstoper} c2={c2}   result={result}')
                 else:
                     result = self.__compare_cols(temp_res[tst[1][1]], temp_res[tst[3][1]], tst[2])
                 temp_res.append(result)
@@ -520,7 +543,10 @@ class vSession(object):
                         raise vExcept(899, tst)
                     if tst[1][0] == "TST":
                         if tst[1][5] == "COLUMN":
-                            c1 = self.__parsed_query["from"][tst[1][1]][4][0]["rows"][self.__RowsPosInTables[tst[1][1]]][tst[1][2]]
+                            if tst[1][4] == "ROWNUM":
+                                c1 = len(self.__result)
+                            else:
+                                c1 = self.__parsed_query["from"][tst[1][1]][4][0]["rows"][self.__RowsPosInTables[tst[1][1]]][tst[1][2]]
                         elif tst[1][5] == "FUNCTION":
                             c1 = self.__compute_function(tst[1][4])
                         elif tst[1][5] == "MATHS":
@@ -530,7 +556,10 @@ class vSession(object):
                         else:
                             c1 = tst[1][4]
                         if tst[3][5] == "COLUMN":
-                            c2 = self.__parsed_query["from"][tst[3][1]][4][0]["rows"][self.__RowsPosInTables[tst[3][1]]][tst[3][2]]
+                            if tst[3][4] == "ROWNUM":
+                                c2 = len(self.__result)
+                            else:
+                                c2 = self.__parsed_query["from"][tst[3][1]][4][0]["rows"][self.__RowsPosInTables[tst[3][1]]][tst[3][2]]
                         elif tst[3][5] == "FUNCTION":
                             c2 = self.__compute_function(tst[3][4])
                         elif tst[3][5] == "MATHS":
@@ -546,6 +575,7 @@ class vSession(object):
                     temp_res.append(result)
                 if len(temp_res) > 0:
                     inner_tests = inner_tests and temp_res[-1]
+        # print(f'__process_tests result={where_tests and inner_tests}')
         return where_tests and inner_tests
 
     def __prefetch_process_tests(self, tab_num):
@@ -555,55 +585,54 @@ class vSession(object):
         if len(self.__parsed_query["parsed_where"]) > 0:
             temp_res = []
             for tst in self.__parsed_query['parsed_where']:
+                no_test = False
                 if tst[1][0] != tst[3][0]:
                     raise vExcept(899, tst)
                 if tst[1][0] == "TST":
-                    if tst[1][5] == "COLUMN":
-                        if tst[1][1] == tab_num:
-                            c1 = self.__parsed_query["from"][tst[1][1]][4][0]["rows"][self.__RowsPosInTables[tst[1][1]]][tst[1][2]]
-                    elif tst[1][5] == "FUNCTION":
-                        c1 = self.__compute_function(tst[1][4])
+                    if (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num):
+                        c1 = self.__parsed_query["from"][tst[1][1]][4][0]["rows"][self.__RowsPosInTables[tst[1][1]]][tst[1][2]]
                     else:
-                        c1 = tst[1][4]
-                    if tst[3][5] == "COLUMN":
-                        if tst[3][1] == tab_num:
-                            c2 = self.__parsed_query["from"][tst[3][1]][4][0]["rows"][self.__RowsPosInTables[tst[3][1]]][tst[3][2]]
-                    elif tst[3][5] == "FUNCTION":
-                        c2 = self.__compute_function(tst[3][4])
+                        no_test = True
+                    if (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num):
+                        c2 = self.__parsed_query["from"][tst[3][1]][4][0]["rows"][self.__RowsPosInTables[tst[3][1]]][tst[3][2]]
                     else:
-                        c2 = tst[3][4]
+                        no_test = True
                     tstoper = tst[2]
-                    if len(tst) == 5:
-                        if tst[4][5] == "COLUMN":
-                            if tst[4][1] == tab_num:
-                                c3 = self.__parsed_query["from"][tst[4][1]][4][0]["rows"][self.__RowsPosInTables[tst[4][1]]][tst[4][2]]
-                        elif tst[4][5] == "FUNCTION":
-                            if tst[4][1] == tab_num:
-                                c3 = self.__compute_function(tst[4][4])
-                        else:
-                            c3 = tst[4][4]
-                        if (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] != "COLUMN") or \
-                        (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num) and (tst[1][5] != "COLUMN") or \
-                        (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num):
-                            result = self.__compare_cols(str(c1), str(c2), '>=')
-                            if (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[4][5] != "COLUMN") or \
-                            (tst[4][5] == "COLUMN") and (tst[4][1] == tab_num) and (tst[1][5] != "COLUMN") or \
-                            (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[4][5] == "COLUMN") and (tst[4][1] == tab_num):
-                                result = result and self.__compare_cols(str(c1), str(c3), '<=')
+                    if no_test:
+                        result = None
+                    elif len(tst) == 5:
+                        if (tst[4][5] == "COLUMN") and (tst[4][1] == tab_num):
+                            c3 = self.__parsed_query["from"][tst[4][1]][4][0]["rows"][self.__RowsPosInTables[tst[4][1]]][tst[4][2]]
+                            if (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]) or \
+                            (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num) and (tst[1][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]) or \
+                            (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num):
+                                result = self.__compare_cols(str(c1), str(c2), '>=')
+                                if (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[4][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]) or \
+                                (tst[4][5] == "COLUMN") and (tst[4][1] == tab_num) and (tst[1][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]) or \
+                                (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[4][5] == "COLUMN") and (tst[4][1] == tab_num):
+                                    result = result and self.__compare_cols(str(c1), str(c3), '<=')
+                                else:
+                                    result = None
                             else:
                                 result = None
                         else:
                             result = None
-                    elif tstoper == 'IN':
+                    elif (tstoper == 'IN'):
                         in_id = self.__get_in(c2)
                         result = False
-                        for mbr in self.__parsed_query["in"][in_id][2]:
-                            if c1 == mbr[3]:
-                                result = True
-                                break
+                        if self.__parsed_query["in"][in_id][1] == 'LIST':
+                            for mbr in self.__parsed_query["in"][in_id][2]:
+                                if mbr[5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]:
+                                    if c1 == mbr[3]:
+                                        result = True
+                                        break
+                                else:
+                                    result = None
+                        else:
+                            result = None
                     else:
-                        if (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] != "COLUMN") or \
-                        (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num) and (tst[1][5] != "COLUMN") or \
+                        if (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]) or \
+                        (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num) and (tst[1][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]) or \
                         (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num):
                             result = self.__compare_cols(str(c1), str(c2), tstoper)
                         else:
@@ -625,6 +654,7 @@ class vSession(object):
                 where_tests = True
         else:
             where_tests = True
+        # print(f'__prefetch_process_tests  where_tests={where_tests} temp_res={temp_res}')
         return where_tests
 
     def __process_select(self, result):
@@ -855,6 +885,7 @@ class vSession(object):
             raise vExcept(2200, '"{}" as {}'.format(value, type_value))
 
     def __compare_cols(self, c1, c2, oper):
+        # print(f'__compare_cols c1={c1} c2={c2} oper={oper}')
         if self.__check_STR(c1):
             if ((c1[0] == '"') and (c1[-1] == '"')) or ((c1[0] == "'") and (c1[-1] == "'")):
                 c1 = c1[1:-1]
@@ -918,6 +949,7 @@ class vSession(object):
                 result = bool(c1 or c2)
             case other:
                 raise vExcept(510, oper)
+        # print(f'__compare_cols result={result}')
         return result
 
     def __check_INT(self, varin):
@@ -1251,7 +1283,10 @@ class vSession(object):
                     case 'PIPE':
                         tmp_res.append(self.__compute_pipe(blk[1][4]))
                     case 'COLUMN':
-                        tmp_res.append(self.__parsed_query["from"][blk[1][6]][4][0]["rows"][self.__RowsPosInTables[blk[1][6]]][blk[1][7]])
+                        if blk[1][4] == 'ROWNUM':
+                            tmp_res.append(len(self.__result))
+                        else:
+                            tmp_res.append(self.__parsed_query["from"][blk[1][6]][4][0]["rows"][self.__RowsPosInTables[blk[1][6]]][blk[1][7]])
             else:
                 match blk[2]:
                     case '+':
@@ -1289,12 +1324,18 @@ class vSession(object):
                 case 'MATHS':
                     tmp_res = tmp_res + self.__compute_maths(blk[3])
                 case 'COLUMN':
-                    tmp_res = tmp_res + self.__remove_quote(self.__parsed_query["from"][blk[6]][4][0]["rows"][self.__RowsPosInTables[blk[6]]][blk[7]])
+                    if blk[1][4] == 'ROWNUM':
+                        tmp_res = tmp_res + f'{len(self.__result)}'
+                    else:
+                        tmp_res = tmp_res + self.__remove_quote(self.__parsed_query["from"][blk[6]][4][0]["rows"][self.__RowsPosInTables[blk[6]]][blk[7]])
         return tmp_res
 
     def __get_function_col(self, colblk):
         if colblk[4] == 'COLUMN':
-            return self.__parsed_query["from"][colblk[5]][4][0]["rows"][self.__RowsPosInTables[colblk[5]]][colblk[6]]
+            if colblk[3] == 'ROWNUM':
+                return len(self.__result)
+            else:
+                return self.__parsed_query["from"][colblk[5]][4][0]["rows"][self.__RowsPosInTables[colblk[5]]][colblk[6]]
         elif colblk[4] == 'FUNCTION':
             return self.__compute_function(colblk[3])
         elif colblk[4] == 'MATHS':
@@ -1325,7 +1366,7 @@ class vSession(object):
                 if sttin < 0:
                     sttin = 0
                 lenin = int(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]))
-                print(f'__compute_function SUBSTR strin={strin} sttin={sttin} lenin={lenin}')
+                # print(f'__compute_function SUBSTR strin={strin} sttin={sttin} lenin={lenin}')
                 if not self.__check_STR(strin):
                     raise vExcept(2301, strin)
                 if not self.__check_INT(sttin):
@@ -1485,10 +1526,14 @@ class vSession(object):
                 while v1[-len(v2):] == v2:
                     v1 = v1[:-len(v2)]
                 return v1
+            case 'LENGTH':
+                if len(self.__parsed_query["functions"][fct_num][2]) != 1:
+                    raise vExcept(2322, len(self.__parsed_query["functions"][fct_num][2]))
+                return len(self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])))
 
     def __get_function_type(self, fct_name: str, ref_col_typ: str):
         match fct_name:
-            case 'CHR'|'LOWER'|'LPAD'|'LTRIM'|'RPAD'|'RTRIM'|'SUBSTR'|'TO_CHAR'|'UPPER':
+            case 'CHR'|'LENGTH'|'LOWER'|'LPAD'|'LTRIM'|'RPAD'|'RTRIM'|'SUBSTR'|'TO_CHAR'|'UPPER':
                 return 'str'
             case 'INSTR':
                 return 'int'

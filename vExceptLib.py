@@ -217,6 +217,8 @@ class vExcept(Exception):
                 self.message = f'Invalid format for value ({message})'
             case 2201:
                 self.message = f'Invalid type ({message})'
+            case 2202:
+                self.message = f'Unable to determine type for {message}'
             # FUNCTION (2300-2499)
             case 2300:
                 self.message = f'Bad arguments number for SUBSTR function: {message} supplied argument(s) but needs 3'
@@ -262,6 +264,8 @@ class vExcept(Exception):
                 self.message = f'''Incorrect number of arguments for LTRIM function: must be 1 or 2 but {message} argument(s) provided'''
             case 2321:
                 self.message = f'''Incorrect number of arguments for RTRIM function: must be 1 or 2 but {message} argument(s) provided'''
+            case 2322:
+                self.message = f'''Incorrect number of arguments for LENGTH function: must be 1 but {message} argument(s) provided'''
             # MATHS (2500-2599)
             case 2500:
                 self.message = '''Division by zero'''

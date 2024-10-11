@@ -55,7 +55,7 @@ UPPER               ok
 Character Functions Returning Number Values
 ASCII               
 INSTR               ok
-LENGTH              
+LENGTH              ok
 REGEXP_INSTR        
 
 Datetime Functions

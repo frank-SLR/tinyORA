@@ -167,6 +167,7 @@ async def post_query(query: str, session_id: str, request: Request, bind:str = [
     Returns:
         dict: dict{result, err_message{errcode, message}}
     """
+    # print(f'post_query bind={bind}')
     jbind:dict = json.loads(bind)
     err_message = {}
     result = {}
