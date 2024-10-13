@@ -1,0 +1,92 @@
+https://docs.oracle.com/cd/B13789_01/server.101/b10759/functions001.htm
+
+
+Numeric Functions
+ABS                 ok
+ACOS                
+ASIN                
+ATAN                
+ATAN2               
+BITAND              
+CEIL                
+COS                 
+COSH                
+EXP                 
+FLOOR               
+LN                  
+LOG                 
+MOD                 
+NANVL               
+POWER               
+REMAINDER           
+ROUND (number)      
+SIGN                
+SIN                 
+SINH                
+SQRT                
+TAN                 
+TANH                
+TRUNC (number)      
+WIDTH_BUCKET        
+
+Character Functions Returning Character Values
+CHR                 ok
+CONCAT              
+INITCAP             
+LOWER               ok
+LPAD                ok
+LTRIM               ok
+NLS_INITCAP         
+NLS_LOWER           
+NLSSORT             
+NLS_UPPER           
+REGEXP_REPLACE      
+REGEXP_SUBSTR       
+REPLACE             
+RPAD                ok
+RTRIM               ok
+SOUNDEX             
+SUBSTR              ok
+TRANSLATE           
+TREAT               
+TRIM                
+UPPER               ok
+
+Character Functions Returning Number Values
+ASCII               
+INSTR               ok
+LENGTH              ok
+REGEXP_INSTR        
+
+Datetime Functions
+ADD_MONTHS          
+CURRENT_DATE        
+EXTRACT (datetime)  
+LAST_DAY            
+MONTHS_BETWEEN      
+NEW_TIME            
+NEXT_DAY            
+ROUND (date)        
+SYSDATE             
+TO_CHAR (datetime)  
+TRUNC (date)        
+
+Conversion Functions
+COMPOSE             
+CONVERT             
+DECOMPOSE           
+HEXTORAW            
+RAWTOHEX            
+RAWTONHEX           
+TO_DATE             
+
+Miscellaneous Single-Row Functions
+COALESCE            
+DECODE              ok
+DEPTH               
+DUMP                
+LEAST               
+LNNVL               
+NULLIF              
+NVL                 ok
+NVL2                ok

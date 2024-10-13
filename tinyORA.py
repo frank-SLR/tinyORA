@@ -153,7 +153,7 @@ def close_connection(session_id: str, request: Request) -> dict:
 # QUERY POST
 # --------------------------------------------------------------------
 @app.post("/query", status_code=status.HTTP_200_OK)
-async def post_query(query: str, session_id: str, request: Request) -> dict:
+async def post_query(query: str, session_id: str, request: Request, bind:str = []) -> dict:
     """Submit SQL query
 
     Args:
@@ -167,6 +167,8 @@ async def post_query(query: str, session_id: str, request: Request) -> dict:
     Returns:
         dict: dict{result, err_message{errcode, message}}
     """
+    # print(f'post_query bind={bind}')
+    jbind:dict = json.loads(bind)
     err_message = {}
     result = {}
     found_sess = False
@@ -179,9 +181,8 @@ async def post_query(query: str, session_id: str, request: Request) -> dict:
             raise vExcept(1000, session_id)
         if app.sessions[n][4] != request.client.host:
             raise vExcept(680, '{} / {}'.format(app.sessions[n][4], request.client.host))
-        app.threads.append([session_id, app.executor.submit(app.sessions[n][1].submit_query, query)])
+        app.threads.append([session_id, app.executor.submit(app.sessions[n][1].submit_query, query, jbind)])
         result = 'Query submitted'
-        # result = await app.sessions[n][1].submit_query(_query=query)
     except vExcept as e:
         raise UnicornException(message=e.message, err_code=e.errcode, status_code = status.HTTP_400_BAD_REQUEST)
     return {"result":result, "err_message":err_message}
