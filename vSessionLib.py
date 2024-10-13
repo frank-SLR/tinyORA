@@ -25,6 +25,7 @@ class vSession(object):
         super().__init__()
 
     def submit_query(self, _query:str, bind:dict = []):
+        self.__bind = bind
         self.__parsed_query = vParser().parse_query(query=_query, bind=bind)
         # print(self.__parsed_query['select'])
         # print(self.__parsed_query['from'])
@@ -243,7 +244,7 @@ class vSession(object):
             self.db.del_locks(session_id=self.session_id, lock_type=10)
         elif self.__parsed_query["querytype"] in ['DROP']:
             if self.__parsed_query["drop"][0][0] == 'TABLE':
-                self.db.del_locks(session_id=self.session_id, owner=self.__parsed_query["drop"][0][1], obj_name=self.__parsed_query["drop"][0][2], lock_type=0)
+                self.db.del_locks(session_id=self.session_id, owner=self.__parsed_query["drop"][0][1], name=self.__parsed_query["drop"][0][2], lock_type=0)
             elif self.__parsed_query["drop"][0][0] == 'USER':
                 self.db.del_locks(session_id=self.session_id, owner=self.__parsed_query["drop"][0][1], lock_type=0)
         elif self.__parsed_query["querytype"] in ['COMMIT', 'ROLLBACK']:
@@ -688,7 +689,7 @@ class vSession(object):
     def __process_create_table(self):
         if len(self.__parsed_query["create"][0][3]) == 1: # create table with cursor
             vsess = vSession(self.db, self.__session_username, self.__password)
-            cur = vsess.submit_query(_query=self.__getCursorQuery(self.__parsed_query["create"][0][3][0]))
+            cur = vsess.submit_query(_query=self.__getCursorQuery(self.__parsed_query["create"][0][3][0]), bind=self.__bind)
             del vsess
             blck = {
                 "table_name": self.__parsed_query["create"][0][2].upper(),
@@ -703,6 +704,10 @@ class vSession(object):
                 "columns": self.__parsed_query["create"][0][3],
                 "rows": []
                 }
+        # define upper/lower for columns
+        for n in range(len(blck["columns"])):
+            blck["columns"][n][0] = blck["columns"][n][0].upper()
+            blck["columns"][n][1] = blck["columns"][n][1].lower()
         # upcase for columns name
         for n in range(len(blck["columns"])):
             blck["columns"][n][0] = str(blck["columns"][n][0]).upper()
@@ -744,7 +749,7 @@ class vSession(object):
             self.db.DelTableFile(owner=owner, table_name=table_name)
             self.db.saveDB()
         else:
-            raise vExcept(210, '{].{}'.format(owner, table_name))
+            raise vExcept(210, '{}.{}'.format(owner, table_name))
 
     def __process_drop_user(self):
         usr = self.__parsed_query["drop"][0][1]
@@ -784,7 +789,7 @@ class vSession(object):
             return 1
         else:
             vsess = vSession(self.db, self.__session_username, self.__password)
-            cur = vsess.submit_query(_query=self.__getCursorQuery(self.__parsed_query['insert'][4]))
+            cur = vsess.submit_query(_query=self.__getCursorQuery(self.__parsed_query['insert'][4]), bind=self.__bind)
             del vsess
             if len(cur["columns"]) != len(self.__parsed_query["insert"][2]):
                 raise vExcept(312)
@@ -991,7 +996,7 @@ class vSession(object):
                 self.__parsed_query["from"][n].append([self.__get_table(owner=tbl[1], table_name=tbl[2])])
             elif tbl[3] == 'CURSOR':
                 vsess = vSession(self.db, self.__session_username, self.__password)
-                result = vsess.submit_query(_query=self.__getCursorQuery(tbl[2]))
+                result = vsess.submit_query(_query=self.__getCursorQuery(tbl[2]), bind=self.__bind)
                 del vsess
                 self.__parsed_query["from"][n].append([result])
 

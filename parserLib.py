@@ -5,6 +5,8 @@ from vExceptLib import vExcept
 
 # querytype: (SELECT, INSERT, UPDATE, DELETE, GRANT, REVOKE, CREATE, DROP, DESCRIBE, COMMIT, ROLLBACK)
 # select: table_alias, schema, table_name, col_name/value, alias, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS, PIPE), table position, position in table, table or cursor, [-]
+# create: 'TABLE', t_owner, t_name, ([c_cols], [cursor_id]
+#         'USER', username, password
 # from: table_alias, schema, table_name, TABLE or CURSOR, {table}
 # cursors: cursor_alias, query
 # inner_where: list of items
@@ -258,8 +260,11 @@ class vParser():
         #   9: [parameters of function]
         for n in range(len(self.__parsed_query["select"])):
             if (self.__parsed_query["select"][n][5] is None) or (self.__parsed_query["select"][n][5] == 'COLUMN'):
+                col_alias = self.__parsed_query["select"][n][4]
+                if (col_alias is not None) and self.__check_STR(col_alias):
+                    col_alias = col_alias.upper()
                 fmt, al, cn, sh, tn, tc, nt = self.__getColFromTable(self.__parsed_query["select"][n][3])
-                self.__parsed_query["select"][n] = [al, sh, tn, cn, None, fmt, nt, None, tc]
+                self.__parsed_query["select"][n] = [al, sh, tn, cn, col_alias, fmt, nt, None, tc]
         # functions:
         #   0: table_alias
         #   1: schema
@@ -812,8 +817,9 @@ class vParser():
                         # print(f'__parse_SEL_COL 4  col={col} word={word}')
                         self.__parsed_query["select"].append([None, None, None, col, None, None, None, None, None, []])
                 if word.upper() not in [',', 'FROM']:
-                    print(f'__parse_SEL_COL word={word}')
+                    # print(f'__parse_SEL_COL word={word}')
                     raise vExcept(702, word)
+        # print(f'__parse_SEL_COL self.__parsed_query["select"]={self.__parsed_query["select"]}')
         return word, pos
 
     def __parse_pipe(self, col, word, pos):
