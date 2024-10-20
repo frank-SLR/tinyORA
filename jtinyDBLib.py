@@ -1,7 +1,7 @@
 import json
 import copy
 import time
-import os, copy
+import os
 from vExceptLib import vExcept
 
 

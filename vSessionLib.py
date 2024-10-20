@@ -19,32 +19,27 @@ class vSession(object):
         self.session_id = hex(random.randint(1, 9999999999999999999))
         self.__password = password
         self.__session_username = username
-        self.__parsed_query = None
-        # self.__parsed_query_flg = False
+        
+        self.__RAZ()
         self.__updated_tables = []
+        self.__group_functions = ['AVG', 'COUNT', 'MAX', 'MIN']
         super().__init__()
 
-    def submit_query(self, _query:str, bind:dict = []):
-        self.__bind = bind
-        self.__parsed_query = vParser().parse_query(query=_query, bind=bind)
-        # print(self.__parsed_query['select'])
-        # print(self.__parsed_query['from'])
-        # print(self.__parsed_query['where'])
-        # print(self.__parsed_query['parsed_where'])
-        # print(self.__parsed_query['in'])
-        # print(self.__parsed_query['functions'])
-        # print(self.__parsed_query['connect'])
-        # print(self.__parsed_query['maths'])
-        # print(self.__parsed_query['pipe'])
-        # print(self.__parsed_query['bind'])
+    def __RAZ(self):
+        self.__parsed_query = None
+        self.__group_post_data = {}
+        self.__bind = {}
 
-        if self.__parsed_query["querytype"] in ['SELECT']:
-            result = {"columns": [], "rows": []}
-        elif self.__parsed_query["querytype"] in ['DESCRIBE']:
-            result = {"columns": [], "schema": [], "table_name": []}
-        elif self.__parsed_query["querytype"] in ['GRANT', 'CREATE', 'DROP', 'INSERT', 'COMMIT', 'ROLLBACK', 'UPDATE', 'DELETE']:
-            result = {"message": None}
+    def submit_query_put_locks(self):
+        """Put the locks on all objetcs used by query
 
+        Raises:
+            vExcept: _description_
+            vExcept: _description_
+            vExcept: _description_
+            vExcept: _description_
+            vExcept: _description_
+        """
         # put locks
         if self.__parsed_query["querytype"] in ['SELECT', 'DESCRIBE']:
             for n in range(len(self.__parsed_query["from"])):
@@ -99,145 +94,179 @@ class vSession(object):
                                 case 1:
                                     raise vExcept(1900, '{}.{}'.format(TAB["schema"], TAB["table_name"]))
 
-        # load tables
-        if self.__parsed_query["querytype"] in ['SELECT', 'DESCRIBE', 'UPDATE', 'DELETE']:
-            self.__validate_tables()
+    def submit_query_check_GRANT(self, result):
+        """Check the grants for all objects
 
-        # check GRANT
-        if self.__parsed_query["querytype"] in ['SELECT', 'DESCRIBE']:
-            for n in range(len(self.__parsed_query["from"])):
-                tbl = self.__parsed_query["from"][n]
-                if tbl[3] == 'TABLE':
-                    if not self.__get_grant_for_object(owner=tbl[1], obj_name=tbl[2], grant_needed='SELECT'):
-                        raise vExcept(210, '{}.{}'.format(tbl[1], tbl[2]))
-        elif self.__parsed_query["querytype"] in ['GRANT']:
-            grt = self.__parsed_query["grant"][0]
-            match grt[1]:
-                case 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE':
-                    o_t = grt[3].split('.')
-                    if len(o_t) == 1:
-                        if not self.__get_grant_for_object(owner=grt[3], obj_name=None, grant_needed=grt[1], admin='YES'):
-                            raise vExcept(900)
-                    else:
-                        if not self.__get_grant_for_object(owner=o_t[0], obj_name=o_t[1], grant_needed=grt[1], admin='YES'):
-                            raise vExcept(900)
-                    self.db.AddGrantToMeta(grant=grt[1], granted=str(grt[0]).lower(), grant_bloc=[grt[2], grt[3], grt[4]])
-                case 'CREATE' | 'DROP':
-                    match grt[2]:
-                        case 'TABLE' | 'INDEX':
-                            if not self.__get_grant_for_object(owner=grt[3], obj_name=grt[2], grant_needed=grt[1], admin='YES'):
-                                    raise vExcept(900)
-                            self.db.AddGrantToMeta(grant=grt[1], granted=grt[0], grant_bloc=[grt[2], grt[3], grt[4]])
-                        case 'USER':
-                            if not self.__get_grant_for_object(owner=None, obj_name=grt[3], grant_needed=grt[1], admin='YES'):
-                                    raise vExcept(900)
-                            self.db.AddGrantToMeta(grant=grt[1], granted=grt[0], grant_bloc=[grt[2], grt[4]])
-            self.db.saveDB()
-            result = {"message": "Grant processed"}
-        elif self.__parsed_query["querytype"] in ['REVOKE']:
-            grt = self.__parsed_query["revoke"][0]
-            match grt[1]:
-                case 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE':
-                    o_t = grt[3].split('.')
-                    if len(o_t) == 1:
-                        if not self.__get_grant_for_object(owner=grt[3], obj_name=None, grant_needed=grt[1], admin='YES'):
-                            raise vExcept(900)
-                    else:
-                        if not self.__get_grant_for_object(owner=o_t[0], obj_name=o_t[1], grant_needed=grt[1], admin='YES'):
-                            raise vExcept(900)
-                    self.db.DelGrantFromMeta(grant=grt[1], granted=str(grt[0]).lower(), grant_bloc=[grt[2], grt[3]])
-                case 'CREATE' | 'DROP':
-                    match grt[2]:
-                        case 'TABLE' | 'INDEX':
-                            if not self.__get_grant_for_object(owner=grt[3], obj_name=grt[2], grant_needed=grt[1], admin='YES'):
-                                    raise vExcept(900)
-                            self.db.DelGrantFromMeta(grant=grt[1], granted=grt[0], grant_bloc=[grt[2], grt[3]])
-                        case 'USER':
-                            if not self.__get_grant_for_object(owner=None, obj_name=grt[3], grant_needed=grt[1], admin='YES'):
-                                    raise vExcept(900)
-                            self.db.DelGrantFromMeta(grant=grt[1], granted=grt[0], grant_bloc=[grt[2]])
-            self.db.saveDB()
-            result = {"message": "Revoke processed"}
-        elif self.__parsed_query["querytype"] in ['CREATE']:
-            if self.__parsed_query["create"][0][0] == 'TABLE':
-                if self.__parsed_query["create"][0][1] is None:
-                    self.__parsed_query["create"][0][1] = self.current_schema
-                if self.__parsed_query["create"][0][1] != self.current_schema:
-                    if not self.__get_grant_for_object(owner=self.__parsed_query["create"][0][1], obj_name='TABLE', grant_needed='CREATE'):
+        Args:
+            result (dict): preformated result set of the query
+
+        Raises:
+            vExcept: _description_
+            vExcept: _description_
+            vExcept: _description_
+            vExcept: _description_
+            vExcept: _description_
+            vExcept: _description_
+            vExcept: _description_
+            vExcept: _description_
+            vExcept: _description_
+            vExcept: _description_
+            vExcept: _description_
+            vExcept: _description_
+            vExcept: _description_
+            vExcept: _description_
+            vExcept: _description_
+            vExcept: _description_
+
+        Returns:
+            dict: the result set of the query
+        """
+        match self.__parsed_query["querytype"]:
+            case 'SELECT'|'DESCRIBE':
+                for n in range(len(self.__parsed_query["from"])):
+                    tbl = self.__parsed_query["from"][n]
+                    if tbl[3] == 'TABLE':
+                        if not self.__get_grant_for_object(owner=tbl[1], obj_name=tbl[2], grant_needed='SELECT'):
+                            raise vExcept(210, '{}.{}'.format(tbl[1], tbl[2]))
+            case 'GRANT':
+                grt = self.__parsed_query["grant"][0]
+                match grt[1]:
+                    case 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE':
+                        o_t = grt[3].split('.')
+                        if len(o_t) == 1:
+                            if not self.__get_grant_for_object(owner=grt[3], obj_name=None, grant_needed=grt[1], admin='YES'):
+                                raise vExcept(900)
+                        else:
+                            if not self.__get_grant_for_object(owner=o_t[0], obj_name=o_t[1], grant_needed=grt[1], admin='YES'):
+                                raise vExcept(900)
+                        self.db.AddGrantToMeta(grant=grt[1], granted=str(grt[0]).lower(), grant_bloc=[grt[2], grt[3], grt[4]])
+                    case 'CREATE' | 'DROP':
+                        match grt[2]:
+                            case 'TABLE' | 'INDEX':
+                                if not self.__get_grant_for_object(owner=grt[3], obj_name=grt[2], grant_needed=grt[1], admin='YES'):
+                                        raise vExcept(900)
+                                self.db.AddGrantToMeta(grant=grt[1], granted=grt[0], grant_bloc=[grt[2], grt[3], grt[4]])
+                            case 'USER':
+                                if not self.__get_grant_for_object(owner=None, obj_name=grt[3], grant_needed=grt[1], admin='YES'):
+                                        raise vExcept(900)
+                                self.db.AddGrantToMeta(grant=grt[1], granted=grt[0], grant_bloc=[grt[2], grt[4]])
+                self.db.saveDB()
+                result = {"message": "Grant processed"}
+            case 'REVOKE':
+                grt = self.__parsed_query["revoke"][0]
+                match grt[1]:
+                    case 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE':
+                        o_t = grt[3].split('.')
+                        if len(o_t) == 1:
+                            if not self.__get_grant_for_object(owner=grt[3], obj_name=None, grant_needed=grt[1], admin='YES'):
+                                raise vExcept(900)
+                        else:
+                            if not self.__get_grant_for_object(owner=o_t[0], obj_name=o_t[1], grant_needed=grt[1], admin='YES'):
+                                raise vExcept(900)
+                        self.db.DelGrantFromMeta(grant=grt[1], granted=str(grt[0]).lower(), grant_bloc=[grt[2], grt[3]])
+                    case 'CREATE' | 'DROP':
+                        match grt[2]:
+                            case 'TABLE' | 'INDEX':
+                                if not self.__get_grant_for_object(owner=grt[3], obj_name=grt[2], grant_needed=grt[1], admin='YES'):
+                                        raise vExcept(900)
+                                self.db.DelGrantFromMeta(grant=grt[1], granted=grt[0], grant_bloc=[grt[2], grt[3]])
+                            case 'USER':
+                                if not self.__get_grant_for_object(owner=None, obj_name=grt[3], grant_needed=grt[1], admin='YES'):
+                                        raise vExcept(900)
+                                self.db.DelGrantFromMeta(grant=grt[1], granted=grt[0], grant_bloc=[grt[2]])
+                self.db.saveDB()
+                result = {"message": "Revoke processed"}
+            case 'CREATE':
+                if self.__parsed_query["create"][0][0] == 'TABLE':
+                    if self.__parsed_query["create"][0][1] is None:
+                        self.__parsed_query["create"][0][1] = self.current_schema
+                    if self.__parsed_query["create"][0][1] != self.current_schema:
+                        if not self.__get_grant_for_object(owner=self.__parsed_query["create"][0][1], obj_name='TABLE', grant_needed='CREATE'):
+                            raise vExcept(901)
+                elif self.__parsed_query["create"][0][0] == 'USER':
+                    if not self.__get_grant_for_object(owner=None, obj_name='USER', grant_needed='CREATE'):
                         raise vExcept(901)
-            elif self.__parsed_query["create"][0][0] == 'USER':
-                if not self.__get_grant_for_object(owner=None, obj_name='USER', grant_needed='CREATE'):
-                    raise vExcept(901)
-        elif self.__parsed_query["querytype"] in ['DROP']:
-            if self.__parsed_query["drop"][0][0] == 'TABLE':
-                if self.__parsed_query["drop"][0][1] is None:
-                    self.__parsed_query["drop"][0][1] = self.current_schema
-                if self.__parsed_query["drop"][0][1] != self.current_schema:
-                    if not self.__get_grant_for_object(owner=self.__parsed_query["drop"][0][1], obj_name='TABLE', grant_needed='DROP'):
+            case 'DROP':
+                if self.__parsed_query["drop"][0][0] == 'TABLE':
+                    if self.__parsed_query["drop"][0][1] is None:
+                        self.__parsed_query["drop"][0][1] = self.current_schema
+                    if self.__parsed_query["drop"][0][1] != self.current_schema:
+                        if not self.__get_grant_for_object(owner=self.__parsed_query["drop"][0][1], obj_name='TABLE', grant_needed='DROP'):
+                            raise vExcept(902)
+                elif self.__parsed_query["drop"][0][0] == 'USER':
+                    if not self.__get_grant_for_object(owner=None, obj_name='USER', grant_needed='DROP'):
                         raise vExcept(902)
-            elif self.__parsed_query["drop"][0][0] == 'USER':
-                if not self.__get_grant_for_object(owner=None, obj_name='USER', grant_needed='DROP'):
-                    raise vExcept(902)
-        elif self.__parsed_query["querytype"] in ['INSERT']:
-            if self.__parsed_query["insert"][0] is None:
-                self.__parsed_query["insert"][0] = self.current_schema
-            u_name=self.__parsed_query["insert"][0]
-            t_name=self.__parsed_query["insert"][1]
-            if not self.__get_grant_for_object(owner=u_name, obj_name=t_name, grant_needed='INSERT'):
-                raise vExcept(210, '{}.{}'.format(u_name, t_name))
-        elif self.__parsed_query["querytype"] in ['UPDATE']:
-            if self.__parsed_query["from"][0][1] is None:
-                self.__parsed_query["from"][0][1] = self.current_schema
-            u_name=self.__parsed_query["from"][0][1]
-            t_name=self.__parsed_query["from"][0][2]
-            if not self.__get_grant_for_object(owner=u_name, obj_name=t_name, grant_needed='UPDATE'):
-                raise vExcept(210, '{}.{}'.format(u_name, t_name))
-        elif self.__parsed_query["querytype"] in ['DELETE']:
-            if self.__parsed_query["from"][0][1] is None:
-                self.__parsed_query["from"][0][1] = self.current_schema
-            u_name=self.__parsed_query["from"][0][1]
-            t_name=self.__parsed_query["from"][0][2]
-            if not self.__get_grant_for_object(owner=u_name, obj_name=t_name, grant_needed='DELETE'):
-                raise vExcept(210, '{}.{}'.format(u_name, t_name))
+            case 'INSERT':
+                if self.__parsed_query["insert"][0] is None:
+                    self.__parsed_query["insert"][0] = self.current_schema
+                u_name=self.__parsed_query["insert"][0]
+                t_name=self.__parsed_query["insert"][1]
+                if not self.__get_grant_for_object(owner=u_name, obj_name=t_name, grant_needed='INSERT'):
+                    raise vExcept(210, '{}.{}'.format(u_name, t_name))
+            case 'UPDATE':
+                if self.__parsed_query["from"][0][1] is None:
+                    self.__parsed_query["from"][0][1] = self.current_schema
+                u_name=self.__parsed_query["from"][0][1]
+                t_name=self.__parsed_query["from"][0][2]
+                if not self.__get_grant_for_object(owner=u_name, obj_name=t_name, grant_needed='UPDATE'):
+                    raise vExcept(210, '{}.{}'.format(u_name, t_name))
+            case 'DELETE':
+                if self.__parsed_query["from"][0][1] is None:
+                    self.__parsed_query["from"][0][1] = self.current_schema
+                u_name=self.__parsed_query["from"][0][1]
+                t_name=self.__parsed_query["from"][0][2]
+                if not self.__get_grant_for_object(owner=u_name, obj_name=t_name, grant_needed='DELETE'):
+                    raise vExcept(210, '{}.{}'.format(u_name, t_name))
+        return result
 
-        # process query
-        if self.__parsed_query["querytype"] in ['CREATE']:
-            if self.__parsed_query["create"][0][0] == 'TABLE':
-                self.__process_create_table()
-                result = {"message": "Table created"}
-            elif self.__parsed_query["create"][0][0] == 'USER':
-                self.__process_create_user()
-                result = {"message": "User created"}
-        elif self.__parsed_query["querytype"] in ['DROP']:
-            if self.__parsed_query["drop"][0][0] == 'TABLE':
-                self.__process_drop_table()
-                result = {"message": "Table dropped"}
-            elif self.__parsed_query["drop"][0][0] == 'USER':
-                self.__process_drop_user()
-                result = {"message": "User dropped"}
-        elif self.__parsed_query["querytype"] in ['INSERT']:
-            cnt = self.__process_insert()
-            result = {"message": "{} line(s) inserted".format(cnt)}
-        elif self.__parsed_query["querytype"] in ['SELECT']:
-            result = self.__process_select(result)
-        elif self.__parsed_query["querytype"] in ['UPDATE']:
-            cnt = self.__process_update()
-            result = {"message": "{} line(s) updated".format(cnt)}
-        elif self.__parsed_query["querytype"] in ['DELETE']:
-            cnt = self.__process_delete()
-            result = {"message": "{} line(s) deleted".format(cnt)}
-        elif self.__parsed_query["querytype"] in ['DESCRIBE']:
-            result["schema"] = self.__parsed_query["from"][0][1]
-            result["table_name"] = self.__parsed_query["from"][0][2]
-            result["columns"] = self.__parsed_query["from"][0][4][0]["columns"]
-        elif self.__parsed_query["querytype"] in ['COMMIT']:
-            self.__commit()
-            result["message"] = 'Commited'
-        elif self.__parsed_query["querytype"] in ['ROLLBACK']:
-            self.__rollback()
-            result["message"] = 'Rollbacked'
+    def submit_query_process_query(self, result):
+        """Process the query
 
-        # remove locks
+        Args:
+            result (dict): preformated result set of the query
+
+        Returns:
+            dict: the result set of the query
+        """
+        match self.__parsed_query["querytype"]:
+            case 'CREATE':
+                if self.__parsed_query["create"][0][0] == 'TABLE':
+                    self.__process_create_table()
+                    result = {"message": "Table created"}
+                elif self.__parsed_query["create"][0][0] == 'USER':
+                    self.__process_create_user()
+                    result = {"message": "User created"}
+            case 'DROP':
+                if self.__parsed_query["drop"][0][0] == 'TABLE':
+                    self.__process_drop_table()
+                    result = {"message": "Table dropped"}
+                elif self.__parsed_query["drop"][0][0] == 'USER':
+                    self.__process_drop_user()
+                    result = {"message": "User dropped"}
+            case 'INSERT':
+                cnt = self.__process_insert()
+                result = {"message": "{} line(s) inserted".format(cnt)}
+            case 'SELECT':
+                result = self.__process_select(result)
+            case 'UPDATE':
+                cnt = self.__process_update()
+                result = {"message": "{} line(s) updated".format(cnt)}
+            case 'DELETE':
+                cnt = self.__process_delete()
+                result = {"message": "{} line(s) deleted".format(cnt)}
+            case 'DESCRIBE':
+                result["schema"] = self.__parsed_query["from"][0][1]
+                result["table_name"] = self.__parsed_query["from"][0][2]
+                result["columns"] = self.__parsed_query["from"][0][4][0]["columns"]
+            case 'COMMIT':
+                self.__commit()
+                result["message"] = 'Commited'
+            case 'ROLLBACK':
+                self.__rollback()
+                result["message"] = 'Rollbacked'
+        return result
+
+    def submit_query_remove_locks(self):
         if self.__parsed_query["querytype"] in ['SELECT', 'DESCRIBE']:
             self.db.del_locks(session_id=self.session_id, lock_type=10)
         elif self.__parsed_query["querytype"] in ['INSERT']:
@@ -249,6 +278,156 @@ class vSession(object):
                 self.db.del_locks(session_id=self.session_id, owner=self.__parsed_query["drop"][0][1], lock_type=0)
         elif self.__parsed_query["querytype"] in ['COMMIT', 'ROLLBACK']:
             self.db.del_locks(session_id=self.session_id, lock_type=99)
+
+    def submit_query_prepare_post_tasks(self):
+    # post_data_model : col_id= {
+    #   obj_name= {
+    #   [
+    #     table_alias, 
+    #     schema,
+    #     table_name,
+    #     col_name/value,
+    #     alias,
+    #     type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS, PIPE),
+    #     table position,
+    #     position in table,
+    #     table or cursor]
+    #     }
+    #   }
+        NColGrp = 0
+        for n, col in enumerate(self.__parsed_query["select"]):
+            res = {}
+            flg = False
+            match col[5]:
+                case 'FUNCTION':
+                    flg, res = self.submit_query_prepare_post_tasks_function(col[3], res)
+                case 'MATHS':
+                    flg, res = self.submit_query_prepare_post_tasks_maths(col[3], res)
+                case 'PIPE':
+                    flg, res = self.submit_query_prepare_post_tasks_pipe(col[3], res)
+            if flg:
+                NColGrp += 1
+                self.__parsed_query["post_data_model"][n] = res
+        if NColGrp+len(self.__parsed_query["group_by"]) < len(self.__parsed_query["select"]):
+            raise vExcept(752)
+        elif NColGrp+len(self.__parsed_query["group_by"]) > len(self.__parsed_query["select"]):
+            raise vExcept(753)
+        # print(f'submit_query_prepare_post_tasks  post_data_model={self.__parsed_query["post_data_model"]}')
+
+    def submit_query_prepare_post_tasks_function(self, fct_name, res):
+        flg, tmpflg = False, False
+        fct_id = self.__get_function(fct_name)
+        res[self.__parsed_query["functions"][fct_id][0]] = {
+            "columns": self.__parsed_query["functions"][fct_id][2],
+            "colvalmodel": [[None, False] for x in range(len(self.__parsed_query["functions"][fct_id][2]))],
+            "colval": [],
+            "result": [],
+            "completed": [],
+            "done": False,
+            "function": self.__parsed_query["functions"][fct_id][1]}
+        if self.__parsed_query["functions"][fct_id][1] in self.__group_functions:
+            flg = True
+        for n, col in enumerate(self.__parsed_query["functions"][fct_id][2]):
+            match col[4]:
+                case 'FUNCTION':
+                    tmpflg, res = self.submit_query_prepare_post_tasks_function(col[3], res)
+                case 'MATHS':
+                    tmpflg, res = self.submit_query_prepare_post_tasks_maths(col[3], res)
+                case 'PIPE':
+                    tmpflg, res = self.submit_query_prepare_post_tasks_pipe(col[3], res)
+            if tmpflg:
+                flg = True
+        return flg, res
+
+    def submit_query_prepare_post_tasks_maths(self, maths_name, res):
+        flg, tmpflg = False, False
+        maths_id = self.__get_maths(maths_name)
+        res[self.__parsed_query["maths"][maths_id][0]] = {
+            "columns": [x for x in self.__parsed_query["mahs"][maths_id][1] if len(x) > 1],
+            "colvalmodel": [[None, False] for x in self.__parsed_query["mahs"][maths_id][1] if len(x) > 1],
+            "colval": [],
+            "result": [],
+            "completed": [],
+            "done": False}
+        for n, col in enumerate(self.__parsed_query["maths"][maths_id][1]):
+            if len(col) == 1:
+                continue
+            match col[4]:
+                case 'FUNCTION':
+                    tmpflg, res = self.submit_query_prepare_post_tasks_function(col[3], res)
+                case 'MATHS':
+                    tmpflg, res = self.submit_query_prepare_post_tasks_maths(col[3], res)
+                case 'PIPE':
+                    tmpflg, res = self.submit_query_prepare_post_tasks_pipe(col[3], res)
+            if tmpflg:
+                flg = True
+        return flg, res
+
+    def submit_query_prepare_post_tasks_pipe(self, pipe_name, res):
+        flg, tmpflg = False, False
+        pipe_id = self.__get_pipe(pipe_name)
+        res[self.__parsed_query["pipe"][pipe_id][0]] = {
+            "columns": self.__parsed_query["pipe"][pipe_id][1],
+            "colvalmodel": [[None, False] for x in self.__parsed_query["pipe"][pipe_id][1]],
+            "colval": [],
+            "result": [],
+            "completed": [],
+            "done": False}
+        for n, col in enumerate(self.__parsed_query["pipe"][pipe_id][1]):
+            match col[5]:
+                case 'FUNCTION':
+                    tmpflg, res = self.submit_query_prepare_post_tasks_function(col[3], res)
+                case 'MATHS':
+                    tmpflg, res = self.submit_query_prepare_post_tasks_maths(col[3], res)
+                case 'PIPE':
+                    tmpflg, res = self.submit_query_prepare_post_tasks_pipe(col[3], res)
+            if tmpflg:
+                flg = True
+        return flg, res
+
+    def submit_query(self, _query:str, bind:dict = []):
+        result = {}
+        self.__bind = bind
+        self.__parsed_query = vParser().parse_query(query=_query, bind=bind)
+        if self.__parsed_query["querytype"] in ['SELECT']:
+            result = {"columns": [], "rows": []}
+        elif self.__parsed_query["querytype"] in ['DESCRIBE']:
+            result = {"columns": [], "schema": [], "table_name": []}
+        elif self.__parsed_query["querytype"] in ['GRANT', 'CREATE', 'DROP', 'INSERT', 'COMMIT', 'ROLLBACK', 'UPDATE', 'DELETE']:
+            result = {"message": None}
+
+        # put locks
+        self.submit_query_put_locks()
+
+        # load tables
+        if self.__parsed_query["querytype"] in ['SELECT', 'DESCRIBE', 'UPDATE', 'DELETE']:
+            self.__validate_tables()
+
+        # check GRANT
+        result = self.submit_query_check_GRANT(result)
+
+        # prepare post tasks
+        if self.__parsed_query["post_tasks"]:
+            self.submit_query_prepare_post_tasks()
+
+        # print(f'submit_query select={self.__parsed_query["select"]}')
+        # print(f'submit_query from={self.__parsed_query["from"]}')
+        # print(f'submit_query where={self.__parsed_query["where"]}')
+        # print(f'submit_query parsed_where={self.__parsed_query["parsed_where"]}')
+        # print(f'submit_query in={self.__parsed_query["in"]}')
+        # print(f'submit_query functions={self.__parsed_query["functions"]}')
+        # print(f'submit_query connect={self.__parsed_query["connect"]}')
+        # print(f'submit_query maths={self.__parsed_query["maths"]}')
+        # print(f'submit_query pipe={self.__parsed_query["pipe"]}')
+        # print(f'submit_query bind={self.__parsed_query["bind"]}')
+        # print(f'submit_query group_by={self.__parsed_query["group_by"]}')
+        # print(f'submit_query post_tasks={self.__parsed_query["post_tasks"]}')
+
+        # process query
+        result = self.submit_query_process_query(result)
+
+        # remove locks
+        self.submit_query_remove_locks()
         return result
 
     def get_tables(self):
@@ -337,6 +516,7 @@ class vSession(object):
             raise vExcept(313, colin)
 
     def __get_rows(self, cur_idx):
+        # print(f'__get_rows post_data_model={self.__parsed_query["post_data_model"]}')
         # print(f'__get_rows cur_idx={cur_idx} nblignes={len(self.__parsed_query["from"][cur_idx][4][0]["rows"])}')
         for n in range(len(self.__parsed_query["from"][cur_idx][4][0]["rows"])):
             self.__RowsPosInTables[cur_idx] = n
@@ -345,31 +525,69 @@ class vSession(object):
             else:
                 if self.__process_tests():
                     rrow = []
-                    for s in self.__parsed_query['select']:
-                        if s[5] == 'COLUMN':
-                            if s[3] == 'ROWNUM':
-                                rrow.append(len(self.__result))
-                            else:
-                                rrow.append(self.__parsed_query["from"][s[6]][4][0]["rows"][self.__RowsPosInTables[s[6]]][s[7]])
-                        elif s[5] == 'INT':
-                            rrow.append(int(s[3]))
-                        elif s[5] == 'FLOAT':
-                            rrow.append(float(s[3]))
-                        elif s[5] == 'HEX':
-                            rrow.append(s[3])
-                        elif s[5] == 'DATETIME':
-                            rrow.append(s[3])
-                        elif s[5] == 'STR':
-                            rrow.append(self.__remove_quote(s[3]).replace("''", "'"))
-                        elif s[5] == 'FUNCTION':
-                            rrow.append(self.__compute_function(s[3]))
-                        elif s[5] == 'MATHS':
-                            rrow.append(self.__compute_maths(s[3]))
-                        elif s[5] == 'PIPE':
-                            rrow.append(self.__remove_quote(self.__compute_pipe(s[3])).replace("''", "'"))
+                    for n, s in enumerate(self.__parsed_query['select']):
+                        if self.__parsed_query['post_tasks'] and (n in self.__parsed_query['post_data_model']):
+                            rrow.append(None)
+                            for colkey in self.__parsed_query['post_data_model'][n].keys():
+                                for ncol, col in enumerate(self.__parsed_query['post_data_model'][n][colkey]["columns"]):
+                                    if len(self.__parsed_query['post_data_model'][n][colkey]["colval"]) < len(self.__result) + 1:
+                                        self.__parsed_query['post_data_model'][n][colkey]["colval"].append(copy.deepcopy(self.__parsed_query['post_data_model'][n][colkey]["colvalmodel"]))
+                                        self.__parsed_query['post_data_model'][n][colkey]["result"].append(None)
+                                        self.__parsed_query['post_data_model'][n][colkey]["completed"].append(False)
+                                    match col[4]:
+                                        case 'COLUMN':
+                                            if col[3] == 'ROWNUM':
+                                                self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [len(self.__result), True]
+                                            elif col[3] == '*':
+                                                self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = ['||ALL_ROWS||', True]
+                                            else:
+                                                self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [self.__parsed_query["from"][col[5]][4][0]["rows"][self.__RowsPosInTables[col[5]]][col[6]], True]
+                                        case 'INT':
+                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [int(col[3]), True]
+                                        case 'FLOAT':
+                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [float(col[3]), True]
+                                        case 'HEX':
+                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][col] = [col[3], True]
+                                        case 'DATETIME':
+                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][col] = [col[3], True]
+                                        case 'STR':
+                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][col] = [self.__remove_quote(col[3]).replace("''", "'"), True]
+                                        case 'FUNCTION':
+                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][col] = [None, False]
+                                        case 'MATHS':
+                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][col] = [None, False]
+                                        case 'PIPE':
+                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][col] = [None, False]
+                                        case _:
+                                            raise vExcept(801)
+                            self.__parsed_query['post_data_model'][n][colkey]["columns"]
                         else:
-                            raise vExcept(801)
+                            match s[5]:
+                                case 'COLUMN':
+                                    if s[3] == 'ROWNUM':
+                                        rrow.append(len(self.__result))
+                                    else:
+                                        rrow.append(self.__parsed_query["from"][s[6]][4][0]["rows"][self.__RowsPosInTables[s[6]]][s[7]])
+                                case 'INT':
+                                    rrow.append(int(s[3]))
+                                case 'FLOAT':
+                                    rrow.append(float(s[3]))
+                                case 'HEX':
+                                    rrow.append(s[3])
+                                case 'DATETIME':
+                                    rrow.append(s[3])
+                                case 'STR':
+                                    rrow.append(self.__remove_quote(s[3]).replace("''", "'"))
+                                case 'FUNCTION':
+                                    rrow.append(self.__compute_function(s[3]))
+                                case 'MATHS':
+                                    rrow.append(self.__compute_maths(s[3]))
+                                case 'PIPE':
+                                    rrow.append(self.__remove_quote(self.__compute_pipe(s[3])).replace("''", "'"))
+                                case _:
+                                    raise vExcept(801)
                     self.__result.append(rrow)
+        # print(f'__get_rows post_data_model={self.__parsed_query["post_data_model"]}')
 
     def __get_function(self, fct_id):
         for n in range(len(self.__parsed_query["functions"])):
@@ -680,6 +898,10 @@ class vSession(object):
         self.__prefetch_get_rows()
         # fetch rows for query
         self.__get_rows(cur_idx=0)
+        # post tasks for GROUP BY
+        if self.__parsed_query["post_tasks"] and (len(self.__result) > 0):
+            self.__process_groupby()
+        # rename duplicated loumns
         self.__check_cols_name(result=result)
         result["rows"] = self.__result
         del self.__result
@@ -690,6 +912,7 @@ class vSession(object):
         if len(self.__parsed_query["create"][0][3]) == 1: # create table with cursor
             vsess = vSession(self.db, self.__session_username, self.__password)
             cur = vsess.submit_query(_query=self.__getCursorQuery(self.__parsed_query["create"][0][3][0]), bind=self.__bind)
+            print(f'__process_create_table, cur={cur}')
             del vsess
             blck = {
                 "table_name": self.__parsed_query["create"][0][2].upper(),
@@ -866,6 +1089,137 @@ class vSession(object):
             del RowsToDel[0]
         self.__add_updated_table(self.__parsed_query["from"][0][4][0])
         return del_rows_cnt
+
+    def __process_groupby(self):
+        matriceCOL = []
+        matriceROW = []
+        parsedROW = [False for x in range(len(self.__result))]
+        for n in range(len(self.__parsed_query["select"])):
+            matriceCOL.append(bool(n in self.__parsed_query["post_data_model"].keys()))
+        StillWork = True
+        numrow = 0
+        rowidx = 0
+        while StillWork and rowidx < len(self.__result):
+            # init selected rows matrice
+            matriceROW = [False for x in range(len(self.__result))]
+            # search first available row
+            StillWork = False
+            for n, value in enumerate(parsedROW):
+                if not value:
+                    rowidx = n
+                    # matriceROW.append(rowidx)
+                    matriceROW[rowidx] = True
+                    parsedROW[rowidx] = True
+                    StillWork = True
+                    break
+            if StillWork:
+                # serach all rows to be grouped
+                numrow = rowidx + 1
+                while numrow < len(self.__result):
+                    if (self.__result[numrow] == self.__result[rowidx]) and (not parsedROW[numrow]):
+                        matriceROW[numrow] = True
+                        parsedROW[numrow] = True
+                    numrow += 1
+            # print(f'__process_groupby matriceROW={matriceROW} parsedROW={parsedROW}')
+            for WorkOnRowIdx, WorkOnRow in enumerate(matriceROW):
+                if not WorkOnRow:
+                    continue
+                for WorkOnCol in self.__parsed_query["post_data_model"].keys():
+                    for obj in self.__parsed_query["post_data_model"][WorkOnCol].keys():
+                        if not self.__parsed_query["post_data_model"][WorkOnCol][obj]["completed"][WorkOnRowIdx]:
+                            # print(f'__process_groupby WorkOnCol={WorkOnCol} obj={obj}')
+                            match obj[0:3]:
+                                case FCT:
+                                    # ##### for fctparamidx, fctparam in enumerate(self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"]):
+                                    # #####     match fctparam[4]:
+                                    # #####         case 'COLUMN'|'INT'|'FLOAT'|'STR'|'HEX'|'DATETIME':
+                                    # #####             pass
+                                    # #####         case 'FUNCTION':
+                                    # #####             pass
+                                    # #####         case 'MATHS':
+                                    # #####             pass
+                                    # #####         case 'PIPE':
+                                    # #####             pass
+                                    # check availability fo all columns data
+                                    chkcolflg = True
+                                    for chkcol in self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][rowidx]:
+                                        if not chkcol[1]:
+                                            chkcolflg = False
+                                    # all columns data are available, function can be parsed
+                                    if chkcolflg:
+                                        match self.__parsed_query["post_data_model"][WorkOnCol][obj]["function"]:
+                                            case 'AVG'|'MAX'|'MIN':
+                                                colval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][0][0]
+                                                self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = colval
+                                            case 'COUNT':
+                                                if self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][rowidx][0][0] is None:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = 0
+                                                else:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = 1
+                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["completed"][WorkOnRowIdx] = True
+                                        # print(f'__process_groupby completed={self.__parsed_query["post_data_model"][WorkOnCol][obj]}')
+            for WorkOnRowIdx, WorkOnRow in enumerate(matriceROW):
+                for WorkOnCol in self.__parsed_query["post_data_model"].keys():
+                    for obj in self.__parsed_query["post_data_model"][WorkOnCol].keys():
+                        if self.__parsed_query["post_data_model"][WorkOnCol][obj]["completed"][WorkOnRowIdx] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["done"]:
+                            match self.__parsed_query["post_data_model"][WorkOnCol][obj]["function"]:
+                                case 'AVG':
+                                    total = 0
+                                    nbrows = 0
+                                    for n in range(len(self.__result)):
+                                        if matriceROW[n]:
+                                            total += self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
+                                            nbrows += 1
+                                    total = total / nbrows
+                                    for n in range(len(self.__result)):
+                                        if matriceROW[n]:
+                                            self.__result[n][WorkOnCol] = total
+                                case 'COUNT':
+                                    total = 0
+                                    for n in range(len(self.__result)):
+                                        if matriceROW[n]:
+                                            total += self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
+                                    for n in range(len(self.__result)):
+                                        if matriceROW[n]:
+                                            self.__result[n][WorkOnCol] = total
+                                case 'MAX':
+                                    total = None
+                                    for n in range(len(self.__result)):
+                                        if matriceROW[n]:
+                                            v = self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
+                                            if v is not None:
+                                                if (total is None) or (total < v):
+                                                    total = v
+                                    for n in range(len(self.__result)):
+                                        if matriceROW[n]:
+                                            self.__result[n][WorkOnCol] = total
+                                case 'MIN':
+                                    total = None
+                                    for n in range(len(self.__result)):
+                                        if matriceROW[n]:
+                                            v = self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
+                                            if v is not None:
+                                                if (total is None) or (total > v):
+                                                    total = v
+                                    for n in range(len(self.__result)):
+                                        if matriceROW[n]:
+                                            self.__result[n][WorkOnCol] = total
+                            self.__parsed_query["post_data_model"][WorkOnCol][obj]["done"] = True
+                # print(f'__process_groupby post_data_model={self.__parsed_query["post_data_model"]}')
+            # check if all columns are parsed
+            for value in parsedROW:
+                if not value:
+                    rowidx = 0
+                    for WorkOnCol in self.__parsed_query["post_data_model"].keys():
+                        for obj in self.__parsed_query["post_data_model"][WorkOnCol].keys():
+                            self.__parsed_query["post_data_model"][WorkOnCol][obj]["done"] = False
+                    break
+            
+        # tmpres = []
+        # for row in self.__result:
+        #     if row not in tmpres:
+        #         tmpres.append(row)
+        # self.__result = tmpres
 
     def __format_value(self, value, type_value):
         try:
@@ -1155,7 +1509,9 @@ class vSession(object):
         for n in range(len(self.__parsed_query["functions"])):
             for m in range(len(self.__parsed_query["functions"][n][2])):
                 cblk = self.__parsed_query["functions"][n][2][m]
-                if cblk[4] == 'COLUMN':
+                if (cblk[3] == '*') and (self.__parsed_query["functions"][n][1] == 'COUNT'):
+                    pass
+                elif cblk[4] == 'COLUMN':
                     colin, aliasin, table_namein, schemain, tf, ctf, ctype = self.__searchColInFromTables(colin=cblk[3],
                                                                                                           aliasin=cblk[0],
                                                                                                           table_namein=cblk[2],
@@ -1540,8 +1896,10 @@ class vSession(object):
         match fct_name:
             case 'CHR'|'LENGTH'|'LOWER'|'LPAD'|'LTRIM'|'RPAD'|'RTRIM'|'SUBSTR'|'TO_CHAR'|'UPPER':
                 return 'str'
-            case 'INSTR':
+            case 'COUNT'|'INSTR':
                 return 'int'
+            case 'AVG'|'MAX'|'MIN':
+                return 'float'
             case 'ABS':
                 if ref_col_typ.upper() in ['INT', 'FLOAT']:
                     return ref_col_typ.lower()

@@ -162,6 +162,14 @@ class vExcept(Exception):
                 self.message = f'Syntax error: symbol "||" can not be followed by "||"'
             case 750:
                 self.message = f'Syntax error: DATETIME can not been concatened with "||"'
+            case 751:
+                self.message = f'Syntax error: expect BY after GROUP but "{message}" found'
+            case 752:
+                self.message = f'Syntax error: miss column(s) in GROUP BY section'
+            case 752:
+                self.message = f'Syntax error: extra column(s) in GROUP BY section'
+            case 753:
+                self.message = f'Syntax error: column(s) "{message}" in GROUP BY statement is not present in SELECT statement'
             # INTERNAL ERROR (800-899)
             case 801:
                 self.message = 'Internal error on column name in SELECT clause'

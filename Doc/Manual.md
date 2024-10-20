@@ -25,7 +25,7 @@ inner join <FROM_OBJ> on <INNER_CLAUSE> [ { AND | OR } INNER_CLAUSE ...]
 left outer join <FROM_OBJ> on <INNER_CLAUSE> [ { AND | OR} INNER_CLAUSE ...]
 right outer join <FROM_OBJ> on <INNER_CLAUSE> [ { AND | OR} INNER_CLAUSE ...]
 where <WHERE_CLAUSE>
---group by <SEL_COL> [ , <SEL_COL> ...]
+group by <GROUP_COL> [ , <GROUP_COL> ...]
 --order by <SEL_COL> [ , <SEL_COL> ...]
 ;
 ```
@@ -33,12 +33,15 @@ where <WHERE_CLAUSE>
 Example:
 
 ```sql
-select e.id, e.age, e.first_name, e.last_name, d.dep_name
+select e.age, d.dep_name, s.site_name count(*)
 from hr.emp e
 inner join hr.dep d on e.dep_id=d.dep_id
 inner join hr.site s on d.site_id=s.site_id
-where s.site_name='San Francisco';
+where s.site_contry='USA'
+group by e.age, d.dep_name;
 ```
+
+See: [SEL_COL](#sel_col), [GROUP_COL](#group_col)
 
 ## Special SELECT
 Generate range of integer with following syntax:
@@ -254,6 +257,22 @@ Concatenate bind variable VAR1 with column NAME:
 select :VAR1 || t1.name from emp_with_dep t1 where emp_id=12;
 ```
 
+## GROUP_COL
+In GROUP BY statement, the column is identified with:
+
+### Single column or an alias
+```
+[[<SCHEMA>.]<TABLE_NAME>.]<COLUMN_NAME>
+[<TABLE_ALIAS>.]<COLUMN_NAME>
+[<COL_ALIAS>]
+```
+Example:
+Select age columns and count lines from table using his alias:
+```sql
+select t1.age age_grp, count(*) from emp_with_dep t1 group by age_grp;
+```
+
+
 ## Function to convert one or more columns or function or constant to a specific format
 There is a lot of functions for convertion, see [FUNCTION](#function).
 
@@ -370,6 +389,19 @@ Obtain absolute value of -12.2:
 ABS(-12.2)
 ```
 
+## AVG
+Return average value for COL.
+
+```sql
+AVG ( <COL> )
+```
+
+Example:
+Obtain average for SALARY:
+```sql
+AVG(SALARY)
+```
+
 ## CHR
 Converts an ASCII code, which is a number from 0 to 255, to a character.
 
@@ -381,6 +413,19 @@ Example:
 Obtain character "A":
 ```sql
 CHR(65)
+```
+
+## COUNT
+Count rows.
+
+```sql
+COUNT ( <COL> )
+```
+
+Example:
+Count all rows:
+```sql
+COUNT(*)
 ```
 
 ## DECODE
@@ -456,6 +501,32 @@ LPAD('-------John', '-')
 ```
 
 See: [SEL_COL](#sel_col)
+
+## MAX
+Return maximum value for COL.
+
+```sql
+MAX ( <COL> )
+```
+
+Example:
+Obtain maximum for SALARY:
+```sql
+MAX(SALARY)
+```
+
+## MIN
+Return minimum value for COL.
+
+```sql
+MIN ( <COL> )
+```
+
+Example:
+Obtain minimum for BILL:
+```sql
+MIN(BILL)
+```
 
 ## NVL
 NVL returns first parameter if it is not null, else NVL returns second parameter
