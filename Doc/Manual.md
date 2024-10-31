@@ -581,6 +581,19 @@ SUBSTR('ABCDEFGH', 3, 4)
 
 See: [SEL_COL](#sel_col)
 
+## SUM
+Return sum of values for COL.
+
+```sql
+SUM ( <COL> )
+```
+
+Example:
+Obtain sum for SALARY:
+```sql
+SUM(SALARY)
+```
+
 ## TO_CHAR
 Convert datetime to string with fixed format.
 Output format is 'str'.

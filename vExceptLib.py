@@ -166,10 +166,10 @@ class vExcept(Exception):
                 self.message = f'Syntax error: expect BY after GROUP but "{message}" found'
             case 752:
                 self.message = f'Syntax error: miss column(s) in GROUP BY section'
-            case 752:
-                self.message = f'Syntax error: extra column(s) in GROUP BY section'
             case 753:
                 self.message = f'Syntax error: column(s) "{message}" in GROUP BY statement is not present in SELECT statement'
+            case 754:
+                self.message = f'Syntax error: extra column(s) in GROUP BY section'
             # INTERNAL ERROR (800-899)
             case 801:
                 self.message = 'Internal error on column name in SELECT clause'
@@ -274,6 +274,8 @@ class vExcept(Exception):
                 self.message = f'''Incorrect number of arguments for RTRIM function: must be 1 or 2 but {message} argument(s) provided'''
             case 2322:
                 self.message = f'''Incorrect number of arguments for LENGTH function: must be 1 but {message} argument(s) provided'''
+            case 2323:
+                self.message = f'''Incorrect number of arguments for {message} function: must be 1'''
             # MATHS (2500-2599)
             case 2500:
                 self.message = '''Division by zero'''

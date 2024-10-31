@@ -46,7 +46,7 @@ class vParser():
         self.__intPipeSeq = 0
         self.__raz()
         self.__list_of_functions = ['ABS', 'AVG', 'CHR', 'COUNT', 'DECODE', 'INSTR', 'LENGTH', 'LOWER', 'LPAD', 'LTRIM', 'MAX', 'MIN',
-                                    'NVL', 'NVL2', 'RPAD', 'RTRIM', 'SUBSTR', 'TO_CHAR', 'UPPER']
+                                    'NVL', 'NVL2', 'RPAD', 'RTRIM', 'SUBSTR', 'SUM', 'TO_CHAR', 'UPPER']
 
     def __raz(self) -> None:
         self.__parsed_query = {"querytype": None, "select": [], "from": [], "where": [], "orderby": [], "groupby": [], "cursors": [],
@@ -961,7 +961,7 @@ class vParser():
 
     def __is_function(self, fct_name):
         if fct_name.upper() in self.__list_of_functions:
-            if fct_name in ['COUNT', 'MIN', 'MAX', 'AVG']:
+            if fct_name in ['COUNT', 'MIN', 'MAX', 'AVG', 'SUM']:
                 self.__parsed_query["post_tasks"] = True
             return True
         else:

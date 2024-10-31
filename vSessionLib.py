@@ -22,7 +22,7 @@ class vSession(object):
         
         self.__RAZ()
         self.__updated_tables = []
-        self.__group_functions = ['AVG', 'COUNT', 'MAX', 'MIN']
+        self.__group_functions = ['AVG', 'COUNT', 'MAX', 'MIN', 'SUM']
         super().__init__()
 
     def __RAZ(self):
@@ -300,21 +300,21 @@ class vSession(object):
             flg = False
             match col[5]:
                 case 'FUNCTION':
-                    flg, res = self.submit_query_prepare_post_tasks_function(col[3], res)
+                    flg, res = self.submit_query_prepare_post_tasks_function(col[3], res, False)
                 case 'MATHS':
-                    flg, res = self.submit_query_prepare_post_tasks_maths(col[3], res)
+                    flg, res = self.submit_query_prepare_post_tasks_maths(col[3], res, False)
                 case 'PIPE':
-                    flg, res = self.submit_query_prepare_post_tasks_pipe(col[3], res)
+                    flg, res = self.submit_query_prepare_post_tasks_pipe(col[3], res, False)
             if flg:
                 NColGrp += 1
                 self.__parsed_query["post_data_model"][n] = res
         if NColGrp+len(self.__parsed_query["group_by"]) < len(self.__parsed_query["select"]):
             raise vExcept(752)
         elif NColGrp+len(self.__parsed_query["group_by"]) > len(self.__parsed_query["select"]):
-            raise vExcept(753)
+            raise vExcept(754)
         # print(f'submit_query_prepare_post_tasks  post_data_model={self.__parsed_query["post_data_model"]}')
 
-    def submit_query_prepare_post_tasks_function(self, fct_name, res):
+    def submit_query_prepare_post_tasks_function(self, fct_name, res, dependant):
         flg, tmpflg = False, False
         fct_id = self.__get_function(fct_name)
         res[self.__parsed_query["functions"][fct_id][0]] = {
@@ -322,48 +322,87 @@ class vSession(object):
             "colvalmodel": [[None, False] for x in range(len(self.__parsed_query["functions"][fct_id][2]))],
             "colval": [],
             "result": [],
+            "dependant": dependant,
             "completed": [],
+            "rowscompleted": [],
             "done": False,
             "function": self.__parsed_query["functions"][fct_id][1]}
+        colcount = len(res[self.__parsed_query["functions"][fct_id][0]]["colvalmodel"])
+        match res[self.__parsed_query["functions"][fct_id][0]]["function"]:
+            case 'ABS'|'AVG'|'CHR'|'COUNT'|'LENGTH'|'LOWER'|'MAX'|'MIN'|'SUM'|'UPPER':
+                if colcount != 1:
+                    raise vExcept(2323, res[self.__parsed_query["functions"][fct_id][0]]["function"])
+            case 'DECODE':
+                if colcount % 2 != 0:
+                    raise vExcept(2308, colcount)
+            case 'INSTR':
+                if colcount not in [2, 3, 4]:
+                    raise vExcept(2313, colcount)
+            case 'LPAD':
+                if colcount not in [2, 3]:
+                    raise vExcept(2316, colcount)
+            case 'LTRIM':
+                if colcount not in [1, 2]:
+                    raise vExcept(2320, colcount)
+            case 'NVL':
+                if colcount != 2:
+                    raise vExcept(2314, colcount)
+            case 'NVL2':
+                if colcount != 3:
+                    raise vExcept(2315, colcount)
+            case 'RPAD':
+                if colcount not in [2, 3]:
+                    raise vExcept(2318, colcount)
+            case 'RTRIM':
+                if colcount not in [1, 2]:
+                    raise vExcept(2321, colcount)
+            case 'SUBSTR':
+                if colcount != 3:
+                    raise vExcept(2300, colcount)
+            case 'TO_CHAR':
+                if colcount != 2:
+                    raise vExcept(2305, colcount)
         if self.__parsed_query["functions"][fct_id][1] in self.__group_functions:
             flg = True
         for n, col in enumerate(self.__parsed_query["functions"][fct_id][2]):
             match col[4]:
                 case 'FUNCTION':
-                    tmpflg, res = self.submit_query_prepare_post_tasks_function(col[3], res)
+                    tmpflg, res = self.submit_query_prepare_post_tasks_function(col[3], res, True)
                 case 'MATHS':
-                    tmpflg, res = self.submit_query_prepare_post_tasks_maths(col[3], res)
+                    tmpflg, res = self.submit_query_prepare_post_tasks_maths(col[3], res, True)
                 case 'PIPE':
-                    tmpflg, res = self.submit_query_prepare_post_tasks_pipe(col[3], res)
+                    tmpflg, res = self.submit_query_prepare_post_tasks_pipe(col[3], res, True)
             if tmpflg:
                 flg = True
         return flg, res
 
-    def submit_query_prepare_post_tasks_maths(self, maths_name, res):
+    def submit_query_prepare_post_tasks_maths(self, maths_name, res, dependant):
         flg, tmpflg = False, False
         maths_id = self.__get_maths(maths_name)
         res[self.__parsed_query["maths"][maths_id][0]] = {
-            "columns": [x for x in self.__parsed_query["mahs"][maths_id][1] if len(x) > 1],
-            "colvalmodel": [[None, False] for x in self.__parsed_query["mahs"][maths_id][1] if len(x) > 1],
+            "columns": [x for x in self.__parsed_query["maths"][maths_id][2]],
+            "colvalmodel": [[None, False] for x in self.__parsed_query["maths"][maths_id][2]],
             "colval": [],
             "result": [],
+            "dependant": dependant,
             "completed": [],
+            "rowscompleted": [],
             "done": False}
-        for n, col in enumerate(self.__parsed_query["maths"][maths_id][1]):
-            if len(col) == 1:
+        for n, col in enumerate(self.__parsed_query["maths"][maths_id][2]):
+            if col[1][0] == 'META':
                 continue
-            match col[4]:
+            match col[1][5]:
                 case 'FUNCTION':
-                    tmpflg, res = self.submit_query_prepare_post_tasks_function(col[3], res)
+                    tmpflg, res = self.submit_query_prepare_post_tasks_function(col[1][4], res, True)
                 case 'MATHS':
-                    tmpflg, res = self.submit_query_prepare_post_tasks_maths(col[3], res)
+                    tmpflg, res = self.submit_query_prepare_post_tasks_maths(col[1][4], res, True)
                 case 'PIPE':
-                    tmpflg, res = self.submit_query_prepare_post_tasks_pipe(col[3], res)
+                    tmpflg, res = self.submit_query_prepare_post_tasks_pipe(col[1][4], res, True)
             if tmpflg:
                 flg = True
         return flg, res
 
-    def submit_query_prepare_post_tasks_pipe(self, pipe_name, res):
+    def submit_query_prepare_post_tasks_pipe(self, pipe_name, res, dependant):
         flg, tmpflg = False, False
         pipe_id = self.__get_pipe(pipe_name)
         res[self.__parsed_query["pipe"][pipe_id][0]] = {
@@ -371,16 +410,18 @@ class vSession(object):
             "colvalmodel": [[None, False] for x in self.__parsed_query["pipe"][pipe_id][1]],
             "colval": [],
             "result": [],
+            "dependant": dependant,
             "completed": [],
+            "rowscompleted": [],
             "done": False}
         for n, col in enumerate(self.__parsed_query["pipe"][pipe_id][1]):
             match col[5]:
                 case 'FUNCTION':
-                    tmpflg, res = self.submit_query_prepare_post_tasks_function(col[3], res)
+                    tmpflg, res = self.submit_query_prepare_post_tasks_function(col[3], res, True)
                 case 'MATHS':
-                    tmpflg, res = self.submit_query_prepare_post_tasks_maths(col[3], res)
+                    tmpflg, res = self.submit_query_prepare_post_tasks_maths(col[3], res, True)
                 case 'PIPE':
-                    tmpflg, res = self.submit_query_prepare_post_tasks_pipe(col[3], res)
+                    tmpflg, res = self.submit_query_prepare_post_tasks_pipe(col[3], res, True)
             if tmpflg:
                 flg = True
         return flg, res
@@ -389,6 +430,17 @@ class vSession(object):
         result = {}
         self.__bind = bind
         self.__parsed_query = vParser().parse_query(query=_query, bind=bind)
+        # print(f'submit_query select={self.__parsed_query["select"]}')
+        # print(f'submit_query from={self.__parsed_query["from"]}')
+        # print(f'submit_query where={self.__parsed_query["where"]}')
+        # print(f'submit_query parsed_where={self.__parsed_query["parsed_where"]}')
+        # print(f'submit_query in={self.__parsed_query["in"]}')
+        # print(f'submit_query functions={self.__parsed_query["functions"]}')
+        # print(f'submit_query connect={self.__parsed_query["connect"]}')
+        # print(f'submit_query maths={self.__parsed_query["maths"]}')
+        # print(f'submit_query pipe={self.__parsed_query["pipe"]}')
+        # print(f'submit_query bind={self.__parsed_query["bind"]}')
+        # print(f'submit_query group_by={self.__parsed_query["group_by"]}')
         if self.__parsed_query["querytype"] in ['SELECT']:
             result = {"columns": [], "rows": []}
         elif self.__parsed_query["querytype"] in ['DESCRIBE']:
@@ -410,18 +462,8 @@ class vSession(object):
         if self.__parsed_query["post_tasks"]:
             self.submit_query_prepare_post_tasks()
 
-        # print(f'submit_query select={self.__parsed_query["select"]}')
-        # print(f'submit_query from={self.__parsed_query["from"]}')
-        # print(f'submit_query where={self.__parsed_query["where"]}')
-        # print(f'submit_query parsed_where={self.__parsed_query["parsed_where"]}')
-        # print(f'submit_query in={self.__parsed_query["in"]}')
-        # print(f'submit_query functions={self.__parsed_query["functions"]}')
-        # print(f'submit_query connect={self.__parsed_query["connect"]}')
-        # print(f'submit_query maths={self.__parsed_query["maths"]}')
-        # print(f'submit_query pipe={self.__parsed_query["pipe"]}')
-        # print(f'submit_query bind={self.__parsed_query["bind"]}')
-        # print(f'submit_query group_by={self.__parsed_query["group_by"]}')
         # print(f'submit_query post_tasks={self.__parsed_query["post_tasks"]}')
+        # print(f'submit_query post_data_model={self.__parsed_query["post_data_model"]}')
 
         # process query
         result = self.submit_query_process_query(result)
@@ -529,37 +571,77 @@ class vSession(object):
                         if self.__parsed_query['post_tasks'] and (n in self.__parsed_query['post_data_model']):
                             rrow.append(None)
                             for colkey in self.__parsed_query['post_data_model'][n].keys():
-                                for ncol, col in enumerate(self.__parsed_query['post_data_model'][n][colkey]["columns"]):
-                                    if len(self.__parsed_query['post_data_model'][n][colkey]["colval"]) < len(self.__result) + 1:
-                                        self.__parsed_query['post_data_model'][n][colkey]["colval"].append(copy.deepcopy(self.__parsed_query['post_data_model'][n][colkey]["colvalmodel"]))
-                                        self.__parsed_query['post_data_model'][n][colkey]["result"].append(None)
-                                        self.__parsed_query['post_data_model'][n][colkey]["completed"].append(False)
-                                    match col[4]:
-                                        case 'COLUMN':
-                                            if col[3] == 'ROWNUM':
-                                                self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [len(self.__result), True]
-                                            elif col[3] == '*':
-                                                self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = ['||ALL_ROWS||', True]
+                                match colkey[0:3]:
+                                    case 'MAT':
+                                        for ncol, col_parse in enumerate(self.__parsed_query['post_data_model'][n][colkey]["columns"]):
+                                            if len(self.__parsed_query['post_data_model'][n][colkey]["colval"]) < len(self.__result) + 1:
+                                                self.__parsed_query['post_data_model'][n][colkey]["colval"].append(copy.deepcopy(self.__parsed_query['post_data_model'][n][colkey]["colvalmodel"]))
+                                                self.__parsed_query['post_data_model'][n][colkey]["result"].append(None)
+                                                self.__parsed_query['post_data_model'][n][colkey]["completed"].append(False)
+                                                self.__parsed_query['post_data_model'][n][colkey]["rowscompleted"].append(False)
+                                            if len(col_parse) == 2:
+                                                col = col_parse[1][1:]
+                                                match col[4]:
+                                                    case 'COLUMN':
+                                                        if col[3] == 'ROWNUM':
+                                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [len(self.__result), True]
+                                                        elif col[3] == '*':
+                                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = ['||ALL_ROWS||', True]
+                                                        else:
+                                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [self.__parsed_query["from"][col[5]][4][0]["rows"][self.__RowsPosInTables[col[5]]][col[6]], True]
+                                                    case 'INT':
+                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [int(col[3]), True]
+                                                    case 'FLOAT':
+                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [float(col[3]), True]
+                                                    case 'HEX':
+                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [col[3], True]
+                                                    case 'DATETIME':
+                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [col[3], True]
+                                                    case 'STR':
+                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [self.__remove_quote(col[3]).replace("''", "'"), True]
+                                                    case 'FUNCTION':
+                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [None, False]
+                                                    case 'MATHS':
+                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [None, False]
+                                                    case 'PIPE':
+                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [None, False]
+                                                    case _:
+                                                        raise vExcept(801)
                                             else:
-                                                self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [self.__parsed_query["from"][col[5]][4][0]["rows"][self.__RowsPosInTables[col[5]]][col[6]], True]
-                                        case 'INT':
-                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [int(col[3]), True]
-                                        case 'FLOAT':
-                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [float(col[3]), True]
-                                        case 'HEX':
-                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][col] = [col[3], True]
-                                        case 'DATETIME':
-                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][col] = [col[3], True]
-                                        case 'STR':
-                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][col] = [self.__remove_quote(col[3]).replace("''", "'"), True]
-                                        case 'FUNCTION':
-                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][col] = [None, False]
-                                        case 'MATHS':
-                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][col] = [None, False]
-                                        case 'PIPE':
-                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][col] = [None, False]
-                                        case _:
-                                            raise vExcept(801)
+                                                self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [None, False]
+                                    case 'FCT':
+                                        for ncol, col in enumerate(self.__parsed_query['post_data_model'][n][colkey]["columns"]):
+                                            if len(self.__parsed_query['post_data_model'][n][colkey]["colval"]) < len(self.__result) + 1:
+                                                self.__parsed_query['post_data_model'][n][colkey]["colval"].append(copy.deepcopy(self.__parsed_query['post_data_model'][n][colkey]["colvalmodel"]))
+                                                self.__parsed_query['post_data_model'][n][colkey]["result"].append(None)
+                                                self.__parsed_query['post_data_model'][n][colkey]["completed"].append(False)
+                                                self.__parsed_query['post_data_model'][n][colkey]["rowscompleted"].append(False)
+                                            match col[4]:
+                                                case 'COLUMN':
+                                                    if col[3] == 'ROWNUM':
+                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [len(self.__result), True]
+                                                    elif col[3] == '*':
+                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = ['||ALL_ROWS||', True]
+                                                    else:
+                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [self.__parsed_query["from"][col[5]][4][0]["rows"][self.__RowsPosInTables[col[5]]][col[6]], True]
+                                                case 'INT':
+                                                    self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [int(col[3]), True]
+                                                case 'FLOAT':
+                                                    self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [float(col[3]), True]
+                                                case 'HEX':
+                                                    self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [col[3], True]
+                                                case 'DATETIME':
+                                                    self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [col[3], True]
+                                                case 'STR':
+                                                    self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [self.__remove_quote(col[3]).replace("''", "'"), True]
+                                                case 'FUNCTION':
+                                                    self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [None, False]
+                                                case 'MATHS':
+                                                    self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [None, False]
+                                                case 'PIPE':
+                                                    self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [None, False]
+                                                case _:
+                                                    raise vExcept(801)
                             self.__parsed_query['post_data_model'][n][colkey]["columns"]
                         else:
                             match s[5]:
@@ -1097,7 +1179,6 @@ class vSession(object):
         for n in range(len(self.__parsed_query["select"])):
             matriceCOL.append(bool(n in self.__parsed_query["post_data_model"].keys()))
         StillWork = True
-        numrow = 0
         rowidx = 0
         while StillWork and rowidx < len(self.__result):
             # init selected rows matrice
@@ -1107,119 +1188,416 @@ class vSession(object):
             for n, value in enumerate(parsedROW):
                 if not value:
                     rowidx = n
-                    # matriceROW.append(rowidx)
                     matriceROW[rowidx] = True
                     parsedROW[rowidx] = True
                     StillWork = True
                     break
             if StillWork:
-                # serach all rows to be grouped
+                # serach all rows to be grouped => all rows are flaged TRUE in matriceROW
                 numrow = rowidx + 1
                 while numrow < len(self.__result):
                     if (self.__result[numrow] == self.__result[rowidx]) and (not parsedROW[numrow]):
                         matriceROW[numrow] = True
                         parsedROW[numrow] = True
                     numrow += 1
-            # print(f'__process_groupby matriceROW={matriceROW} parsedROW={parsedROW}')
             for WorkOnRowIdx, WorkOnRow in enumerate(matriceROW):
-                if not WorkOnRow:
-                    continue
+                # if not WorkOnRow:
+                #     continue
                 for WorkOnCol in self.__parsed_query["post_data_model"].keys():
                     for obj in self.__parsed_query["post_data_model"][WorkOnCol].keys():
-                        if not self.__parsed_query["post_data_model"][WorkOnCol][obj]["completed"][WorkOnRowIdx]:
-                            # print(f'__process_groupby WorkOnCol={WorkOnCol} obj={obj}')
+                        # test if "obj" is fully computed
+                        if not (self.__parsed_query["post_data_model"][WorkOnCol][obj]["done"] or self.__parsed_query["post_data_model"][WorkOnCol][obj]["completed"][WorkOnRowIdx]):
                             match obj[0:3]:
-                                case FCT:
-                                    # ##### for fctparamidx, fctparam in enumerate(self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"]):
-                                    # #####     match fctparam[4]:
-                                    # #####         case 'COLUMN'|'INT'|'FLOAT'|'STR'|'HEX'|'DATETIME':
-                                    # #####             pass
-                                    # #####         case 'FUNCTION':
-                                    # #####             pass
-                                    # #####         case 'MATHS':
-                                    # #####             pass
-                                    # #####         case 'PIPE':
-                                    # #####             pass
-                                    # check availability fo all columns data
-                                    chkcolflg = True
-                                    for chkcol in self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][rowidx]:
-                                        if not chkcol[1]:
-                                            chkcolflg = False
+                                case 'FCT':
                                     # all columns data are available, function can be parsed
-                                    if chkcolflg:
-                                        match self.__parsed_query["post_data_model"][WorkOnCol][obj]["function"]:
-                                            case 'AVG'|'MAX'|'MIN':
-                                                colval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][0][0]
-                                                self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = colval
-                                            case 'COUNT':
-                                                if self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][rowidx][0][0] is None:
-                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = 0
-                                                else:
-                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = 1
+                                    match self.__parsed_query["post_data_model"][WorkOnCol][obj]["function"]:
+                                        case 'ABS'|'AVG'|'CHR'|'LENGTH'|'LOWER'|'MAX'|'MIN'|'SUM'|'UPPER':
+                                            match self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"][0][4]:
+                                                case 'FUNCTION'|'MATHS'|'PIPE':
+                                                    fct = self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"][0][3]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][fct]["done"]:
+                                                        colval = self.__parsed_query["post_data_model"][WorkOnCol][fct]["result"][WorkOnRowIdx]
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][0] = [colval, True]
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = colval
+                                                case _:
+                                                    colval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][0][0]
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = colval
+                                        case 'COUNT':
+                                            if self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][0][0] is None:
+                                                self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = 0
+                                            else:
+                                                self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = 1
+                                        case 'DECODE'|'INSTR'|'LPAD'|'LTRIM'|'NVL'|'NVL2'|'RPAD'|'RTRIM'|'SUBSTR'|'TO_CHAR'|'SUBSTR'|'TO_CHAR':
+                                            for ncol in range(len(self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"])):
+                                                match self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"][ncol][4]:
+                                                    case 'FUNCTION'|'MATHS'|'PIPE':
+                                                        fct = self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"][ncol][3]
+                                                        if self.__parsed_query["post_data_model"][WorkOnCol][fct]["done"]:
+                                                            colval = self.__parsed_query["post_data_model"][WorkOnCol][fct]["result"][WorkOnRowIdx]
+                                                            self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][ncol] = [colval, True]
+                                    # set "completed" if all rows are parsed for each "obj"
+                                    AllRowsParsed = True
+                                    for chkcol in self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx]:
+                                        if not chkcol[1]:
+                                            AllRowsParsed = False
+                                    if AllRowsParsed:
                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["completed"][WorkOnRowIdx] = True
-                                        # print(f'__process_groupby completed={self.__parsed_query["post_data_model"][WorkOnCol][obj]}')
+                                case 'MAT':
+                                    # all columns data are available, function can be parsed
+                                    for n, column in enumerate(self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"]):
+                                        if not self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][n][1]:
+                                            match column[1][0]:
+                                                case 'META':
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][column[1][1]][1] and self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][column[3][1]][1]:
+                                                        v1 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][column[1][1]][0]
+                                                        v2 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][column[3][1]][0]
+                                                        match column[2]:
+                                                            case '+':
+                                                                self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][n] = [v1 + v2, True]
+                                                            case '-':
+                                                                self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][n] = [v1 - v2, True]
+                                                            case '*':
+                                                                self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][n] = [v1 * v2, True]
+                                                            case '/':
+                                                                if v2 != 0:
+                                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][n] = [v1 / v2, True]
+                                                                else:
+                                                                    raise vExcept(2500)
+                                                case 'TST':
+                                                    match column[1][4][0:3]:
+                                                        case 'FCT':
+                                                            if self.__parsed_query["post_data_model"][WorkOnCol][column[1][4]]["done"]:
+                                                                self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][n] = [self.__parsed_query["post_data_model"][WorkOnCol][column[1][4]]["result"][WorkOnRowIdx], True]
+                                                        case 'MAT':
+                                                            pass
+                                                        case 'PIP':
+                                                            pass
+                                    # set "completed" if all rows are parsed for each "obj"
+                                    AllRowsParsed = True
+                                    for chkcol in self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx]:
+                                        if not chkcol[1]:
+                                            AllRowsParsed = False
+                                    if AllRowsParsed:
+                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["completed"][WorkOnRowIdx] = True
+                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][-1][0]
             for WorkOnRowIdx, WorkOnRow in enumerate(matriceROW):
                 for WorkOnCol in self.__parsed_query["post_data_model"].keys():
                     for obj in self.__parsed_query["post_data_model"][WorkOnCol].keys():
-                        if self.__parsed_query["post_data_model"][WorkOnCol][obj]["completed"][WorkOnRowIdx] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["done"]:
-                            match self.__parsed_query["post_data_model"][WorkOnCol][obj]["function"]:
-                                case 'AVG':
-                                    total = 0
-                                    nbrows = 0
+                        if not self.__parsed_query["post_data_model"][WorkOnCol][obj]["done"]:
+                            NotAllCompleted = False
+                            for n in self.__parsed_query["post_data_model"][WorkOnCol][obj]["completed"]:
+                                if not n:
+                                    NotAllCompleted = True
+                            if self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][WorkOnRowIdx] or NotAllCompleted:
+                                continue
+                            match obj[0:3]:
+                                case 'MAT':
                                     for n in range(len(self.__result)):
-                                        if matriceROW[n]:
-                                            total += self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
-                                            nbrows += 1
-                                    total = total / nbrows
+                                        if not self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"] and self.__parsed_query["post_data_model"][WorkOnCol][obj]["completed"][n]:
+                                            self.__result[n][WorkOnCol] = self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
+                                            self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                    AllRowsParsed = 0
                                     for n in range(len(self.__result)):
-                                        if matriceROW[n]:
-                                            self.__result[n][WorkOnCol] = total
-                                case 'COUNT':
-                                    total = 0
+                                        if self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                            AllRowsParsed += 1
+                                    if AllRowsParsed == len(self.__result):
+                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["done"] = True
+                                case 'FCT':
+                                    match self.__parsed_query["post_data_model"][WorkOnCol][obj]["function"]:
+                                        case 'ABS':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = abs(self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n])
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = abs(self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n])
+                                        case 'AVG':
+                                            total = 0
+                                            nbrows = 0
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n]:
+                                                    total += self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
+                                                    nbrows += 1
+                                            total = total / nbrows
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = total
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = total
+                                        case 'CHR':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    val_int = self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
+                                                    if self.__check_INT(val_int):
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                        if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                            self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = str(chr(int(val_int)))
+                                                        else:
+                                                            self.__result[n][WorkOnCol] = str(chr(int(val_int)))
+                                                    else:
+                                                        raise vExcept(2310, val_int)
+                                        case 'COUNT':
+                                            total = 0
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n]:
+                                                    total += self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = total
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = total
+                                        case 'DECODE':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    param = []
+                                                    for m in self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n]:
+                                                        param.append(m[0])
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__DECODE(param)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.self.__DECODE(param)
+                                        case 'LENGTH':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    val_int = self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = len(val_int)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = len(val_int)
+                                        case 'LOWER':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    val_int = str(self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]).lower()
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = val_int
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = val_int
+                                        case 'LPAD':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    v1 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    v2 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][1][0]
+                                                    if len (self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n]) == 3:
+                                                        v3 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][2][0]
+                                                    else:
+                                                        v3 = ' '
+                                                    vbegin = str(v3 * v2)[0:v2-len(v1)]
+                                                    r = f'{vbegin}{v1}'
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = r
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = r
+                                        case 'LTRIM':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    v1 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    if len (self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n]) == 2:
+                                                        v2 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][1][0]
+                                                    else:
+                                                        v2 = ' '
+                                                    while v1[0:len(v2)] == v2:
+                                                        v1 = v1[len(v2):]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = v1
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = v1
+                                        case 'NVL':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    v1 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    v2 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][1][0]
+                                                    if (v1 is None) or (v1 == ''):
+                                                        if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                            self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = v2
+                                                        else:
+                                                            self.__result[n][WorkOnCol] = v2
+                                                    else:
+                                                        if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                            self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = v1
+                                                        else:
+                                                            self.__result[n][WorkOnCol] = v1
+                                        case 'NVL2':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    v1 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    v2 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][1][0]
+                                                    v3 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][2][0]
+                                                    if (v1 is None) or (v1 == ''):
+                                                        if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                            self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = v3
+                                                        else:
+                                                            self.__result[n][WorkOnCol] = v3
+                                                    else:
+                                                        if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                            self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = v2
+                                                        else:
+                                                            self.__result[n][WorkOnCol] = v2
+                                        case 'MAX':
+                                            total = None
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n]:
+                                                    v = self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
+                                                    if v is not None:
+                                                        if (total is None) or (total < v):
+                                                            total = v
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = total
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = total
+                                        case 'MIN':
+                                            total = None
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n]:
+                                                    v = self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
+                                                    if v is not None:
+                                                        if (total is None) or (total > v):
+                                                            total = v
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = total
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = total
+                                        case 'RPAD':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    v1 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    v2 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][1][0]
+                                                    if len (self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n]) == 3:
+                                                        v3 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][2][0]
+                                                    else:
+                                                        v3 = ' '
+                                                    vbegin = str(v3 * v2)[0:v2-len(v1)]
+                                                    r = str(v1 + vbegin)
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = r
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = r
+                                        case 'RTRIM':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    v1 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    if len (self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n]) == 2:
+                                                        v2 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][1][0]
+                                                    else:
+                                                        v2 = ' '
+                                                    while v1[-len(v2):] == v2:
+                                                        v1 = v1[:-len(v2)]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = v1
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = v1
+                                        case 'SUBSTR':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    strin = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    sttin = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][1][0]
+                                                    lenin = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][2][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__SUBSTR(strin, sttin, lenin)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__SUBSTR(strin, sttin, lenin)
+                                        case 'SUM':
+                                            total = 0
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n]:
+                                                    total += self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = total
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = total
+                                        case 'TO_CHAR':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    dtein = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    fmtin = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][1][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__TO_CHAR(dtein, fmtin)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__TO_CHAR(dtein, fmtin)
+                                        case 'INSTR':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    instr = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    insubstr = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][1][0]
+                                                    match len(self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n]):
+                                                        case 2:
+                                                            inposition = 0
+                                                            inoccurence = 1
+                                                        case 3:
+                                                            inposition = int(self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][2][0])
+                                                            inoccurence = 1
+                                                        case 4:
+                                                            inposition = int(self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][2][0])
+                                                            inoccurence = int(self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][3][0])
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__INSTR(instr, insubstr, inposition, inoccurence)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__INSTR(instr, insubstr, inposition, inoccurence)
+                                        case 'UPPER':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    val_int = str(self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]).upper()
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = val_int
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = val_int
+                                    AllRowsParsed = 0
                                     for n in range(len(self.__result)):
-                                        if matriceROW[n]:
-                                            total += self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
-                                    for n in range(len(self.__result)):
-                                        if matriceROW[n]:
-                                            self.__result[n][WorkOnCol] = total
-                                case 'MAX':
-                                    total = None
-                                    for n in range(len(self.__result)):
-                                        if matriceROW[n]:
-                                            v = self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
-                                            if v is not None:
-                                                if (total is None) or (total < v):
-                                                    total = v
-                                    for n in range(len(self.__result)):
-                                        if matriceROW[n]:
-                                            self.__result[n][WorkOnCol] = total
-                                case 'MIN':
-                                    total = None
-                                    for n in range(len(self.__result)):
-                                        if matriceROW[n]:
-                                            v = self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
-                                            if v is not None:
-                                                if (total is None) or (total > v):
-                                                    total = v
-                                    for n in range(len(self.__result)):
-                                        if matriceROW[n]:
-                                            self.__result[n][WorkOnCol] = total
-                            self.__parsed_query["post_data_model"][WorkOnCol][obj]["done"] = True
+                                        if self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                            AllRowsParsed += 1
+                                    if AllRowsParsed == len(self.__result):
+                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["done"] = True
                 # print(f'__process_groupby post_data_model={self.__parsed_query["post_data_model"]}')
-            # check if all columns are parsed
+            # check if all rows are parsed
+            AllRowsParsed = True
             for value in parsedROW:
                 if not value:
-                    rowidx = 0
-                    for WorkOnCol in self.__parsed_query["post_data_model"].keys():
-                        for obj in self.__parsed_query["post_data_model"][WorkOnCol].keys():
-                            self.__parsed_query["post_data_model"][WorkOnCol][obj]["done"] = False
-                    break
-            
-        # tmpres = []
-        # for row in self.__result:
-        #     if row not in tmpres:
-        #         tmpres.append(row)
-        # self.__result = tmpres
+                    AllRowsParsed = False
+            # check if all columns are parsed
+            AllObjDone = True
+            for WorkOnCol in self.__parsed_query["post_data_model"].keys():
+                for obj in self.__parsed_query["post_data_model"][WorkOnCol].keys():
+                    if not self.__parsed_query["post_data_model"][WorkOnCol][obj]["done"]:
+                        AllObjDone = False
+            if AllObjDone:
+                StillWork = False
+            else:
+                StillWork = True
+                rowidx = 0
+                if AllRowsParsed:
+                    parsedROW = [False for x in range(len(self.__result))]
+        # remove duplicate rows
+        tmpres = []
+        for row in self.__result:
+            if row not in tmpres:
+                tmpres.append(row)
+        self.__result = tmpres
 
     def __format_value(self, value, type_value):
         try:
@@ -1713,59 +2091,6 @@ class vSession(object):
         # functions : [fct_id, fct_name, [[table_alias, schema, table_name, col_name/value, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS, PIPE), table position, position in table, table or cursor]]]
         fct_num = self.__get_function(fct_id)
         match self.__parsed_query["functions"][fct_num][1]:
-            case 'UPPER':
-                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
-                return str(value).upper()
-            case 'LOWER':
-                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
-                return str(value).lower()
-            case 'SUBSTR':
-                if len(self.__parsed_query["functions"][fct_num][2]) != 3:
-                    raise vExcept(2300, len(self.__parsed_query["functions"][fct_num][2]))
-                strin = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
-                sttin = int(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])) - 1
-                if sttin < 0:
-                    sttin = 0
-                lenin = int(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]))
-                # print(f'__compute_function SUBSTR strin={strin} sttin={sttin} lenin={lenin}')
-                if not self.__check_STR(strin):
-                    raise vExcept(2301, strin)
-                if not self.__check_INT(sttin):
-                    raise vExcept(2302, sttin)
-                if not self.__check_INT(lenin):
-                    raise vExcept(2303, lenin)
-                return strin[sttin:sttin+lenin]
-            case 'TO_CHAR':
-                if len(self.__parsed_query["functions"][fct_num][2]) != 2:
-                    raise vExcept(2305, len(self.__parsed_query["functions"][fct_num][2]))
-                dtein = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
-                fmtin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
-                if (not self.__check_DATETIME(dtein)) and (not self.__check_FLOAT(dtein)):
-                    raise vExcept(2306, dtein)
-                if not self.__check_STR(fmtin):
-                    raise vExcept(2307, fmtin)
-                fmtin = fmtin.replace('YYYY', '%Y').replace('YY', '%y')
-                fmtin = fmtin.replace('MM', '%m').replace('MONTH', '%B').replace('MON', '%'+'b')
-                fmtin = fmtin.replace('DDD', '%j').replace('DD', '%'+'d').replace('DAY', '%A').replace('DY', '%'+'a')
-                fmtin = fmtin.replace('HH24', '%H').replace('HH', '%I')
-                fmtin = fmtin.replace('MI', '%M')
-                fmtin = fmtin.replace('SS', '%S')
-                return datetime.fromtimestamp(dtein).strftime(fmtin)[1:-1]
-            case 'DECODE':
-                if len(self.__parsed_query["functions"][fct_num][2]) % 2 != 0:
-                    raise vExcept(2308, len(self.__parsed_query["functions"][fct_num][2]))
-                mainval = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
-                n = 1
-                dont_stop_flg = True
-                while (n+1 < len(self.__parsed_query["functions"][fct_num][2])) and dont_stop_flg:
-                    if self.__get_function_col(self.__parsed_query["functions"][fct_num][2][n]) == mainval:
-                        res = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][n+1])
-                        dont_stop_flg = False
-                    else:
-                        n += 2
-                if dont_stop_flg:
-                    res = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][-1])
-                return res
             case 'ABS':
                 if len(self.__parsed_query["functions"][fct_num][2]) != 1:
                     raise vExcept(2311, len(self.__parsed_query["functions"][fct_num][2]))
@@ -1790,6 +2115,25 @@ class vSession(object):
                     return str(chr(int(val_int)))
                 else:
                     raise vExcept(2310, val_int)
+            case 'DECODE':
+                if len(self.__parsed_query["functions"][fct_num][2]) % 2 != 0:
+                    raise vExcept(2308, len(self.__parsed_query["functions"][fct_num][2]))
+                param = []
+                for x in self.__get_function_col(self.__parsed_query["functions"][fct_num][2]):
+                    param.append(x)
+                return self.__DECODE(param)
+                # mainval = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                # n = 1
+                # dont_stop_flg = True
+                # while (n+1 < len(self.__parsed_query["functions"][fct_num][2])) and dont_stop_flg:
+                #     if self.__get_function_col(self.__parsed_query["functions"][fct_num][2][n]) == mainval:
+                #         res = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][n+1])
+                #         dont_stop_flg = False
+                #     else:
+                #         n += 2
+                # if dont_stop_flg:
+                #     res = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][-1])
+                # return res
             case 'INSTR':
                 if len(self.__parsed_query["functions"][fct_num][2]) not in [2, 3, 4]:
                     raise vExcept(2313, len(self.__parsed_query["functions"][fct_num][2]))
@@ -1805,21 +2149,53 @@ class vSession(object):
                     case 4:
                         inposition = int(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]))
                         inoccurence = int(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][3]))
-                if (inposition >= len(instr)) or (inoccurence < 1):
-                    return 0
-                while inposition < len(instr):
-                    try:
-                        foundin = instr[inposition:].index(insubstr)
-                        if foundin >= 0:
-                            if inoccurence == 1:
-                                return foundin+inposition+1
-                            else:
-                                inoccurence -= 1
-                                inposition = inposition+foundin+1
-                        else:
-                            return 0
-                    except ValueError:
-                        return 0
+                return self.__INSTR(instr, insubstr, inposition, inoccurence)
+                # if (inposition >= len(instr)) or (inoccurence < 1):
+                #     return 0
+                # while inposition < len(instr):
+                #     try:
+                #         foundin = instr[inposition:].index(insubstr)
+                #         if foundin >= 0:
+                #             if inoccurence == 1:
+                #                 return foundin+inposition+1
+                #             else:
+                #                 inoccurence -= 1
+                #                 inposition = inposition+foundin+1
+                #         else:
+                #             return 0
+                #     except ValueError:
+                #         return 0
+            case 'LENGTH':
+                if len(self.__parsed_query["functions"][fct_num][2]) != 1:
+                    raise vExcept(2322, len(self.__parsed_query["functions"][fct_num][2]))
+                return len(self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])))
+            case 'LOWER':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return str(value).lower()
+            case 'LPAD':
+                if len(self.__parsed_query["functions"][fct_num][2]) not in [2, 3]:
+                    raise vExcept(2316, len(self.__parsed_query["functions"][fct_num][2]))
+                v1 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
+                v2 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1]))
+                if not self.__check_INT(v2):
+                    raise vExcept(2317, v2)
+                if len(self.__parsed_query["functions"][fct_num][2]) == 3:
+                    v3 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]))
+                else:
+                    v3 = ' '
+                vbegin = str(v3 * v2)[0:v2-len(v1)]
+                return str(vbegin + v1)
+            case 'LTRIM':
+                if len(self.__parsed_query["functions"][fct_num][2]) not in [1, 2]:
+                    raise vExcept(2320, len(self.__parsed_query["functions"][fct_num][2]))
+                v1 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
+                if len(self.__parsed_query["functions"][fct_num][2]) == 2:
+                    v2 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1]))
+                else:
+                    v2 = ' '
+                while v1[0:len(v2)] == v2:
+                    v1 = v1[len(v2):]
+                return v1
             case 'NVL':
                 if len(self.__parsed_query["functions"][fct_num][2]) != 2:
                     raise vExcept(2314, len(self.__parsed_query["functions"][fct_num][2]))
@@ -1839,19 +2215,6 @@ class vSession(object):
                     return v3
                 else:
                     return v2
-            case 'LPAD':
-                if len(self.__parsed_query["functions"][fct_num][2]) not in [2, 3]:
-                    raise vExcept(2316, len(self.__parsed_query["functions"][fct_num][2]))
-                v1 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
-                v2 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1]))
-                if not self.__check_INT(v2):
-                    raise vExcept(2317, v2)
-                if len(self.__parsed_query["functions"][fct_num][2]) == 3:
-                    v3 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]))
-                else:
-                    v3 = ' '
-                vbegin = str(v3 * v2)[0:v2-len(v1)]
-                return str(vbegin + v1)
             case 'RPAD':
                 if len(self.__parsed_query["functions"][fct_num][2]) not in [2, 3]:
                     raise vExcept(2318, len(self.__parsed_query["functions"][fct_num][2]))
@@ -1865,17 +2228,6 @@ class vSession(object):
                     v3 = ' '
                 vbegin = str(v3 * v2)[0:v2-len(v1)]
                 return str(v1 + vbegin)
-            case 'LTRIM':
-                if len(self.__parsed_query["functions"][fct_num][2]) not in [1, 2]:
-                    raise vExcept(2320, len(self.__parsed_query["functions"][fct_num][2]))
-                v1 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
-                if len(self.__parsed_query["functions"][fct_num][2]) == 2:
-                    v2 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1]))
-                else:
-                    v2 = ' '
-                while v1[0:len(v2)] == v2:
-                    v1 = v1[len(v2):]
-                return v1
             case 'RTRIM':
                 if len(self.__parsed_query["functions"][fct_num][2]) not in [1, 2]:
                     raise vExcept(2321, len(self.__parsed_query["functions"][fct_num][2]))
@@ -1887,10 +2239,23 @@ class vSession(object):
                 while v1[-len(v2):] == v2:
                     v1 = v1[:-len(v2)]
                 return v1
-            case 'LENGTH':
-                if len(self.__parsed_query["functions"][fct_num][2]) != 1:
-                    raise vExcept(2322, len(self.__parsed_query["functions"][fct_num][2]))
-                return len(self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])))
+            case 'SUBSTR':
+                if len(self.__parsed_query["functions"][fct_num][2]) != 3:
+                    raise vExcept(2300, len(self.__parsed_query["functions"][fct_num][2]))
+                strin = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
+                sttin = int(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])) - 1
+                lenin = int(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]))
+                return self.__SUBSTR(strin, sttin, lenin)
+            case 'TO_CHAR':
+                if len(self.__parsed_query["functions"][fct_num][2]) != 2:
+                    raise vExcept(2305, len(self.__parsed_query["functions"][fct_num][2]))
+                dtein = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                fmtin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
+                return self.__TO_CHAR(dtein, fmtin)
+
+            case 'UPPER':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return str(value).upper()
 
     def __get_function_type(self, fct_name: str, ref_col_typ: str):
         match fct_name:
@@ -1898,7 +2263,7 @@ class vSession(object):
                 return 'str'
             case 'COUNT'|'INSTR':
                 return 'int'
-            case 'AVG'|'MAX'|'MIN':
+            case 'AVG'|'MAX'|'MIN'|'SUM':
                 return 'float'
             case 'ABS':
                 if ref_col_typ.upper() in ['INT', 'FLOAT']:
@@ -1912,3 +2277,59 @@ class vSession(object):
                     return 'str'
             case _:
                 raise vExcept(2304, fct_name)
+
+    def __INSTR(self, instr, insubstr, inposition, inoccurence):
+        if (inposition >= len(instr)) or (inoccurence < 1):
+            return 0
+        while inposition < len(instr):
+            try:
+                foundin = instr[inposition:].index(insubstr)
+                if foundin >= 0:
+                    if inoccurence == 1:
+                        return foundin+inposition+1
+                    else:
+                        inoccurence -= 1
+                        inposition = inposition+foundin+1
+                else:
+                    return 0
+            except ValueError:
+                return 0
+
+    def __DECODE(self, param):
+        mainval = param[0]
+        n = 1
+        dont_stop_flg = True
+        while (n+1 < len(param)) and dont_stop_flg:
+            if param[n] == mainval:
+                res = param[n+1]
+                dont_stop_flg = False
+            else:
+                n += 2
+        if dont_stop_flg:
+            res = param[-1]
+        return res
+
+    def __SUBSTR(self, strin, sttin, lenin):
+        if sttin < 0:
+            sttin = 0
+        if not self.__check_STR(strin):
+            raise vExcept(2301, strin)
+        if not self.__check_INT(sttin):
+            raise vExcept(2302, sttin)
+        if not self.__check_INT(lenin):
+            raise vExcept(2303, lenin)
+        return strin[sttin:sttin+lenin]
+        
+    def __TO_CHAR(self, dtein, fmtin):
+        if (not self.__check_DATETIME(dtein)) and (not self.__check_FLOAT(dtein)):
+            raise vExcept(2306, dtein)
+        if not self.__check_STR(fmtin):
+            raise vExcept(2307, fmtin)
+        fmtin = fmtin.replace('YYYY', '%Y').replace('YY', '%y')
+        fmtin = fmtin.replace('MM', '%m').replace('MONTH', '%B').replace('MON', '%'+'b')
+        fmtin = fmtin.replace('DDD', '%j').replace('DD', '%'+'d').replace('DAY', '%A').replace('DY', '%'+'a')
+        fmtin = fmtin.replace('HH24', '%H').replace('HH', '%I')
+        fmtin = fmtin.replace('MI', '%M')
+        fmtin = fmtin.replace('SS', '%S')
+        return datetime.fromtimestamp(dtein).strftime(fmtin)[1:-1]
+        
