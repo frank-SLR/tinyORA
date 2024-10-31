@@ -5,6 +5,8 @@ from vExceptLib import vExcept
 
 # querytype: (SELECT, INSERT, UPDATE, DELETE, GRANT, REVOKE, CREATE, DROP, DESCRIBE, COMMIT, ROLLBACK)
 # select: table_alias, schema, table_name, col_name/value, alias, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS, PIPE), table position, position in table, table or cursor, [-]
+# create: 'TABLE', t_owner, t_name, ([c_cols], [cursor_id]
+#         'USER', username, password
 # from: table_alias, schema, table_name, TABLE or CURSOR, {table}
 # cursors: cursor_alias, query
 # inner_where: list of items
@@ -25,6 +27,15 @@ from vExceptLib import vExcept
 #                   ...]
 # pipe : pipe_id, [[table_alias, schema, table_name, col_name/value, alias, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS, PIPE), table position, position in table, table or cursor]]
 # bind : [[name, value] ...]
+# group_by : table_alias, schema, table_name, col_name/value, alias, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS, PIPE), table position, position in table, table or cursor
+# post_tasks : (TRUE, FALSE)
+# post_data_model : col_id= {obj_name= {column:[table_alias, schema,table_name,col_name/value,alias,type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS, PIPE),table position,position in table,table or cursor], 
+#                            colvalmodel= [value, (TRUE, FALSE)],
+#                            colval= [[value, (TRUE, FALSE)]],
+#                            result= [val1, ...],
+#                            parsed= (TRUE, FALSE),
+#                            completed= (TRUE, FALSE),
+#                            function= function_name}}
 
 class vParser():
     def __init__(self) -> None:
@@ -34,13 +45,14 @@ class vParser():
         self.__intMathsSeq = 0
         self.__intPipeSeq = 0
         self.__raz()
-        self.__list_of_functions = ['ABS', 'CHR', 'DECODE', 'INSTR', 'LENGTH', 'LOWER', 'LPAD', 'LTRIM', 'NVL', 'NVL2', 
-                                    'RPAD', 'RTRIM', 'SUBSTR', 'TO_CHAR', 'UPPER']
+        self.__list_of_functions = ['ABS', 'AVG', 'CHR', 'COUNT', 'DECODE', 'INSTR', 'LENGTH', 'LOWER', 'LPAD', 'LTRIM', 'MAX', 'MIN',
+                                    'NVL', 'NVL2', 'RPAD', 'RTRIM', 'SUBSTR', 'SUM', 'TO_CHAR', 'UPPER']
 
     def __raz(self) -> None:
         self.__parsed_query = {"querytype": None, "select": [], "from": [], "where": [], "orderby": [], "groupby": [], "cursors": [],
-                               "inner_where": [], "parsed_where": [], "parsed_inner_where": [], "grant": [], "revoke": [], "create": [], "drop": [], "insert": [], "update": [],
-                               "functions": [], "in": [], "connect": [], "maths": [], "pipe": [], "bind":{}}
+                               "inner_where": [], "parsed_where": [], "parsed_inner_where": [], "grant": [], "revoke": [], "create": [], "drop": [],
+                               "insert": [], "update": [], "functions": [], "in": [], "connect": [], "maths": [], "pipe": [], "bind":{},
+                               "group_by": [], "post_tasks": False, "post_data_model": {}}
         self.__query = ''
 
     def parse_query(self, query:str, bind:dict = []) -> dict:
@@ -243,7 +255,7 @@ class vParser():
         if (word.upper() == 'ORDER') and (pos < len(self.__query)):
             pass
         if (word.upper() == 'GROUP') and (pos < len(self.__query)):
-            pass
+            word, pos = self.__parse_GROUP_BY_CLAUSE(pos)
         # parse selected columns
         # select: 
         #   0: table_alias
@@ -258,8 +270,11 @@ class vParser():
         #   9: [parameters of function]
         for n in range(len(self.__parsed_query["select"])):
             if (self.__parsed_query["select"][n][5] is None) or (self.__parsed_query["select"][n][5] == 'COLUMN'):
+                col_alias = self.__parsed_query["select"][n][4]
+                if (col_alias is not None) and self.__check_STR(col_alias):
+                    col_alias = col_alias.upper()
                 fmt, al, cn, sh, tn, tc, nt = self.__getColFromTable(self.__parsed_query["select"][n][3])
-                self.__parsed_query["select"][n] = [al, sh, tn, cn, None, fmt, nt, None, tc]
+                self.__parsed_query["select"][n] = [al, sh, tn, cn, col_alias, fmt, nt, None, tc]
         # functions:
         #   0: table_alias
         #   1: schema
@@ -347,6 +362,28 @@ class vParser():
                     self.__parsed_query["pipe"][f][1][n][3] = str(self.__parsed_query["pipe"][f][1][n][3])
                 elif self.__check_STR(self.__parsed_query["pipe"][f][1][n][3]):
                     self.__parsed_query["pipe"][f][1][n][5] = 'STR'
+        # group by
+        col_found = False
+        for gcol in range(len(self.__parsed_query["group_by"])):
+            for scol in range(len(self.__parsed_query["select"])):
+                gcolname = self.__parsed_query["group_by"][gcol][3].split('.')
+                if len(gcolname) == 1:
+                    if gcolname[0] == self.__parsed_query["select"][scol][3]:
+                        self.__parsed_query["group_by"][gcol] == self.__parsed_query["select"][scol][0:9]
+                        col_found = True
+                    elif gcolname[0] == self.__parsed_query["select"][scol][4]:
+                        self.__parsed_query["group_by"][gcol] == self.__parsed_query["select"][scol][0:9]
+                        col_found = True
+                elif len(gcolname) == 2:
+                    if ((gcolname[0] == self.__parsed_query["select"][scol][2]) or (gcolname[0] == self.__parsed_query["select"][scol][0])) and gcolname[1] == self.__parsed_query["select"][scol][3]:
+                        self.__parsed_query["group_by"][gcol] == self.__parsed_query["select"][scol][0:9]
+                        col_found = True
+                elif len(gcolname) == 3:
+                    if (gcolname[0] == self.__parsed_query["select"][scol][1]) and (gcolname[1] == self.__parsed_query["select"][scol][2]) and gcolname[2] == self.__parsed_query["select"][scol][3]:
+                        self.__parsed_query["group_by"][gcol] == self.__parsed_query["select"][scol][0:9]
+                        col_found = True
+            if not col_found:
+                raise vExcept(753, self.__parsed_query["group_by"][gcol][3])
         # generate maths
         for f in range(len(self.__parsed_query["maths"])):
             lst_maths = []
@@ -812,8 +849,9 @@ class vParser():
                         # print(f'__parse_SEL_COL 4  col={col} word={word}')
                         self.__parsed_query["select"].append([None, None, None, col, None, None, None, None, None, []])
                 if word.upper() not in [',', 'FROM']:
-                    print(f'__parse_SEL_COL word={word}')
+                    # print(f'__parse_SEL_COL word={word}')
                     raise vExcept(702, word)
+        # print(f'__parse_SEL_COL self.__parsed_query["select"]={self.__parsed_query["select"]}')
         return word, pos
 
     def __parse_pipe(self, col, word, pos):
@@ -922,7 +960,12 @@ class vParser():
         return word, maths_id, pos
 
     def __is_function(self, fct_name):
-        return bool(fct_name.upper() in self.__list_of_functions)
+        if fct_name.upper() in self.__list_of_functions:
+            if fct_name in ['COUNT', 'MIN', 'MAX', 'AVG', 'SUM']:
+                self.__parsed_query["post_tasks"] = True
+            return True
+        else:
+            return False
 
     def __parse_COL_FCT(self, fct_name, pos):
         # functions : [fct_id, fct_name, [[
@@ -1245,7 +1288,71 @@ class vParser():
             raise vExcept(745, value)
         self.__parsed_query["connect"] = [oper, int(value)]
         return word, pos
-        
+
+    def __parse_GROUP_BY_CLAUSE(self, pos):
+        # 0: table_alias
+        # 1: schema
+        # 2: table_name
+        # 3: col_name/value
+        # 4: alias
+        # 5: type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS, PIPE)
+        # 6: table position
+        # 7: position in table
+        # 8: table or cursor
+        self.__parsed_query["post_tasks"] = True
+        word, pos = self.__parse_word(pos)
+        if word.upper() != 'BY':
+            raise vExcept(751, word)
+        while pos < len(self.__query):
+            col, pos = self.__parse_word(pos)
+            # print(f'__parse_GROUP_BY_CLAUSE 1  col={col}')
+            if col == ',':
+                raise vExcept(701, pos)
+            word, pos = self.__parse_word(pos)
+            # print(f'__parse_GROUP_BY_CLAUSE 2  word={word}')
+            if word == ',':
+                self.__parsed_query["group_by"].append([None, None, None, col, None, None, None, None, None])
+            elif word in ['+', '-', '*', '/'] or col == '(':
+                word, maths_id, pos = self.__parse_maths(col, word, pos)
+                if word == ',':
+                    self.__parsed_query["group_by"].append([None, None, None, maths_id, None, 'MATHS', None, None, None])
+                else:
+                    self.__parsed_query["group_by"].append([None, None, None, maths_id, word, 'MATHS', None, None, None])
+                    word, pos = self.__parse_word(pos)
+            elif word == '||':
+                word, pipe_id, pos = self.__parse_pipe(col, word, pos)
+                if word == ',':
+                    self.__parsed_query["group_by"].append([None, None, None, pipe_id, None, 'PIPE', None, None, None])
+                else:
+                    self.__parsed_query["group_by"].append([None, None, None, pipe_id, word, 'PIPE', None, None, None])
+                    word, pos = self.__parse_word(pos)
+            else:
+                if self.__is_function(col.upper()):
+                    if word != '(':
+                        raise vExcept(739, word)
+                    # print (f'__parse_GROUP_BY_CLAUSE avant __parse_COL_FCT  col={col} word={word}')
+                    fct_col, pos = self.__parse_COL_FCT(col.upper(), pos)
+                    word, pos = self.__parse_word(pos)
+                    # print (f'__parse_GROUP_BY_CLAUSE apres __parse_COL_FCT  fct_col={fct_col} word={word}')
+                    if word != ',':
+                        self.__parsed_query["group_by"].append([None, None, None, fct_col, word, 'FUNCTION', None, None, None])
+                        word, pos = self.__parse_word(pos)
+                    else:
+                        self.__parsed_query["group_by"].append([None, None, None, fct_col, None, 'FUNCTION', None, None, None])
+                else:
+                    if word != ',':
+                        self.__parsed_query["group_by"].append([None, None, None, col, word, None, None, None, None])
+                        # print(f'__parse_GROUP_BY_CLAUSE 3  col={col} word={word}')
+                        word, pos = self.__parse_word(pos)
+                    else:
+                        # print(f'__parse_GROUP_BY_CLAUSE 4  col={col} word={word}')
+                        self.__parsed_query["group_by"].append([None, None, None, col, None, None, None, None, None])
+                if (word != ',') and (pos < len(self.__query)):
+                    # print(f'__parse_GROUP_BY_CLAUSE word={word}')
+                    raise vExcept(702, word)
+        # print(f'__parse_GROUP_BY_CLAUSE self.__parsed_query["group_by"]={self.__parsed_query["group_by"]}')
+        return word, pos
+
     def __getCursor(self, curin):
         found = False
         if len(self.__parsed_query["cursors"]) > 0:
@@ -1468,7 +1575,7 @@ class vParser():
                 return 'COLUMN'
         elif self.__check_DATETIME(varin):
             return 'DATETIME'
-        elif self.__is_function(varin):
+        elif self.__is_function(varin.upper()):
             return 'FUNCTION'
 
     def __remove_parenthesis(self, _where:list):

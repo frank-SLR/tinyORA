@@ -90,3 +90,10 @@ LNNVL
 NULLIF              
 NVL                 ok
 NVL2                ok
+
+Group functions
+AVG                 ok
+MAX                 ok
+MIN                 ok
+COUNT               ok
+SUM                 ok

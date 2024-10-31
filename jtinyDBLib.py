@@ -1,7 +1,7 @@
 import json
 import copy
 import time
-import os, copy
+import os
 from vExceptLib import vExcept
 
 
@@ -193,10 +193,13 @@ class JSONtinyDB():
             raise vExcept(15)
 
     def DelTableFromMeta(self, owner, table_name):
+        # print(f'DelTableFromMeta self.__meta_db["Tables"]={self.__meta_db["Tables"]}')
         if self.__DB_enable:
-            for n in range(len(self.__meta_db["Tables"])):
+            for n in range(len(self.__meta_db["Tables"][owner.upper()])):
+                # print(f'DelTableFromMeta current table={self.__meta_db["Tables"][owner.upper()][n]}')
                 if self.__meta_db["Tables"][owner.upper()][n] == table_name.upper():
                     del self.__meta_db["Tables"][owner.upper()][n]
+                    # print(f'DelTableFromMeta self.__meta_db={self.__meta_db["Tables"]}')
                     break
             for aID in range(len(self.__meta_db["Accounts"])):
                 for sID in range(len(self.__meta_db["Accounts"][aID]["grants"]["SELECT"])-1, -1, -1):
@@ -219,10 +222,12 @@ class JSONtinyDB():
             raise vExcept(15)
 
     def DelTableFromDB(self, owner, table_name):
+        # print(f'DelTableFromDB self.db={self.db["Tables"]}')
         if self.__DB_enable:
             for n in range(len(self.db["Tables"])):
                 if (self.db["Tables"][n]["table_name"] == table_name.upper()) and (self.db["Tables"][n]["schema"] == owner.upper()):
                     del self.db["Tables"][n]
+                    # print(f'DelTableFromDB self.db={self.db["Tables"]}')
                     break
             for aID in range(len(self.db["Accounts"])):
                 for sID in range(len(self.db["Accounts"][aID]["grants"]["SELECT"])-1, -1, -1):

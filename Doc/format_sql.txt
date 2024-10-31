@@ -11,6 +11,7 @@ PASSWORD: str
 FORMAT: { str | int | hex | float }
 GENERIC_COL : [ { [ <SCHEMA>. ] <TABLE_NAME> . | <TAB_ALIAS> . } ] <COLUMN_NAME> [COL_ALIAS]
 SEL_COL : { [ { [ <SCHEMA>. ] <TABLE_NAME> . | <TAB_ALIAS> . } ] { <COLUMN_NAME> [COL_ALIAS] | * } | <FUNCTION> | <CONSTANT> }
+GROUP_COL : { [ { [ <SCHEMA>. ] <TABLE_NAME> . | <TAB_ALIAS> . } ] { <COLUMN_NAME> } | [COL_ALIAS] }
 WHERE_COMPARE : { = | > | < | >= | <= | <> | != }
 WHERE_CMP : [[ ( ]] <SEL_COL> <WHERE_COMPARE> <SEL_COL> [[ ) ]]
 WHERE_BETWEEN : [[ ( ]] <SEL_COL> between <SEL_COL> and <SEL_COL> [[ ) ]]
@@ -31,7 +32,7 @@ inner join <FROM_OBJ> on <INNER_CLAUSE> [ { AND | OR} INNER_CLAUSE ...]
 --left outer join <FROM_OBJ> on <INNER_CLAUSE> [ { AND | OR} INNER_CLAUSE ...]
 --right outer join <FROM_OBJ> on <INNER_CLAUSE> [ { AND | OR} INNER_CLAUSE ...]
 where <WHERE_CLAUSE>
---group by <SEL_COL> [ , <SEL_COL> ...]
+group by <GROUP_COL> [ , <GROUP_COL> ...]
 --order by <SEL_COL> [ , <SEL_COL> ...]
 
 WITH :

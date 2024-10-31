@@ -102,7 +102,7 @@ async def open_connection(database: str, username: str, password: str, request: 
             raise vExcept(600)
         else:
             try:
-                session = await db.create_session(username=username, password=password)
+                session = db.create_session(username=username, password=password)
                 session_id = str(session.session_id)
                 app.sessions.append([session_id, session, username, database, request.client.host])
             except vExcept as e:
