@@ -33,7 +33,7 @@ inner join <FROM_OBJ> on <INNER_CLAUSE> [ { AND | OR} INNER_CLAUSE ...]
 --right outer join <FROM_OBJ> on <INNER_CLAUSE> [ { AND | OR} INNER_CLAUSE ...]
 where <WHERE_CLAUSE>
 group by <GROUP_COL> [ , <GROUP_COL> ...]
---order by <SEL_COL> [ , <SEL_COL> ...]
+order by <SEL_COL> [ ASC | DESC ] [ , <SEL_COL> [ ASC | DESC ] ...]
 
 WITH :
 with <CURSOR_NAME> as ( <SELECT> ) [, <CURSOR_NAME> as ( <SELECT> ) ]

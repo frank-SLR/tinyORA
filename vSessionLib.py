@@ -441,6 +441,7 @@ class vSession(object):
         # print(f'submit_query pipe={self.__parsed_query["pipe"]}')
         # print(f'submit_query bind={self.__parsed_query["bind"]}')
         # print(f'submit_query group_by={self.__parsed_query["group_by"]}')
+        # print(f'submit_query order_by={self.__parsed_query["order_by"]}')
         if self.__parsed_query["querytype"] in ['SELECT']:
             result = {"columns": [], "rows": []}
         elif self.__parsed_query["querytype"] in ['DESCRIBE']:
@@ -983,6 +984,9 @@ class vSession(object):
         # post tasks for GROUP BY
         if self.__parsed_query["post_tasks"] and (len(self.__result) > 0):
             self.__process_groupby()
+        # parse ORDER BY
+        if (len(self.__parsed_query["order_by"]) > 0) and (len(self.__result) > 0):
+            self.__process_orderby(result["columns"])
         # rename duplicated loumns
         self.__check_cols_name(result=result)
         result["rows"] = self.__result
@@ -1598,6 +1602,54 @@ class vSession(object):
             if row not in tmpres:
                 tmpres.append(row)
         self.__result = tmpres
+
+    def __process_orderby(self, col_lst):
+        self.__result = self.__sort(self.__result, col_lst, 0, bool(self.__parsed_query["order_by"][0][1] == 'ASC'))
+
+    def __sort(self, src, col_lst, col, asc):
+        a=0
+        result = []
+        colsort = self.__parsed_query["order_by"][col][0]
+        while len(src) > 0:
+            min_idx = 0
+            srt_cols = []
+            # print(f'__sort len={len(src)} col={colsort} asc={asc}')
+            for n in range(len(src)):
+                match col_lst[colsort][1].upper():
+                    case 'INT':
+                        if asc:
+                            if int(src[n][colsort]) < int(src[min_idx][colsort]):
+                                min_idx = n
+                        else:
+                            if int(src[n][colsort]) > int(src[min_idx][colsort]):
+                                min_idx = n
+                    case 'FLOAT':
+                        if asc:
+                            if float(src[n][colsort]) < float(src[min_idx][colsort]):
+                                min_idx = n
+                        else:
+                            if float(src[n][colsort]) > float(src[min_idx][colsort]):
+                                min_idx = n
+                    case _:
+                        if asc:
+                            if str(src[n][colsort]) < str(src[min_idx][colsort]):
+                                min_idx = n
+                        else:
+                            if str(src[n][colsort]) > str(src[min_idx][colsort]):
+                                min_idx = n
+            min_val = src[min_idx][colsort]
+            for n in range(len(src)-1, -1, -1):
+                # print(f'__sort src[n][colsort]={src[n][colsort]} src[min_idx][colsort]={min_val}')
+                if src[n][colsort] == min_val:
+                    srt_cols.append(src[n])
+                    del src[n]
+            if col < len(self.__parsed_query["order_by"])-1:
+                srt_cols = self.__sort(srt_cols, col_lst, col+1, bool(self.__parsed_query["order_by"][col+1][1] == 'ASC'))
+            result = result + copy.deepcopy(srt_cols)
+            a += 1
+            if a > 10:
+                break
+        return result
 
     def __format_value(self, value, type_value):
         try:
