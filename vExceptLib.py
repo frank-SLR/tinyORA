@@ -170,6 +170,18 @@ class vExcept(Exception):
                 self.message = f'Syntax error: column(s) "{message}" in GROUP BY statement is not present in SELECT statement'
             case 754:
                 self.message = f'Syntax error: extra column(s) in GROUP BY section'
+            case 755:
+                self.message = f'Syntax error: expect BY after ORDER but "{message}" found'
+            case 756:
+                self.message = f'Syntax error: mathematical operations not allowed in ORDER BY statement'
+            case 757:
+                self.message = f'Syntax error: concatenation not allowed in ORDER BY statement'
+            case 758:
+                self.message = f'Syntax error: function ({message}) not allowed in ORDER BY statement'
+            case 759:
+                self.message = f'Syntax error: field in ORDER BY statement({message}) does not match fields in SELECT statement'
+            case 760:
+                self.message = f'Syntax error: ambiguous field in ORDER BY statement({message})'
             # INTERNAL ERROR (800-899)
             case 801:
                 self.message = 'Internal error on column name in SELECT clause'

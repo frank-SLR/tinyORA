@@ -52,7 +52,7 @@ class vParser():
         self.__parsed_query = {"querytype": None, "select": [], "from": [], "where": [], "orderby": [], "groupby": [], "cursors": [],
                                "inner_where": [], "parsed_where": [], "parsed_inner_where": [], "grant": [], "revoke": [], "create": [], "drop": [],
                                "insert": [], "update": [], "functions": [], "in": [], "connect": [], "maths": [], "pipe": [], "bind":{},
-                               "group_by": [], "post_tasks": False, "post_data_model": {}}
+                               "group_by": [], "order_by": [],"post_tasks": False, "post_data_model": {}}
         self.__query = ''
 
     def parse_query(self, query:str, bind:dict = []) -> dict:
@@ -252,10 +252,10 @@ class vParser():
             word, pos = self.__parse_WHERE_CLAUSE(pos)
         if (word.upper() == 'CONNECT') and (pos < len(self.__query)):
             word, pos = self.__parse_CONNECT_BY_VALUE(pos)
-        if (word.upper() == 'ORDER') and (pos < len(self.__query)):
-            pass
         if (word.upper() == 'GROUP') and (pos < len(self.__query)):
             word, pos = self.__parse_GROUP_BY_CLAUSE(pos)
+        if (word.upper() == 'ORDER') and (pos < len(self.__query)):
+            word, pos = self.__parse_ORDER_BY_CLAUSE(pos)
         # parse selected columns
         # select: 
         #   0: table_alias
@@ -410,6 +410,43 @@ class vParser():
             while w_idx < len(iw):
                 w_idx, lst_where, v_idx, bracket = self.__compute_where(iw, w_idx, lst_where, v_idx, 'AND', bracket)
             self.__parsed_query['parsed_inner_where'].append(lst_where)
+        # order_by
+        # 0: table_alias
+        # 1: schema
+        # 2: table_name
+        # 3: col_name/value
+        # 4: alias
+        # 5: type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS, PIPE)
+        # 6: table position
+        # 7: position in table
+        # 8: table or cursor
+        for f in range(len(self.__parsed_query["order_by"])):
+            ocol = self.__parsed_query["order_by"][f][0]
+            if self.__check_INT(ocol):
+                pass
+            else:
+                col = ocol.upper().split('.')
+                found = 0
+                match len(col):
+                    case 1:
+                        for n, scol in enumerate(self.__parsed_query["select"]):
+                            if (col[0] == scol[3].upper()) or (col[0] == scol[4].upper()):
+                                self.__parsed_query["order_by"][f][0] = n
+                                found += 1
+                    case 2:
+                        for n, scol in enumerate(self.__parsed_query["select"]):
+                            if ((col[0] == scol[0].upper()) or (col[0] == scol[4]).upper()) and (col[1] == scol[3].upper()):
+                                self.__parsed_query["order_by"][f][0] = n
+                                found += 1
+                    case 3:
+                        for n, scol in enumerate(self.__parsed_query["select"]):
+                            if (col[0] == scol[1].upper()) and (col[1] == scol[2].upper()) and (col[2] == scol[3].upper()):
+                                self.__parsed_query["order_by"][f][0] = n
+                                found += 1
+                if found == 0:
+                    raise vExcept(759, ocol)
+                elif found > 1:
+                    raise vExcept(760, ocol)
 
     def __get_function(self, fct_id):
         for n in range(len(self.__parsed_query["functions"])):
@@ -1352,6 +1389,46 @@ class vParser():
                     raise vExcept(702, word)
         # print(f'__parse_GROUP_BY_CLAUSE self.__parsed_query["group_by"]={self.__parsed_query["group_by"]}')
         return word, pos
+
+    def __parse_ORDER_BY_CLAUSE(self, pos):
+        # 0: col_name/value/alias
+        # 1: ASC ou DESC
+        word, pos = self.__parse_word(pos)
+        if word.upper() != 'BY':
+            raise vExcept(755, word)
+        while pos < len(self.__query):
+            col, pos = self.__parse_word(pos)
+            # print(f'__parse_ORDER_BY_CLAUSE 1  col={col}')
+            if col == ',':
+                raise vExcept(701, pos)
+            word, pos = self.__parse_word(pos)
+            # print(f'__parse_ORDER_BY_CLAUSE 2  word={word}')
+            if word == ',':
+                self.__parsed_query["order_by"].append([col, 'ASC'])
+            elif word in ['+', '-', '*', '/'] or col == '(':
+                raise vExcept(756)
+            elif word == '||':
+                raise vExcept(757)
+            else:
+                if self.__is_function(col.upper()):
+                    raise vExcept(758, col)
+                else:
+                    if word != ',':
+                        if word.upper() in ['ASC', 'DESC']:
+                            self.__parsed_query["order_by"].append([col, word.upper()])
+                            # print(f'__parse_ORDER_BY_CLAUSE 3  col={col} word={word}')
+                            word, pos = self.__parse_word(pos)
+                        else:
+                            self.__parsed_query["order_by"].append([col, 'ASC'])
+                    else:
+                        # print(f'__parse_ORDER_BY_CLAUSE 4  col={col} word={word}')
+                        self.__parsed_query["order_by"].append([col, 'ASC'])
+                if (word != ',') and (pos < len(self.__query)):
+                    # print(f'__parse_ORDER_BY_CLAUSE word={word}')
+                    raise vExcept(702, word)
+        # print(f'__parse_ORDER_BY_CLAUSE self.__parsed_query["order_by"]={self.__parsed_query["order_by"]}')
+        return word, pos
+        
 
     def __getCursor(self, curin):
         found = False

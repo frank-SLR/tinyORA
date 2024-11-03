@@ -26,7 +26,7 @@ left outer join <FROM_OBJ> on <INNER_CLAUSE> [ { AND | OR} INNER_CLAUSE ...]
 right outer join <FROM_OBJ> on <INNER_CLAUSE> [ { AND | OR} INNER_CLAUSE ...]
 where <WHERE_CLAUSE>
 group by <GROUP_COL> [ , <GROUP_COL> ...]
---order by <SEL_COL> [ , <SEL_COL> ...]
+order by <SEL_COL> [ , <ORDER_COL> ...]
 ;
 ```
 
@@ -41,7 +41,7 @@ where s.site_contry='USA'
 group by e.age, d.dep_name;
 ```
 
-See: [SEL_COL](#sel_col), [GROUP_COL](#group_col)
+See: [SEL_COL](#sel_col), [GROUP_COL](#group_col), [ORDER_COL](#order_col)
 
 ## Special SELECT
 Generate range of integer with following syntax:
@@ -270,6 +270,22 @@ Example:
 Select age columns and count lines from table using his alias:
 ```sql
 select t1.age age_grp, count(*) from emp_with_dep t1 group by age_grp;
+```
+
+
+## ORDER_COL
+In ORDER BY statement, the column is identified with:
+
+### Single column or an alias
+```
+[[<SCHEMA>.]<TABLE_NAME>.]<COLUMN_NAME>
+[<TABLE_ALIAS>.]<COLUMN_NAME>
+[<COL_ALIAS>]
+```
+Example:
+Select age columns and count lines from table using his alias:
+```sql
+select t1.age age_grp, t1.dep_name from emp_with_dep t1 order by age_grp;
 ```
 
 
