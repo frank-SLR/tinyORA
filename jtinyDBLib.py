@@ -23,10 +23,9 @@ class JSONtinyDB():
                 raise vExcept(12, str(self.__db_base_dir))
 
     def create_db(self, _db_base_dir, admin_password):
-        try:
-            self.__RAZ()
-            if not os.path.exists(_db_base_dir):
-                os.makedirs(_db_base_dir)
+        self.__RAZ()
+        if not os.path.exists(_db_base_dir):
+            os.makedirs(_db_base_dir)
             if os.path.isdir(_db_base_dir):
                 if not os.path.exists('{}/ADMIN'.format(_db_base_dir)):
                     os.makedirs('{}/ADMIN'.format(_db_base_dir))
@@ -57,8 +56,8 @@ class JSONtinyDB():
                     self.__loadDB()
             else:
                 raise vExcept(16, _db_base_dir)
-        except:
-            pass
+        else:
+            raise vExcept(17, _db_base_dir)
 
     def __RAZ(self):
         self.__meta_db = None
@@ -426,7 +425,7 @@ class JSONtinyDB():
                 }
         else:
             for t in self.db["Tables"]:
-                if (t["table_name"] == table_name) and (((owner is not None) and (t["schema"] == owner)) or (owner is None)):
+                if (t["table_name"] == table_name.upper()) and (((owner is not None) and (t["schema"] == owner.upper())) or (owner is None)):
                     count += 1
                     result = copy.deepcopy(t)
             if count == 0:

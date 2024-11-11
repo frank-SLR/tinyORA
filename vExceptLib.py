@@ -15,6 +15,8 @@ class vExcept(Exception):
                 self.message = 'Database not open'
             case 16:
                 self.message = f'Unable to create directory ({message}) for new DB'
+            case 17:
+                self.message = f'Directory ({message}) for new DB already exists'
             case 23:
                 self.message = f'Invalid PATH and file name for DB ({message})'
             case 24:
