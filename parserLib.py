@@ -236,7 +236,8 @@ class vParser():
         # FROM
         while (word.upper() not in self.__list_of_word(['FROM'])) and (pos < len(self.__query)):
             word, pos = self.__parse_FROM_OBJ(pos)
-        while pos < len(self.__query) and (word.upper() not in self.__list_of_word(['INNER', 'LEFT', 'RIGHT'])):
+        while (pos < len(self.__query)) and (word.upper() not in self.__list_of_word(['INNER', 'LEFT', 'RIGHT'])):
+            print(word)
             # INNER JOIN
             if (word.upper() == 'INNER') and (pos < len(self.__query)):
                 word, pos = self.__parse_INNER_JOIN(pos)
@@ -366,7 +367,7 @@ class vParser():
         col_found = False
         for gcol in range(len(self.__parsed_query["group_by"])):
             for scol in range(len(self.__parsed_query["select"])):
-                gcolname = self.__parsed_query["group_by"][gcol][3].split('.')
+                gcolname = str(self.__parsed_query["group_by"][gcol][3]).upper().split('.')
                 if len(gcolname) == 1:
                     if gcolname[0] == str(self.__parsed_query["select"][scol][3]).upper():
                         self.__parsed_query["group_by"][gcol] == self.__parsed_query["select"][scol][0:9]
@@ -861,6 +862,7 @@ class vParser():
                     word, pos = self.__parse_word(pos)
             elif word == '||':
                 word, pipe_id, pos = self.__parse_pipe(col, word, pos)
+                # print(f'__parse_SEL_COL 3  word={word}')
                 if word.upper() in [',', 'FROM']:
                     self.__parsed_query["select"].append([None, None, None, pipe_id, None, 'PIPE', None, None, None, []])
                 else:
@@ -929,6 +931,16 @@ class vParser():
                     raise vExcept(749, word)
                 else:
                     last_is_pipe = True
+            elif word == '(':
+                col, pos = self.__parse_word(pos)
+                word, maths_id, pos = self.__parse_maths(word, col, pos)
+                tmpP[1].append([None, None, None, maths_id, None, 'MATHS', None, None, None])
+                last_is_pipe = False
+            elif word in ['+', '-', '*', '/']:
+                word, maths_id, pos = self.__parse_maths(tmpP[1][-1][3], word, pos)
+                tmpP[1][-1] = [None, None, None, maths_id, None, 'MATHS', None, None, None]
+                last_is_pipe = False
+                encore = bool((word.upper() not in ['FROM', ',', 'CONNECT', 'IN', 'BETWEEN', '>', '>=', '=', '<', '<=', '!=', '<>']))
             else:
                 if last_is_pipe:
                     col = self.__remove_quote(word)
@@ -973,7 +985,8 @@ class vParser():
                     lvl -= 1
                 else:
                     encore = False
-            elif word.upper() in ['CONNECT', 'IN', 'BETWEEN', '>', '>=', '=', '<', '<=', '!=', '<>']:
+            elif word.upper() in ['FROM', 'CONNECT', 'IN', 'BETWEEN', '>', '>=', '=', '<', '<=', '!=', '<>']:
+                # print(f'__parse_maths word={word}')
                 encore = False
             if encore:
                 if self.__is_function(word.upper()):
@@ -1430,7 +1443,6 @@ class vParser():
                     raise vExcept(702, word)
         # print(f'__parse_ORDER_BY_CLAUSE self.__parsed_query["order_by"]={self.__parsed_query["order_by"]}')
         return word, pos
-        
 
     def __getCursor(self, curin):
         found = False

@@ -102,21 +102,6 @@ class vSession(object):
 
         Raises:
             vExcept: _description_
-            vExcept: _description_
-            vExcept: _description_
-            vExcept: _description_
-            vExcept: _description_
-            vExcept: _description_
-            vExcept: _description_
-            vExcept: _description_
-            vExcept: _description_
-            vExcept: _description_
-            vExcept: _description_
-            vExcept: _description_
-            vExcept: _description_
-            vExcept: _description_
-            vExcept: _description_
-            vExcept: _description_
 
         Returns:
             dict: the result set of the query
@@ -1085,7 +1070,8 @@ class vSession(object):
                     raise vExcept(311, self.__parsed_query["insert"][2][i])
                 col_mat.append([n, i])
         else:
-            for i in range(len(self.__parsed_query["insert"][2])):
+            for i in range(len(tbl["columns"])):
+                self.__parsed_query["insert"][2].append(tbl["columns"][i][0].upper())
                 col_mat.append([i, i])
         if self.__parsed_query["insert"][4] is None:
             row = []
@@ -2113,14 +2099,14 @@ class vSession(object):
                 case 'FUNCTION':
                     tmp_res = tmp_res + self.__remove_quote(self.__compute_function(blk[3]))
                 case 'MATHS':
-                    tmp_res = tmp_res + self.__compute_maths(blk[3])
+                    tmp_res = tmp_res + str(self.__compute_maths(blk[3]))
                 case 'COLUMN':
-                    if blk[1][4] == 'ROWNUM':
+                    if blk[4] == 'ROWNUM':
                         tmp_res = tmp_res + f'{len(self.__result)}'
                     else:
                         val = self.__remove_quote(self.__parsed_query["from"][blk[6]][4][0]["rows"][self.__RowsPosInTables[blk[6]]][blk[7]])
                         if (val is not None) and (val != ''):
-                            tmp_res = tmp_res + self.__remove_quote(val)
+                            tmp_res = tmp_res + str(self.__remove_quote(val))
         return tmp_res
 
     def __get_function_col(self, colblk):
