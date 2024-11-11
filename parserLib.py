@@ -368,18 +368,18 @@ class vParser():
             for scol in range(len(self.__parsed_query["select"])):
                 gcolname = self.__parsed_query["group_by"][gcol][3].split('.')
                 if len(gcolname) == 1:
-                    if gcolname[0] == self.__parsed_query["select"][scol][3]:
+                    if gcolname[0] == str(self.__parsed_query["select"][scol][3]).upper():
                         self.__parsed_query["group_by"][gcol] == self.__parsed_query["select"][scol][0:9]
                         col_found = True
-                    elif gcolname[0] == self.__parsed_query["select"][scol][4]:
+                    elif gcolname[0] == str(self.__parsed_query["select"][scol][4]).upper():
                         self.__parsed_query["group_by"][gcol] == self.__parsed_query["select"][scol][0:9]
                         col_found = True
                 elif len(gcolname) == 2:
-                    if ((gcolname[0] == self.__parsed_query["select"][scol][2]) or (gcolname[0] == self.__parsed_query["select"][scol][0])) and gcolname[1] == self.__parsed_query["select"][scol][3]:
+                    if ((gcolname[0] == str(self.__parsed_query["select"][scol][2]).upper()) or (gcolname[0] == str(self.__parsed_query["select"][scol][0]).upper())) and (gcolname[1] == str(self.__parsed_query["select"][scol][3]).upper()):
                         self.__parsed_query["group_by"][gcol] == self.__parsed_query["select"][scol][0:9]
                         col_found = True
                 elif len(gcolname) == 3:
-                    if (gcolname[0] == self.__parsed_query["select"][scol][1]) and (gcolname[1] == self.__parsed_query["select"][scol][2]) and gcolname[2] == self.__parsed_query["select"][scol][3]:
+                    if (gcolname[0] == str(self.__parsed_query["select"][scol][1]).upper()) and (gcolname[1] == str(self.__parsed_query["select"][scol][2]).upper()) and (gcolname[2] == str(self.__parsed_query["select"][scol][3].upper())):
                         self.__parsed_query["group_by"][gcol] == self.__parsed_query["select"][scol][0:9]
                         col_found = True
             if not col_found:
@@ -430,17 +430,17 @@ class vParser():
                 match len(col):
                     case 1:
                         for n, scol in enumerate(self.__parsed_query["select"]):
-                            if (col[0] == scol[3].upper()) or (col[0] == scol[4].upper()):
+                            if (col[0] == str(scol[3]).upper()) or (col[0] == str(scol[4]).upper()):
                                 self.__parsed_query["order_by"][f][0] = n
                                 found += 1
                     case 2:
                         for n, scol in enumerate(self.__parsed_query["select"]):
-                            if ((col[0] == scol[0].upper()) or (col[0] == scol[4]).upper()) and (col[1] == scol[3].upper()):
+                            if ((col[0] == str(scol[0]).upper()) or (col[0] == str(scol[4])).upper()) and (col[1] == str(scol[3]).upper()):
                                 self.__parsed_query["order_by"][f][0] = n
                                 found += 1
                     case 3:
                         for n, scol in enumerate(self.__parsed_query["select"]):
-                            if (col[0] == scol[1].upper()) and (col[1] == scol[2].upper()) and (col[2] == scol[3].upper()):
+                            if (col[0] == str(scol[1]).upper()) and (col[1] == str(scol[2]).upper()) and (col[2] == str(scol[3]).upper()):
                                 self.__parsed_query["order_by"][f][0] = n
                                 found += 1
                 if found == 0:
@@ -542,6 +542,8 @@ class vParser():
             # self.__parsed_query["from"].append([self.__get_cur_name(), None, c_name.upper(), 'CURSOR'])
             self.__parsed_query["cursors"].append([c_name.upper(), c_query])
             c_name, pos = self.__parse_word(pos)
+            if c_name == ',':
+                c_name, pos = self.__parse_word(pos)
         self.__parse_select(pos)
 
     def __parse_desc(self, pos):

@@ -2118,7 +2118,9 @@ class vSession(object):
                     if blk[1][4] == 'ROWNUM':
                         tmp_res = tmp_res + f'{len(self.__result)}'
                     else:
-                        tmp_res = tmp_res + self.__remove_quote(self.__parsed_query["from"][blk[6]][4][0]["rows"][self.__RowsPosInTables[blk[6]]][blk[7]])
+                        val = self.__remove_quote(self.__parsed_query["from"][blk[6]][4][0]["rows"][self.__RowsPosInTables[blk[6]]][blk[7]])
+                        if (val is not None) and (val != ''):
+                            tmp_res = tmp_res + self.__remove_quote(val)
         return tmp_res
 
     def __get_function_col(self, colblk):
@@ -2171,8 +2173,8 @@ class vSession(object):
                 if len(self.__parsed_query["functions"][fct_num][2]) % 2 != 0:
                     raise vExcept(2308, len(self.__parsed_query["functions"][fct_num][2]))
                 param = []
-                for x in self.__get_function_col(self.__parsed_query["functions"][fct_num][2]):
-                    param.append(x)
+                for x in self.__parsed_query["functions"][fct_num][2]:
+                    param.append(self.__get_function_col(x))
                 return self.__DECODE(param)
                 # mainval = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 # n = 1
