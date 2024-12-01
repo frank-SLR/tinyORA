@@ -370,18 +370,18 @@ class vParser():
                 gcolname = str(self.__parsed_query["group_by"][gcol][3]).upper().split('.')
                 if len(gcolname) == 1:
                     if gcolname[0] == str(self.__parsed_query["select"][scol][3]).upper():
-                        self.__parsed_query["group_by"][gcol] == self.__parsed_query["select"][scol][0:9]
+                        self.__parsed_query["group_by"][gcol] = self.__parsed_query["select"][scol][0:9]
                         col_found = True
                     elif gcolname[0] == str(self.__parsed_query["select"][scol][4]).upper():
-                        self.__parsed_query["group_by"][gcol] == self.__parsed_query["select"][scol][0:9]
+                        self.__parsed_query["group_by"][gcol] = self.__parsed_query["select"][scol][0:9]
                         col_found = True
                 elif len(gcolname) == 2:
                     if ((gcolname[0] == str(self.__parsed_query["select"][scol][2]).upper()) or (gcolname[0] == str(self.__parsed_query["select"][scol][0]).upper())) and (gcolname[1] == str(self.__parsed_query["select"][scol][3]).upper()):
-                        self.__parsed_query["group_by"][gcol] == self.__parsed_query["select"][scol][0:9]
+                        self.__parsed_query["group_by"][gcol] = self.__parsed_query["select"][scol][0:9]
                         col_found = True
                 elif len(gcolname) == 3:
                     if (gcolname[0] == str(self.__parsed_query["select"][scol][1]).upper()) and (gcolname[1] == str(self.__parsed_query["select"][scol][2]).upper()) and (gcolname[2] == str(self.__parsed_query["select"][scol][3].upper())):
-                        self.__parsed_query["group_by"][gcol] == self.__parsed_query["select"][scol][0:9]
+                        self.__parsed_query["group_by"][gcol] = self.__parsed_query["select"][scol][0:9]
                         col_found = True
             if not col_found:
                 raise vExcept(753, self.__parsed_query["group_by"][gcol][3])
