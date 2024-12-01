@@ -391,8 +391,8 @@ class vParser():
             m_idx = 0
             bracket = 0
             v_idx = 0
-            for im in self.__parsed_query["maths"][f][1]:
-                m_idx, lst_maths, v_idx, bracket = self.__compute_maths(self.__parsed_query["maths"][f][1], m_idx, lst_maths, v_idx, None, bracket)
+            # for im in self.__parsed_query["maths"][f][1]:
+            m_idx, lst_maths, v_idx, bracket = self.__compute_maths(self.__parsed_query["maths"][f][1], m_idx, lst_maths, v_idx, None, bracket)
             self.__parsed_query["maths"][f][2] = lst_maths
         # generate where test
         lst_where = []
@@ -1544,14 +1544,19 @@ class vParser():
                 else:
                     fmt1, alias1, col1, schema1, table_name1, tab_cur1, num_tab1 = self.__getColFromTable(x[0])
                 if self.__is_parsed_function(x[2]):
+                    list2 = None
                     fmt2, alias2, col2, schema2, table_name2, tab_cur2, num_tab2 = 'FUNCTION', None, x[2], None, None, None, None
                 elif self.__is_parsed_maths(x[2]):
+                    list2 = None
                     fmt2, alias2, col2, schema2, table_name2, tab_cur2, num_tab2 = 'MATHS', None, x[2], None, None, None, None
                 elif self.__is_parsed_pipe(x[2]):
+                    list2 = None
                     fmt2, alias2, col2, schema2, table_name2, tab_cur2, num_tab2 = 'PIPE', None, x[2], None, None, None, None
                 elif x[1].upper() == 'IN':
                     list2 = x[2]
+                    fmt2, alias2, col2, schema2, table_name2, tab_cur2, num_tab2 = None, None, None, None, None, None, None
                 else:
+                    list2 = None
                     fmt2, alias2, col2, schema2, table_name2, tab_cur2, num_tab2 = self.__getColFromTable(x[2])
                 if (len(x) == 5) and (x[1].upper() == 'BETWEEN') and (x[3].upper() == 'AND'):
                     if self.__is_parsed_function(x[4]):
