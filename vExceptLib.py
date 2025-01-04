@@ -39,22 +39,24 @@ class vExcept(Exception):
             case 311:
                 self.message = f'Invalid column name ({message})'
             case 312:
-                self.message = f'Invalid columns number in sub-query'
+                self.message = 'Invalid columns number in sub-query'
             case 313:
                 self.message = f'Ambiguous column name ({message})'
             # SELECT clause (400-499)
             # WHERE clause (500-599)
+            case 500:
+                self.message = 'More than 1 column in sub query with IN statement'
             case 510:
                 self.message = f'Invalid operator ({message})'
             # DB (600-679)
             case 600:
-                self.message = f'Invalid database name'
+                self.message = 'Invalid database name'
             case 601:
                 self.message = f'Database ({message}) already exists'
             case 602:
                 self.message = f'Invalid parameters file ({message})'
             case 603:
-                self.message = f'Parameters file is missing'
+                self.message = 'Parameters file is missing'
             # SERVER MANAGMENT (660-679)
             case 660:
                 self.message = 'Invalid Manager password'
@@ -63,7 +65,7 @@ class vExcept(Exception):
                 self.message = f'Invlid client IP ({message})'
             # SYNTAX ERROR (700-899)
             case 700:
-                self.message = f'Syntax error: quotes are not matching'
+                self.message = 'Syntax error: quotes are not matching'
             case 701:
                 self.message = f'Syntax error: found comma instead of argument in position {message}'
             case 702:
@@ -161,23 +163,23 @@ class vExcept(Exception):
             case 748:
                 self.message = f'Syntax error: symbol "||" can not be followed by "{message}"'
             case 749:
-                self.message = f'Syntax error: symbol "||" can not be followed by "||"'
+                self.message = 'Syntax error: symbol "||" can not be followed by "||"'
             case 750:
-                self.message = f'Syntax error: DATETIME can not been concatened with "||"'
+                self.message = 'Syntax error: DATETIME can not been concatened with "||"'
             case 751:
                 self.message = f'Syntax error: expect BY after GROUP but "{message}" found'
             case 752:
-                self.message = f'Syntax error: miss column(s) in GROUP BY section'
+                self.message = 'Syntax error: miss column(s) in GROUP BY section'
             case 753:
                 self.message = f'Syntax error: column(s) "{message}" in GROUP BY statement is not present in SELECT statement'
             case 754:
-                self.message = f'Syntax error: extra column(s) in GROUP BY section'
+                self.message = 'Syntax error: extra column(s) in GROUP BY section'
             case 755:
                 self.message = f'Syntax error: expect BY after ORDER but "{message}" found'
             case 756:
-                self.message = f'Syntax error: mathematical operations not allowed in ORDER BY statement'
+                self.message = 'Syntax error: mathematical operations not allowed in ORDER BY statement'
             case 757:
-                self.message = f'Syntax error: concatenation not allowed in ORDER BY statement'
+                self.message = 'Syntax error: concatenation not allowed in ORDER BY statement'
             case 758:
                 self.message = f'Syntax error: function ({message}) not allowed in ORDER BY statement'
             case 759:

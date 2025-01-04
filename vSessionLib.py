@@ -427,6 +427,7 @@ class vSession(object):
         # print(f'submit_query bind={self.__parsed_query["bind"]}')
         # print(f'submit_query group_by={self.__parsed_query["group_by"]}')
         # print(f'submit_query order_by={self.__parsed_query["order_by"]}')
+        # print(f'submit_query cursors={self.__parsed_query["cursors"]}')
         if self.__parsed_query["querytype"] in ['SELECT']:
             result = {"columns": [], "rows": []}
         elif self.__parsed_query["querytype"] in ['DESCRIBE']:
@@ -810,6 +811,17 @@ class vSession(object):
                         result = False
                         for mbr in self.__parsed_query["in"][in_id][2]:
                             if c1 == mbr[3]:
+                                result = True
+                                break
+                    elif tstoper == 'IN_SELECT':
+                        vsess = vSession(self.db, self.__session_username, self.__password)
+                        sel_cur = vsess.submit_query(_query=self.__getCursorQuery(c2), bind=self.__bind)
+                        if len(sel_cur["columns"]) > 1:
+                            raise vExcept(500)
+                        del vsess
+                        result = False
+                        for mbr in sel_cur["rows"]:
+                            if c1 == mbr[0]:
                                 result = True
                                 break
                     else:

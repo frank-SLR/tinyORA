@@ -237,7 +237,6 @@ class vParser():
         while (word.upper() not in self.__list_of_word(['FROM'])) and (pos < len(self.__query)):
             word, pos = self.__parse_FROM_OBJ(pos)
         while (pos < len(self.__query)) and (word.upper() not in self.__list_of_word(['INNER', 'LEFT', 'RIGHT'])):
-            print(word)
             # INNER JOIN
             if (word.upper() == 'INNER') and (pos < len(self.__query)):
                 word, pos = self.__parse_INNER_JOIN(pos)
@@ -1296,9 +1295,17 @@ class vParser():
                     par, pos = self.__parse_word(pos)
                     if par != '(':
                         raise vExcept(739, par)
-                    col_lst_name, pos = self.__parse_COL_IN(pos)
-                    self.__parsed_query["where"].append([m1, 'IN', col_lst_name])
-                    m1, op = None, None
+                    next_word , _ = self.__parse_word(pos)
+                    if str(next_word).upper() == 'SELECT':
+                        cur_query, pos = self.__parse_parenthesis(pos)
+                        word = self.__get_cur_name()
+                        self.__parsed_query["where"].append([m1, 'IN_SELECT', word])
+                        self.__parsed_query["cursors"].append([word, cur_query])
+                        m1, op = None, None
+                    else:
+                        col_lst_name, pos = self.__parse_COL_IN(pos)
+                        self.__parsed_query["where"].append([m1, 'IN', col_lst_name])
+                        m1, op = None, None
                     word, pos = self.__parse_word(pos)
                     # print(f'__parse_WHERE_CLAUSE  6 word={word}')
                 elif op in ['+', '-', '*', '/']:
@@ -1552,7 +1559,7 @@ class vParser():
                 elif self.__is_parsed_pipe(x[2]):
                     list2 = None
                     fmt2, alias2, col2, schema2, table_name2, tab_cur2, num_tab2 = 'PIPE', None, x[2], None, None, None, None
-                elif x[1].upper() == 'IN':
+                elif x[1].upper() in  ['IN', 'IN_SELECT']:
                     list2 = x[2]
                     fmt2, alias2, col2, schema2, table_name2, tab_cur2, num_tab2 = None, None, None, None, None, None, None
                 else:
@@ -1568,8 +1575,8 @@ class vParser():
                     else:
                         fmt3, alias3, col3, schema3, table_name3, tab_cur3, num_tab3 = self.__getColFromTable(x[4])
                     lst_where.append([v_idx, ['TST', num_tab1, None, alias1, col1, fmt1, schema1, table_name1, tab_cur1], 'BETWEEN', ['TST', num_tab2, None, alias2, col2, fmt2, schema2, table_name2, tab_cur2], ['TST', num_tab3, None, alias3, col3, fmt3, schema3, table_name3, tab_cur3]])
-                elif (x[1].upper() == 'IN'):
-                    lst_where.append([v_idx, ['TST', num_tab1, None, alias1, col1, fmt1, schema1, table_name1, tab_cur1], 'IN', ['TST', None, None, None, list2, None, None, None, None]])
+                elif x[1].upper() in  ['IN', 'IN_SELECT']:
+                    lst_where.append([v_idx, ['TST', num_tab1, None, alias1, col1, fmt1, schema1, table_name1, tab_cur1], x[1].upper(), ['TST', None, None, None, list2, None, None, None, None]])
                 else:
                     lst_where.append([v_idx, ['TST', num_tab1, None, alias1, col1, fmt1, schema1, table_name1, tab_cur1], x[1], ['TST', num_tab2, None, alias2, col2, fmt2, schema2, table_name2, tab_cur2]])
                 # x.insert(0, v_idx)
