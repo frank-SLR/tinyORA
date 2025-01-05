@@ -1,14 +1,15 @@
-Examples/001_select.py
-Examples/002_create_table.py
-Examples/003_select_on_new_table.py
-Examples/004_drop_new_table.py
-Examples/005_select_group_by.py
-Examples/006_select_order_by.py
-Examples/007_multi_with.py
-Examples/008_create_DB.py
-Examples/009_create_account.py
-Examples/010_create_tables.py
-Examples/011_insert.py
+# Examples/001_select.py
+# Examples/002_create_table.py
+# Examples/003_select_on_new_table.py
+# Examples/004_drop_new_table.py
+# Examples/005_select_group_by.py
+# Examples/006_select_order_by.py
+# Examples/007_multi_with.py
+# Examples/008_create_DB.py
+# Examples/009_create_account.py
+# Examples/010_create_tables.py
+# Examples/011_insert.py
+# Examples/012_select_where_in_select.py
 __pycache__/jtinyDBLib.cpython-312.pyc
 __pycache__/parserLib.cpython-312.pyc
 __pycache__/tinyORA.cpython-312.pyc

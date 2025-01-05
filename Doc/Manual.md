@@ -380,10 +380,14 @@ Comparison of one object between two other objects.
 See: [SEL_COL](#sel_col)
 
 ## WHERE_IN
-Comparison of one object between content of list.
+Comparison of one object between content of list or of sub query result.
 
 ```
 <SEL_COL> IN ( <CONSTANT>, [ <CONSTANT>, ...] )
+
+or
+
+<SEL_COL> IN ( <SELECT> )
 ```
 
 See: [SEL_COL](#sel_col)

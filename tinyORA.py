@@ -210,7 +210,7 @@ async def get_query(session_id: str, request: Request, response: Response, table
     found_sess = False
     try:
         if table.upper() not in ['JSON', 'TEXT', 'HTML']:
-            raise(9000, table)
+            raise vExcept(9000, table)
         for n in range(len(app.sessions)):
             if str(app.sessions[n][0]) == str(session_id):
                 found_sess = True
@@ -299,7 +299,7 @@ async def create_db(mgrpassword: str, database: str, adminpwd: str) -> dict:
         db.create_db(_db_base_dir=db_base_dir, admin_password=adminpwd)
         del db
         # open DB
-        db = vDB(db_base_dir)
+        db = vDB(_db_base_dir= db_base_dir, g_params=app.__meta_cfg["global_parameters"])
         try:
             # append DB in catalog
             __id_db = open(app.parameters_file, mode='w')

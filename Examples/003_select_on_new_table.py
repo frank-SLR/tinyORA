@@ -27,14 +27,7 @@ try:
     username = 'resto'
     password = 'restopwd'
     database = 'db'
-    query = ("with "
-        + "l as (select * from resto.legumes), "
-        + "p as (select * from resto.plats) "
-        + "select l.id lid, l.name lname, p.id pid, p.name pname "
-        + "from l, p "
-        + "where l.id < p.id "
-        + "order by lid asc, pid desc"
-        )
+    query = "select * from resto.test01"
     bind = {}
 
     db_found = False

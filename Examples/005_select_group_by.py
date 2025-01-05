@@ -27,13 +27,11 @@ try:
     username = 'resto'
     password = 'restopwd'
     database = 'db'
-    query = ("with "
-        + "l as (select * from resto.legumes), "
-        + "p as (select * from resto.plats) "
-        + "select l.id lid, l.name lname, p.id pid, p.name pname "
-        + "from l, p "
-        + "where l.id < p.id "
-        + "order by lid asc, pid desc"
+    # query = ("select count(1) n, substr(name, 2, 1) lettre, sum(length(name)) somme_length "
+    query = ("select count(1) n, substr(name, 2, 1) lettre, avg(id) moyenne, min(id) mini, 2 * max(id) maxi, sum(length(name)) somme_length, length(substr(name, decode(id, 1, 1, 2, 1, 3, 2, 4), min(id))) bout "
+        + "from resto.legumes "
+        + "where lower(substr(name, 2, 1)) in ('o', 'h') "
+        + "group by lettre"
         )
     bind = {}
 

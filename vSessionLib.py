@@ -427,6 +427,7 @@ class vSession(object):
         # print(f'submit_query bind={self.__parsed_query["bind"]}')
         # print(f'submit_query group_by={self.__parsed_query["group_by"]}')
         # print(f'submit_query order_by={self.__parsed_query["order_by"]}')
+        # print(f'submit_query cursors={self.__parsed_query["cursors"]}')
         if self.__parsed_query["querytype"] in ['SELECT']:
             result = {"columns": [], "rows": []}
         elif self.__parsed_query["querytype"] in ['DESCRIBE']:
@@ -812,6 +813,22 @@ class vSession(object):
                             if c1 == mbr[3]:
                                 result = True
                                 break
+                    elif tstoper == 'IN_SELECT':
+                        cid = self.__getCursorID(c2)
+                        if len(self.__parsed_query['cursors'][cid]) == 2:
+                            vsess = vSession(self.db, self.__session_username, self.__password)
+                            sel_cur = vsess.submit_query(_query=self.__getCursorQuery(c2), bind=self.__bind)
+                            if len(sel_cur["columns"]) > 1:
+                                raise vExcept(500)
+                            del vsess
+                            self.__parsed_query['cursors'][cid].append(sel_cur)
+                        else:
+                            sel_cur = self.__parsed_query['cursors'][cid][2]
+                        result = False
+                        for mbr in sel_cur["rows"]:
+                            if c1 == mbr[0]:
+                                result = True
+                                break
                     else:
                         result = self.__compare_cols(str(c1), str(c2), tstoper)
                         # print(f'__process_tests c1={c1} {tstoper} c2={c2}   result={result}')
@@ -917,6 +934,22 @@ class vSession(object):
                                     result = None
                         else:
                             result = None
+                    elif tstoper == 'IN_SELECT':
+                        cid = self.__getCursorID(c2)
+                        if len(self.__parsed_query['cursors'][cid]) == 2:
+                            vsess = vSession(self.db, self.__session_username, self.__password)
+                            sel_cur = vsess.submit_query(_query=self.__getCursorQuery(c2), bind=self.__bind)
+                            if len(sel_cur["columns"]) > 1:
+                                raise vExcept(500)
+                            del vsess
+                            self.__parsed_query['cursors'][cid].append(sel_cur)
+                        else:
+                            sel_cur = self.__parsed_query['cursors'][cid][2]
+                        result = False
+                        for mbr in sel_cur["rows"]:
+                            if c1 == mbr[0]:
+                                result = True
+                                break
                     else:
                         if (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]) or \
                         (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num) and (tst[1][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]) or \
@@ -1995,6 +2028,18 @@ class vSession(object):
             return result
         else:
             raise vExcept(2101, cur_name)
+
+    def __getCursorID(self, cur_name):
+        # cursors: cursor_alias, query
+        id = None
+        for n in range(len(self.__parsed_query['cursors'])):
+            if self.__parsed_query['cursors'][n][0] == cur_name:
+                id = n
+                break
+        if id is None:
+            raise vExcept(2100, cur_name)
+        else:
+            return id
 
     def __get_grant_for_object(self, owner, obj_name, grant_needed, admin='NO'):
         # print(owner, obj_name, grant_needed, admin)

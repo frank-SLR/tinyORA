@@ -6,10 +6,10 @@ sys.path.append('D:/python/parser')
 from vExceptLib import vExcept
 from vSessionLib import vSession
 from vtinyDBLib import vDB
-from tabulate import tabulate
 import os, json
-import tabulate
 from shutil import copyfile
+from tabulate import tabulate
+import tabulate
 
 try:
     db_parameters_file = 'D:/Python/data/pfile.json'
@@ -24,18 +24,18 @@ try:
     finally:
         __id_db.close()
 
-    username = 'resto'
-    password = 'restopwd'
-    database = 'db'
-    query = ("with "
-        + "l as (select * from resto.legumes), "
-        + "p as (select * from resto.plats) "
-        + "select l.id lid, l.name lname, p.id pid, p.name pname "
-        + "from l, p "
-        + "where l.id < p.id "
-        + "order by lid asc, pid desc"
+    username = 'test'
+    password = 'testpwd'
+    database = 'DBTEST'
+    # query = ("with t as (select level v from dual connect by level <= 20) "
+    #     + "select t.v, 'line: '||t.v, 'coef 2.9 : ' || t.v*2.9, t.v*2.9 "
+    #     + "from t"
+    #     )
+    query = ("insert into rnd1 "
+        + "select level, 'line: '||level, 'coef 2.9 : ' || level*2.9 "
+        + "from dual connect by level <= :MAXVALUE"
         )
-    bind = {}
+    bind = {'MAXVALUE': 200}
 
     db_found = False
     for dbidx, dbblk in enumerate(__meta_cfg["db_list"]):
@@ -60,8 +60,13 @@ try:
     result = session.submit_query(query, bind)
  
     # print result
-    entete = [x[0] for x in result["columns"]]
-    print(tabulate.tabulate(result["rows"], headers=entete, tablefmt="grid"))
+    print(result["message"])
+    
+    # commit
+    result = session.submit_query('commit')
+ 
+    # print commit result
+    print(result["message"])
     
 except vExcept as e:
     print("error code: {}".format(e.errcode))

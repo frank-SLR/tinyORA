@@ -27,15 +27,15 @@ try:
     username = 'resto'
     password = 'restopwd'
     database = 'db'
-    query = ("with "
-        + "l as (select * from resto.legumes), "
-        + "p as (select * from resto.plats) "
-        + "select l.id lid, l.name lname, p.id pid, p.name pname "
-        + "from l, p "
-        + "where l.id < p.id "
-        + "order by lid asc, pid desc"
+    query = ("create table resto.test01 as "
+        + "select rownum num_row, id, name, 'je ''dirais: '||decode(id, :VAR1, :VAR3, :VAR2, 'quatre', 'autre') blablabla, "
+        + "abs(-12.3) r, instr(name, 'o', 0, 2) positO, substr(name, rownum + 1, 5) souschaine "
+        + "from resto.legumes "
+        + "where lower(substr(name, 2, 1)) in ('o', 'h') "
+        + "and id between 2 and 5 "
+        + "and id > (rownum * 3)"
         )
-    bind = {}
+    bind = {"VAR1": 2, "VAR2": 4, "VAR3": "deux"}
 
     db_found = False
     for dbidx, dbblk in enumerate(__meta_cfg["db_list"]):
@@ -60,8 +60,7 @@ try:
     result = session.submit_query(query, bind)
  
     # print result
-    entete = [x[0] for x in result["columns"]]
-    print(tabulate.tabulate(result["rows"], headers=entete, tablefmt="grid"))
+    print(result)
     
 except vExcept as e:
     print("error code: {}".format(e.errcode))
@@ -69,6 +68,6 @@ except vExcept as e:
         print("  {}".format(s))
 finally:
     if os.path.isfile("./parameters.json"):
-        # copyfile("./parameters.json", db_parameters_file)
+        copyfile("./parameters.json", db_parameters_file)
         os.remove("./parameters.json")
 

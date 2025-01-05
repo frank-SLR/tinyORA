@@ -19,7 +19,7 @@ try:
 
     # load parameters file
     try:
-        __id_db = open(parameters_file)
+        __id_db = open(file=parameters_file, mode='tr')
         __meta_cfg = json.load(__id_db)
     finally:
         __id_db.close()
@@ -27,14 +27,10 @@ try:
     username = 'resto'
     password = 'restopwd'
     database = 'db'
-    query = ("with "
-        + "l as (select * from resto.legumes), "
-        + "p as (select * from resto.plats) "
-        + "select l.id lid, l.name lname, p.id pid, p.name pname "
-        + "from l, p "
-        + "where l.id < p.id "
-        + "order by lid asc, pid desc"
-        )
+    query = ("select id, name from (select id, name "
+             + "from resto.legumes "
+             + "where id in (select id from resto.legumes where lower(substr(name, 2, 1)) in ('o', 'h')) )"
+             )
     bind = {}
 
     db_found = False

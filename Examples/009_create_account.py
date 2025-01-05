@@ -6,9 +6,7 @@ sys.path.append('D:/python/parser')
 from vExceptLib import vExcept
 from vSessionLib import vSession
 from vtinyDBLib import vDB
-from tabulate import tabulate
 import os, json
-import tabulate
 from shutil import copyfile
 
 try:
@@ -24,16 +22,10 @@ try:
     finally:
         __id_db.close()
 
-    username = 'resto'
-    password = 'restopwd'
-    database = 'db'
-    query = ("with "
-        + "l as (select * from resto.legumes), "
-        + "p as (select * from resto.plats) "
-        + "select l.id lid, l.name lname, p.id pid, p.name pname "
-        + "from l, p "
-        + "where l.id < p.id "
-        + "order by lid asc, pid desc"
+    username = 'admin'
+    password = 'adminpwd'
+    database = 'DBTEST'
+    query = ("create user test identified by testpwd"
         )
     bind = {}
 
@@ -60,8 +52,7 @@ try:
     result = session.submit_query(query, bind)
  
     # print result
-    entete = [x[0] for x in result["columns"]]
-    print(tabulate.tabulate(result["rows"], headers=entete, tablefmt="grid"))
+    print(result["message"])
     
 except vExcept as e:
     print("error code: {}".format(e.errcode))
