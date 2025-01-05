@@ -53,3 +53,4 @@ finally:
     if os.path.isfile("./parameters.json"):
         copyfile(parameters_file, db_parameters_file)
         os.remove("./parameters.json")
+

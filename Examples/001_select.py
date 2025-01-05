@@ -70,3 +70,4 @@ finally:
     if os.path.isfile("./parameters.json"):
         # copyfile("./parameters.json", db_parameters_file)
         os.remove("./parameters.json")
+

@@ -19,7 +19,7 @@ try:
 
     # load parameters file
     try:
-        __id_db = open(parameters_file)
+        __id_db = open(file=parameters_file, mode='tr')
         __meta_cfg = json.load(__id_db)
     finally:
         __id_db.close()
@@ -27,9 +27,9 @@ try:
     username = 'resto'
     password = 'restopwd'
     database = 'db'
-    query = ("select id, name "
+    query = ("select id, name from (select id, name "
              + "from resto.legumes "
-             + "where id in (select id from resto.legumes where lower(substr(name, 2, 1)) in ('o', 'h')) "
+             + "where id in (select id from resto.legumes where lower(substr(name, 2, 1)) in ('o', 'h')) )"
              )
     bind = {}
 
@@ -67,3 +67,4 @@ finally:
     if os.path.isfile("./parameters.json"):
         # copyfile("./parameters.json", db_parameters_file)
         os.remove("./parameters.json")
+
