@@ -416,9 +416,12 @@ class vSession(object):
         self.__bind = bind
         self.__parsed_query = vParser().parse_query(query=_query, bind=bind)
         # print(f'submit_query select={self.__parsed_query["select"]}')
-        # print(f'submit_query from={self.__parsed_query["from"]}')
+        print(f'submit_query from={self.__parsed_query["from"]}')
         # print(f'submit_query where={self.__parsed_query["where"]}')
         # print(f'submit_query parsed_where={self.__parsed_query["parsed_where"]}')
+        # print(f'submit_query parsed_inner_where={self.__parsed_query["parsed_inner_where"]}')
+        print(f'submit_query left_outer_where={self.__parsed_query["left_outer_where"]}')
+        print(f'submit_query parsed_left_outer_where={self.__parsed_query["parsed_left_outer_where"]}')
         # print(f'submit_query in={self.__parsed_query["in"]}')
         # print(f'submit_query functions={self.__parsed_query["functions"]}')
         # print(f'submit_query connect={self.__parsed_query["connect"]}')
@@ -549,6 +552,11 @@ class vSession(object):
         # print(f'__get_rows cur_idx={cur_idx} nblignes={len(self.__parsed_query["from"][cur_idx][4][0]["rows"])}')
         for n in range(len(self.__parsed_query["from"][cur_idx][4][0]["rows"])):
             self.__RowsPosInTables[cur_idx] = n
+            # self.empty_table : [table is in outer join, current row, all rows for current loop in table]
+            if cur_idx == 0:
+                self.empty_table = [[False, False, False] for x in range(len(self.__parsed_query["from"]))]
+            if n == 0:
+                self.empty_table[cur_idx] = [False, False, False]
             if cur_idx < len(self.__parsed_query["from"])-1:
                 self.__get_rows(cur_idx=cur_idx+1)
             else:
@@ -629,14 +637,17 @@ class vSession(object):
                                                     self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [None, False]
                                                 case _:
                                                     raise vExcept(801)
-                            self.__parsed_query['post_data_model'][n][colkey]["columns"]
+                            # self.__parsed_query['post_data_model'][n][colkey]["columns"]
                         else:
                             match s[5]:
                                 case 'COLUMN':
                                     if s[3] == 'ROWNUM':
                                         rrow.append(len(self.__result))
                                     else:
-                                        rrow.append(self.__parsed_query["from"][s[6]][4][0]["rows"][self.__RowsPosInTables[s[6]]][s[7]])
+                                        if self.empty_table[s[6]][0] and self.empty_table[s[6]][1]:
+                                            rrow.append(None)
+                                        else:
+                                            rrow.append(self.__parsed_query["from"][s[6]][4][0]["rows"][self.__RowsPosInTables[s[6]]][s[7]])
                                 case 'INT':
                                     rrow.append(int(s[3]))
                                 case 'FLOAT':
@@ -879,8 +890,57 @@ class vSession(object):
                     temp_res.append(result)
                 if len(temp_res) > 0:
                     inner_tests = inner_tests and temp_res[-1]
+        left_outer_tests = True
+        if len(self.__parsed_query["parsed_left_outer_where"]) > 0:
+            for row in range(len(self.__parsed_query["parsed_left_outer_where"])):
+                temp_res = []
+                for tst in self.__parsed_query["parsed_left_outer_where"][row][1]:
+                    if tst[1][0] != tst[3][0]:
+                        raise vExcept(899, tst)
+                    if tst[1][0] == "TST":
+                        if tst[1][5] == "COLUMN":
+                            if tst[1][4] == "ROWNUM":
+                                c1 = len(self.__result)
+                            else:
+                                c1 = self.__parsed_query["from"][tst[1][1]][4][0]["rows"][self.__RowsPosInTables[tst[1][1]]][tst[1][2]]
+                        elif tst[1][5] == "FUNCTION":
+                            c1 = self.__compute_function(tst[1][4])
+                        elif tst[1][5] == "MATHS":
+                            c1 = self.__compute_maths(tst[1][4])
+                        elif tst[1][5] == "PIPE":
+                            c1 = self.__compute_pipe(tst[1][4])
+                        else:
+                            c1 = tst[1][4]
+                        if tst[3][5] == "COLUMN":
+                            if tst[3][4] == "ROWNUM":
+                                c2 = len(self.__result)
+                            else:
+                                c2 = self.__parsed_query["from"][tst[3][1]][4][0]["rows"][self.__RowsPosInTables[tst[3][1]]][tst[3][2]]
+                        elif tst[3][5] == "FUNCTION":
+                            c2 = self.__compute_function(tst[3][4])
+                        elif tst[3][5] == "MATHS":
+                            c2 = self.__compute_maths(tst[3][4])
+                        elif tst[3][5] == "PIPE":
+                            c2 = self.__compute_pipe(tst[3][4])
+                        else:
+                            c2 = tst[3][4]
+                        tstoper = tst[2]
+                        result = self.__compare_cols(str(c1), str(c2), tstoper)
+                    else:
+                        result = self.__compare_cols(temp_res[tst[1][1]], temp_res[tst[3][1]], tst[2])
+                    temp_res.append(result)
+                if len(temp_res) > 0:
+                    left_outer_tests = left_outer_tests and temp_res[-1]
+                table_idx = self.__parsed_query["parsed_left_outer_where"][row][0]
+                self.empty_table[table_idx][0] = True
+                self.empty_table[table_idx][1] = not left_outer_tests
+                self.empty_table[table_idx][2] = self.empty_table[table_idx][2] or left_outer_tests
+                print(self.__RowsPosInTables[table_idx], len(self.__parsed_query["from"][table_idx][4][0]["rows"]), self.empty_table[table_idx][2])
+                if self.__RowsPosInTables[table_idx]+1 == len(self.__parsed_query["from"][table_idx][4][0]["rows"]) and not self.empty_table[table_idx][2]:
+                    self.empty_table[table_idx][1] = True
+                    left_outer_tests = True
         # print(f'__process_tests result={where_tests and inner_tests}')
-        return where_tests and inner_tests
+        return where_tests and inner_tests and left_outer_tests
 
     def __prefetch_process_tests(self, tab_num):
         # parsed_where: item_id, field1, oper, field2
@@ -990,6 +1050,8 @@ class vSession(object):
         self.__validate_where()
         # generate data for where clause of inner join
         self.__validate_inner_where()
+        # generate data for where clause of left_ outer join
+        self.__validate_left_outer_where()
         # init gloal variable for rows fetch
         self.__result = []
         self.__RowsPosInTables = []
@@ -2013,6 +2075,26 @@ class vSession(object):
                     self.__parsed_query["parsed_inner_where"][b][n][3][1] = tf
                     self.__parsed_query["parsed_inner_where"][b][n][3][2] = ctf
                     self.__parsed_query["parsed_inner_where"][b][n][3][3] = aliasin
+
+    def __validate_left_outer_where(self):
+        for b in range (len(self.__parsed_query["parsed_left_outer_where"])):
+            for n in range (len(self.__parsed_query["parsed_left_outer_where"][b][1])):
+                if (self.__parsed_query["parsed_left_outer_where"][b][1][n][1][0] == "TST") and (self.__parsed_query["parsed_left_outer_where"][b][1][n][1][5] == 'COLUMN'):
+                    _, aliasin, _, _, tf, ctf, _ = self.__searchColInFromTables(colin=self.__parsed_query["parsed_left_outer_where"][b][1][n][1][4],
+                                                                                aliasin=self.__parsed_query["parsed_left_outer_where"][b][1][n][1][3],
+                                                                                table_namein=self.__parsed_query["parsed_left_outer_where"][b][1][n][1][7],
+                                                                                schemain=self.__parsed_query["parsed_left_outer_where"][b][1][n][1][6])
+                    self.__parsed_query["parsed_left_outer_where"][b][1][n][1][1] = tf
+                    self.__parsed_query["parsed_left_outer_where"][b][1][n][1][2] = ctf
+                    self.__parsed_query["parsed_left_outer_where"][b][1][n][1][3] = aliasin
+                if (self.__parsed_query["parsed_left_outer_where"][b][1][n][3][0] == "TST") and (self.__parsed_query["parsed_left_outer_where"][b][1][n][3][5] == 'COLUMN'):
+                    _, aliasin, _, _, tf, ctf, _ = self.__searchColInFromTables(colin=self.__parsed_query["parsed_left_outer_where"][b][1][n][3][4],
+                                                                                aliasin=self.__parsed_query["parsed_left_outer_where"][b][1][n][3][3],
+                                                                                table_namein=self.__parsed_query["parsed_left_outer_where"][b][1][n][3][7],
+                                                                                schemain=self.__parsed_query["parsed_left_outer_where"][b][1][n][3][6])
+                    self.__parsed_query["parsed_left_outer_where"][b][1][n][3][1] = tf
+                    self.__parsed_query["parsed_left_outer_where"][b][1][n][3][2] = ctf
+                    self.__parsed_query["parsed_left_outer_where"][b][1][n][3][3] = aliasin
 
     def __getCursorQuery(self, cur_name):
         # cursors: cursor_alias, query

@@ -10,9 +10,15 @@ from vExceptLib import vExcept
 # from: table_alias, schema, table_name, TABLE or CURSOR, {table}
 # cursors: cursor_alias, query
 # inner_where: list of items
+# left_outer_where: table_index [list of items]
 # parsed_inner_where: item_id, field1, oper, field2
-#                  or item_id, ['META', item_id], oper, ['META', item_id]
-#                  or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], oper, ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
+#                       or item_id, ['META', item_id], oper, ['META', item_id]
+#                       or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], oper, ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
+# parsed_left_outer_where: table_index, [
+#                         item_id, field1, oper, field2
+#                      or item_id, ['META', item_id], oper, ['META', item_id]
+#                      or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], oper, ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
+#                      ]
 # parsed_where: item_id, field1, oper, field2
 #            or item_id, ['META', item_id], oper, ['META', item_id]
 #            or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], oper, ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
@@ -50,9 +56,10 @@ class vParser():
 
     def __raz(self) -> None:
         self.__parsed_query = {"querytype": None, "select": [], "from": [], "where": [], "orderby": [], "groupby": [], "cursors": [],
-                               "inner_where": [], "parsed_where": [], "parsed_inner_where": [], "grant": [], "revoke": [], "create": [], "drop": [],
-                               "insert": [], "update": [], "functions": [], "in": [], "connect": [], "maths": [], "pipe": [], "bind":{},
-                               "group_by": [], "order_by": [],"post_tasks": False, "post_data_model": {}}
+                               "inner_where": [], "left_outer_where": [], "parsed_where": [], "parsed_inner_where": [], "parsed_left_outer_where": [], "grant": [],
+                               "revoke": [], "create": [], "drop": [], "insert": [], "update": [], "functions": [], "in": [], 
+                               "connect": [], "maths": [], "pipe": [], "bind":{}, "group_by": [], "order_by": [],"post_tasks": False,
+                               "post_data_model": {}}
         self.__query = ''
 
     def parse_query(self, query:str, bind:dict = []) -> dict:
@@ -242,8 +249,7 @@ class vParser():
                 word, pos = self.__parse_INNER_JOIN(pos)
             # LEFT OIUTER JOIN
             if (word.upper() == 'LEFT') and (pos < len(self.__query)):
-                ### a traiter LEFT OIUTER JOIN
-                pass
+                word, pos = self.__parse_LEFT_OUTER_JOIN(pos)
             # RIGHT OUTER JOIN
             if (word.upper() == 'RIGHT') and (pos < len(self.__query)):
                 ### a traiter RIGHT OUTER JOIN
@@ -410,6 +416,26 @@ class vParser():
             while w_idx < len(iw):
                 w_idx, lst_where, v_idx, bracket = self.__compute_where(iw, w_idx, lst_where, v_idx, 'AND', bracket)
             self.__parsed_query['parsed_inner_where'].append(lst_where)
+        # generate left outer join test
+        if len(self.__parsed_query['left_outer_where']) > 0:
+            for low in self.__parsed_query['left_outer_where']:
+                row = [low[0], []]
+                lst_where = []
+                w_idx = 0
+                bracket = 0
+                v_idx = 0
+                while w_idx < len(low[1]):
+                    w_idx, lst_where, v_idx, bracket = self.__compute_where(low[1], w_idx, lst_where, v_idx, 'AND', bracket)
+                # for iw in low[1]:
+                #     print(iw)
+                #     lst_where = []
+                #     w_idx = 0
+                #     bracket = 0
+                #     v_idx = 0
+                #     while w_idx < len(iw):
+                #         w_idx, lst_where, v_idx, bracket = self.__compute_where(iw, w_idx, lst_where, v_idx, 'AND', bracket)
+                row[1] = lst_where
+                self.__parsed_query['parsed_left_outer_where'].append(row)
         # order_by
         # 0: table_alias
         # 1: schema
@@ -1171,6 +1197,72 @@ class vParser():
         else:
             result = 'NO'
         return result, pos
+
+    def __parse_LEFT_OUTER_JOIN(self, pos):
+        col, pos = self.__parse_word(pos)
+        if col.upper() != 'OUTER':
+            raise vExcept(761, col)
+        col, pos = self.__parse_word(pos)
+        if col.upper() != 'JOIN':
+            raise vExcept(705, col)
+        # par table/cursor
+        col, pos = self.__parse_word(pos)
+        if col == ',':
+            raise vExcept(701, pos)
+        if col == '(':
+            cur_query, pos = self.__parse_parenthesis(pos)
+            word, pos = self.__parse_word(pos)
+            if (word.upper() == ',') or (word.upper() in self.__list_of_word(['NONE'])):
+                raise vExcept(703, word)
+            self.__parsed_query["from"].append([self.__get_cur_name(), None, word.upper(), 'CURSOR'])
+            self.__parsed_query["cursors"].append([word.upper(), cur_query])
+            word, pos = self.__parse_word(pos)
+        else:
+            word, pos = self.__parse_word(pos)
+            if word.upper() == 'ON':
+                a_t = col.upper().split('.')
+                if len(a_t) == 1:
+                    if self.__getCursor(a_t[0]):
+                        self.__parsed_query["from"].append([self.__get_cur_name(), None, a_t[0], 'CURSOR'])
+                    else:
+                        self.__parsed_query["from"].append([self.__get_cur_name(), None, a_t[0], 'TABLE'])
+                elif len(a_t) == 2:
+                    self.__parsed_query["from"].append([self.__get_cur_name(), a_t[0], a_t[1], 'TABLE'])
+                else:
+                    raise vExcept(209, col)
+            else:
+                a_t = col.upper().split('.')
+                if len(a_t) == 1:
+                    if self.__getCursor(a_t[0]):
+                        self.__parsed_query["from"].append([word.upper(), None, a_t[0], 'CURSOR'])
+                    else:
+                        self.__parsed_query["from"].append([word.upper(), None, a_t[0], 'TABLE'])
+                elif len(a_t) == 2:
+                    self.__parsed_query["from"].append([word.upper(), a_t[0], a_t[1], 'TABLE'])
+                else:
+                    raise vExcept(209, col)
+                word, pos = self.__parse_word(pos)
+                if word.upper() != 'ON':
+                    raise vExcept(706, word)
+        # parse clause
+        parse_clause = []
+        word, pos = self.__parse_word(pos)
+        m1, op = None, None
+        while (word.upper() not in self.__list_of_word(['NONE'])) and (pos < len(self.__query)):
+            if word.upper() in ['(', ')', 'AND', 'OR']:
+                parse_clause.append([word])
+            elif m1 is None:
+                m1 = word
+            elif op is None:
+                op = word
+            else:
+                parse_clause.append([m1, op, word])
+                m1, op = None, None
+            word, pos = self.__parse_word(pos)
+        if pos >= len(self.__query):
+            parse_clause.append([m1, op, word])
+        self.__parsed_query["left_outer_where"].append([len(self.__parsed_query["from"])-1, parse_clause])
+        return word, pos
 
     def __parse_INNER_JOIN(self, pos):
         col, pos = self.__parse_word(pos)

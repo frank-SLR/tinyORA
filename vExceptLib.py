@@ -186,6 +186,8 @@ class vExcept(Exception):
                 self.message = f'Syntax error: field in ORDER BY statement({message}) does not match fields in SELECT statement'
             case 760:
                 self.message = f'Syntax error: ambiguous field in ORDER BY statement({message})'
+            case 761:
+                self.message = f'Syntax error: reserved word "OUTER" expected but "{message}" found'
             # INTERNAL ERROR (800-899)
             case 801:
                 self.message = 'Internal error on column name in SELECT clause'
