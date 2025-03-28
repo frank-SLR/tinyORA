@@ -416,12 +416,12 @@ class vSession(object):
         self.__bind = bind
         self.__parsed_query = vParser().parse_query(query=_query, bind=bind)
         # print(f'submit_query select={self.__parsed_query["select"]}')
-        print(f'submit_query from={self.__parsed_query["from"]}')
+        # print(f'submit_query from={self.__parsed_query["from"]}')
         # print(f'submit_query where={self.__parsed_query["where"]}')
         # print(f'submit_query parsed_where={self.__parsed_query["parsed_where"]}')
         # print(f'submit_query parsed_inner_where={self.__parsed_query["parsed_inner_where"]}')
-        print(f'submit_query left_outer_where={self.__parsed_query["left_outer_where"]}')
-        print(f'submit_query parsed_left_outer_where={self.__parsed_query["parsed_left_outer_where"]}')
+        # print(f'submit_query left_outer_where={self.__parsed_query["left_outer_where"]}')
+        # print(f'submit_query parsed_left_outer_where={self.__parsed_query["parsed_left_outer_where"]}')
         # print(f'submit_query in={self.__parsed_query["in"]}')
         # print(f'submit_query functions={self.__parsed_query["functions"]}')
         # print(f'submit_query connect={self.__parsed_query["connect"]}')
@@ -935,7 +935,6 @@ class vSession(object):
                 self.empty_table[table_idx][0] = True
                 self.empty_table[table_idx][1] = not left_outer_tests
                 self.empty_table[table_idx][2] = self.empty_table[table_idx][2] or left_outer_tests
-                print(self.__RowsPosInTables[table_idx], len(self.__parsed_query["from"][table_idx][4][0]["rows"]), self.empty_table[table_idx][2])
                 if self.__RowsPosInTables[table_idx]+1 == len(self.__parsed_query["from"][table_idx][4][0]["rows"]) and not self.empty_table[table_idx][2]:
                     self.empty_table[table_idx][1] = True
                     left_outer_tests = True
@@ -1446,7 +1445,7 @@ class vSession(object):
                                                     if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__DECODE(param)
                                                     else:
-                                                        self.__result[n][WorkOnCol] = self.self.__DECODE(param)
+                                                        self.__result[n][WorkOnCol] = self.__DECODE(param)
                                         case 'LENGTH':
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
@@ -1848,7 +1847,7 @@ class vSession(object):
 
     def __check_DATETIME(self, varin):
         try:
-            reg = datetime.datetime.fromtimestamp(varin, tz=None)
+            reg = datetime.fromtimestamp(varin, tz=None)
             return bool(reg is not None)
         except Exception as e:
             return False

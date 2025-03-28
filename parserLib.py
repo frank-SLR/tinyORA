@@ -461,7 +461,7 @@ class vParser():
                                 found += 1
                     case 2:
                         for n, scol in enumerate(self.__parsed_query["select"]):
-                            if ((col[0] == str(scol[0]).upper()) or (col[0] == str(scol[4])).upper()) and (col[1] == str(scol[3]).upper()):
+                            if ((col[0] == str(scol[0]).upper()) or (col[0] == str(scol[4]).upper())) and (col[1] == str(scol[3]).upper()):
                                 self.__parsed_query["order_by"][f][0] = n
                                 found += 1
                     case 3:

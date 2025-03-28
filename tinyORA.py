@@ -1,14 +1,17 @@
 # uvicorn tinyDB:app --reload --port 1521
 # uvicorn tinyDB:app --reload --port 1521 --ssl-keyfile D:\Python\OpenSSL\key.pem --ssl-certfile D:\Python\OpenSSL\cert.pem --log-level warning
 
+import sys
+import os
+import ssl
+import json
+from fastapi import FastAPI, Response, status, Request
+from fastapi.responses import JSONResponse
+import concurrent.futures
+import tabulate
 from vtinyDBLib import vDB
 from jtinyDBLib import JSONtinyDB
 from vExceptLib import vExcept
-from fastapi import FastAPI, Response, status, Request
-from fastapi.responses import JSONResponse
-import sys, os, ssl, json
-import concurrent.futures
-import tabulate
 
 class UnicornException(Exception):
     def __init__(self, err_code: int, message: str, status_code: int):
@@ -211,19 +214,20 @@ async def get_query(session_id: str, request: Request, response: Response, table
     try:
         if table.upper() not in ['JSON', 'TEXT', 'HTML']:
             raise vExcept(9000, table)
-        for n in range(len(app.sessions)):
-            if str(app.sessions[n][0]) == str(session_id):
+        for n, curses in enumerate(app.sessions):
+            if str(curses[0]) == str(session_id):
                 found_sess = True
                 break
         if not found_sess:
             raise vExcept(1000, session_id)
-        if app.sessions[n][4] != request.client.host:
-            raise vExcept(680, '{} / {}'.format(app.sessions[n][4], request.client.host))
+        else:
+            if app.sessions[n][4] != request.client.host:
+                raise vExcept(680, f'{app.sessions[n][4]} / {request.client.host}')
         
         thrd_found = False
         if len(app.threads) > 0:
-            for n in range(len(app.threads)):
-                sesid_thrd = app.threads[n]
+            for n, sesid_thrd in enumerate(app.threads):
+                # sesid_thrd = app.threads[n]
                 if sesid_thrd[0] == session_id:
                     if sesid_thrd[1].running():
                         response.status_code = status.HTTP_204_NO_CONTENT

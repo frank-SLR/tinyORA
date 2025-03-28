@@ -62,7 +62,7 @@ class vExcept(Exception):
                 self.message = 'Invalid Manager password'
             # IP (680-699)
             case 680:
-                self.message = f'Invlid client IP ({message})'
+                self.message = f'Invalid client IP ({message})'
             # SYNTAX ERROR (700-899)
             case 700:
                 self.message = 'Syntax error: quotes are not matching'
