@@ -310,6 +310,8 @@ class vExcept(Exception):
                 self.message = f'''First argument for ATAN function must have 'float' format' ({message})'''
             case 2331:
                 self.message = f'''First argument for ATAN2 function must have 'float' format' ({message})'''
+            case 2332:
+                self.message = f'''Incorrect number of arguments for ATAN2 function: must be 2 but {message} argument(s) provided'''
             # MATHS (2500-2599)
             case 2500:
                 self.message = '''Division by zero'''

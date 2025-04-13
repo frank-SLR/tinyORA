@@ -315,7 +315,7 @@ class vSession(object):
             "function": self.__parsed_query["functions"][fct_id][1]}
         colcount = len(res[self.__parsed_query["functions"][fct_id][0]]["colvalmodel"])
         match res[self.__parsed_query["functions"][fct_id][0]]["function"]:
-            case 'ABS'|'ACOS'|'ASIN'|'ATAN'|'ATAN2'|'AVG'|'CHR'|'COUNT'|'LENGTH'|'LOWER'|'MAX'|'MIN'|'SUM'|'UPPER':
+            case 'ABS'|'ACOS'|'ASIN'|'ATAN'|'AVG'|'CHR'|'COUNT'|'LENGTH'|'LOWER'|'MAX'|'MIN'|'SUM'|'UPPER':
                 if colcount != 1:
                     raise vExcept(2323, res[self.__parsed_query["functions"][fct_id][0]]["function"])
             case 'DECODE':
@@ -333,6 +333,9 @@ class vSession(object):
             case 'NVL':
                 if colcount != 2:
                     raise vExcept(2314, colcount)
+            case 'ATAN2':
+                if colcount != 2:
+                    raise vExcept(2332, colcount)
             case 'NVL2':
                 if colcount != 3:
                     raise vExcept(2315, colcount)
@@ -1296,7 +1299,7 @@ class vSession(object):
                                 case 'FCT':
                                     # all columns data are available, function can be parsed
                                     match self.__parsed_query["post_data_model"][WorkOnCol][obj]["function"]:
-                                        case 'ABS'|'ACOS'|'ASIN'|'ATAN'|'ATAN2'|'AVG'|'CHR'|'LENGTH'|'LOWER'|'MAX'|'MIN'|'SUM'|'UPPER':
+                                        case 'ABS'|'AVG'|'LOWER'|'MAX'|'MIN'|'SUM':
                                             match self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"][0][4]:
                                                 case 'FUNCTION'|'MATHS'|'PIPE':
                                                     fct = self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"][0][3]
@@ -1312,7 +1315,7 @@ class vSession(object):
                                                 self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = 0
                                             else:
                                                 self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = 1
-                                        case 'DECODE'|'INSTR'|'LPAD'|'LTRIM'|'NVL'|'NVL2'|'RPAD'|'RTRIM'|'SUBSTR'|'TO_CHAR'|'SUBSTR'|'TO_CHAR'|'TRUNC':
+                                        case 'DECODE'|'ACOS'|'ASIN'|'ATAN'|'ATAN2'|'CHR'|'LENGTH'|'UPPER'|'INSTR'|'LPAD'|'LTRIM'|'NVL'|'NVL2'|'RPAD'|'RTRIM'|'SUBSTR'|'TO_CHAR'|'SUBSTR'|'TO_CHAR'|'TRUNC':
                                             for ncol in range(len(self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"])):
                                                 match self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"][ncol][4]:
                                                     case 'FUNCTION'|'MATHS'|'PIPE':
@@ -1689,11 +1692,12 @@ class vSession(object):
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
-                                                    inval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    inval1 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    inval2 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][1][0]
                                                     if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
-                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__ATAN2(inval)
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__ATAN2(inval1, inval2)
                                                     else:
-                                                        self.__result[n][WorkOnCol] = self.__ATAN2(inval)
+                                                        self.__result[n][WorkOnCol] = self.__ATAN2(inval1, inval2)
                                         case 'UPPER':
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
@@ -2473,9 +2477,19 @@ class vSession(object):
             case 'UPPER':
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return str(value).upper()
-            case 'ACOS'|'ASIN'|'ATAN'|'ATAN2':
+            case 'ACOS':
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
-                return float(value).upper()
+                return self.__ACOS(value)
+            case 'ASIN':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return self.__ASIN(value)
+            case 'ATAN':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return self.__ATAN(value)
+            case 'ATAN2':
+                val1 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                val2 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
+                return self.__ATAN2(val1, val2)
             case 'TRUNC':
                 if len(self.__parsed_query["functions"][fct_num][2]) == 1:
                     valin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
@@ -2593,7 +2607,9 @@ class vSession(object):
             raise vExcept(2330, inval)
         return math.atan(inval)
 
-    def __ATAN2(self, inval):
-        if (not self.__check_FLOAT(inval)):
-            raise vExcept(2331, inval)
-        return math.atan2(inval)
+    def __ATAN2(self, inval1, inval2):
+        if (not self.__check_FLOAT(inval1)):
+            raise vExcept(2331, inval1)
+        if (not self.__check_FLOAT(inval2)):
+            raise vExcept(2331, inval2)
+        return math.atan2(inval1, inval2)

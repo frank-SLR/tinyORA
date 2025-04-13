@@ -409,6 +409,58 @@ Obtain absolute value of -12.2:
 ABS(-12.2)
 ```
 
+## ACOS
+return arc cosine of parameter.
+
+```sql
+ACOS ( <NUMERIC_VALUE> )
+```
+
+Example:
+Obtain arc cosine for value 0.3:
+```sql
+ACOS(0.3)
+```
+
+## ASIN
+return arcsine of parameter.
+
+```sql
+ASIN ( <NUMERIC_VALUE> )
+```
+
+Example:
+Obtain arcsine for value 0.3:
+```sql
+ASIN(0.3)
+```
+
+## ATAN
+return arctangent of parameter.
+
+```sql
+ATAN ( <NUMERIC_VALUE> )
+```
+
+Example:
+Obtain arctangent for value 0.3:
+```sql
+ATAN(0.3)
+```
+
+## ATAN2
+return arctangent of parameters.
+
+```sql
+ATAN2 ( <NUMERIC_VALUE>, <NUMERIC_VALUE> )
+```
+
+Example:
+Obtain arctangent for values 0.3 and 0.7:
+```sql
+ATAN2(0.3, 0.7)
+```
+
 ## AVG
 Return average value for COL.
 
@@ -647,6 +699,26 @@ TO_CHAR(date, 'YYYY/MM/DD')
 ```
 
 See: [SEL_COL](#sel_col)
+
+## TRUNC
+Returns a value limited to a given number of decimal places
+
+The first parameter is the value to process.
+The second parameter is optional and defines the number of decimal places to return. The default value is 0.
+
+```sql
+TRUNC ( <NUMERIC_VALUE> )
+```
+or
+```sql
+TRUNC ( <NUMERIC_VALUE>, <NUMERIC_VALUE> )
+```
+
+Example:
+Keep two decimal places for pi
+```sql
+TRUNC ( 3.141592653589793, 2 )
+```
 
 ## UPPER
 Convert data to uppercase.
