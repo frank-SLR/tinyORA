@@ -1816,7 +1816,7 @@ class vSession(object):
                 result = bool(c1 and c2)
             case 'OR':
                 result = bool(c1 or c2)
-            case other:
+            case _:
                 raise vExcept(510, oper)
         # print(f'__compare_cols result={result}')
         return result
