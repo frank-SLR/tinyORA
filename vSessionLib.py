@@ -1,6 +1,7 @@
 import re
 import copy
 import random
+import math
 from datetime import datetime
 from vExceptLib import vExcept
 from jtinyDBLib import JSONtinyDB
@@ -314,7 +315,7 @@ class vSession(object):
             "function": self.__parsed_query["functions"][fct_id][1]}
         colcount = len(res[self.__parsed_query["functions"][fct_id][0]]["colvalmodel"])
         match res[self.__parsed_query["functions"][fct_id][0]]["function"]:
-            case 'ABS'|'AVG'|'CHR'|'COUNT'|'LENGTH'|'LOWER'|'MAX'|'MIN'|'SUM'|'UPPER':
+            case 'ABS'|'ACOS'|'ASIN'|'ATAN'|'ATAN2'|'AVG'|'CHR'|'COUNT'|'LENGTH'|'LOWER'|'MAX'|'MIN'|'SUM'|'UPPER':
                 if colcount != 1:
                     raise vExcept(2323, res[self.__parsed_query["functions"][fct_id][0]]["function"])
             case 'DECODE':
@@ -338,7 +339,7 @@ class vSession(object):
             case 'RPAD':
                 if colcount not in [2, 3]:
                     raise vExcept(2318, colcount)
-            case 'RTRIM':
+            case 'RTRIM'|'TRUNC':
                 if colcount not in [1, 2]:
                     raise vExcept(2321, colcount)
             case 'SUBSTR':
@@ -1295,7 +1296,7 @@ class vSession(object):
                                 case 'FCT':
                                     # all columns data are available, function can be parsed
                                     match self.__parsed_query["post_data_model"][WorkOnCol][obj]["function"]:
-                                        case 'ABS'|'AVG'|'CHR'|'LENGTH'|'LOWER'|'MAX'|'MIN'|'SUM'|'UPPER':
+                                        case 'ABS'|'ACOS'|'ASIN'|'ATAN'|'ATAN2'|'AVG'|'CHR'|'LENGTH'|'LOWER'|'MAX'|'MIN'|'SUM'|'UPPER':
                                             match self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"][0][4]:
                                                 case 'FUNCTION'|'MATHS'|'PIPE':
                                                     fct = self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"][0][3]
@@ -1311,7 +1312,7 @@ class vSession(object):
                                                 self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = 0
                                             else:
                                                 self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = 1
-                                        case 'DECODE'|'INSTR'|'LPAD'|'LTRIM'|'NVL'|'NVL2'|'RPAD'|'RTRIM'|'SUBSTR'|'TO_CHAR'|'SUBSTR'|'TO_CHAR':
+                                        case 'DECODE'|'INSTR'|'LPAD'|'LTRIM'|'NVL'|'NVL2'|'RPAD'|'RTRIM'|'SUBSTR'|'TO_CHAR'|'SUBSTR'|'TO_CHAR'|'TRUNC':
                                             for ncol in range(len(self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"])):
                                                 match self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"][ncol][4]:
                                                     case 'FUNCTION'|'MATHS'|'PIPE':
@@ -1642,6 +1643,57 @@ class vSession(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__INSTR(instr, insubstr, inposition, inoccurence)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__INSTR(instr, insubstr, inposition, inoccurence)
+                                        case 'TRUNC':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    match len(self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n]):
+                                                        case 1:
+                                                            instr = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                            precision = 0
+                                                        case 2:
+                                                            instr = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                            precision = int(self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][1][0])
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__TRUNC(instr, precision)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__TRUNC(instr, precision)
+                                        case 'ACOS':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    inval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__ACOS(inval)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__ACOS(inval)
+                                        case 'ASIN':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    inval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__ASIN(inval)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__ASIN(inval)
+                                        case 'ATAN':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    inval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__ATAN(inval)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__ATAN(inval)
+                                        case 'ATAN2':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    inval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__ATAN2(inval)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__ATAN2(inval)
                                         case 'UPPER':
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
@@ -2418,10 +2470,22 @@ class vSession(object):
                 dtein = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 fmtin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
                 return self.__TO_CHAR(dtein, fmtin)
-
             case 'UPPER':
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return str(value).upper()
+            case 'ACOS'|'ASIN'|'ATAN'|'ATAN2':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return float(value).upper()
+            case 'TRUNC':
+                if len(self.__parsed_query["functions"][fct_num][2]) == 1:
+                    valin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                    precision = 0
+                elif len(self.__parsed_query["functions"][fct_num][2]) == 2:
+                    valin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                    precision = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
+                else:
+                    raise vExcept(2327, len(self.__parsed_query["functions"][fct_num][2]))
+                return self.__TRUNC(valin, precision)
 
     def __get_function_type(self, fct_name: str, ref_col_typ: str):
         match fct_name:
@@ -2429,7 +2493,7 @@ class vSession(object):
                 return 'str'
             case 'COUNT'|'INSTR':
                 return 'int'
-            case 'AVG'|'MAX'|'MIN'|'SUM':
+            case 'AVG'|'ACOS'|'ASIN'|'ATAN'|'ATAN2'|'MAX'|'MIN'|'SUM':
                 return 'float'
             case 'ABS':
                 if ref_col_typ.upper() in ['INT', 'FLOAT']:
@@ -2441,6 +2505,11 @@ class vSession(object):
                     return ref_col_typ.lower()
                 else:
                     return 'str'
+            case 'TRUNC':
+                if ref_col_typ.upper() == 'DATETIME':
+                    return 'datetime'
+                else:
+                    return 'float'
             case _:
                 raise vExcept(2304, fct_name)
 
@@ -2498,4 +2567,33 @@ class vSession(object):
         fmtin = fmtin.replace('MI', '%M')
         fmtin = fmtin.replace('SS', '%S')
         return datetime.fromtimestamp(dtein).strftime(fmtin)[1:-1]
-        
+
+    def __TRUNC(self, inval, precision):
+        if (not self.__check_DATETIME(inval)) and (not self.__check_FLOAT(inval)):
+            raise vExcept(2324, inval)
+        if not self.__check_INT(precision):
+            raise vExcept(2325, precision)
+        if precision > 18:
+            raise vExcept(2326, precision)
+        factor = 10 ** precision
+        return int(inval * factor) / factor
+
+    def __ACOS(self, inval):
+        if (not self.__check_FLOAT(inval)):
+            raise vExcept(2328, inval)
+        return math.acos(inval)
+
+    def __ASIN(self, inval):
+        if (not self.__check_FLOAT(inval)):
+            raise vExcept(2329, inval)
+        return math.asin(inval)
+
+    def __ATAN(self, inval):
+        if (not self.__check_FLOAT(inval)):
+            raise vExcept(2330, inval)
+        return math.atan(inval)
+
+    def __ATAN2(self, inval):
+        if (not self.__check_FLOAT(inval)):
+            raise vExcept(2331, inval)
+        return math.atan2(inval)

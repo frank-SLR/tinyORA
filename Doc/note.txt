@@ -3,10 +3,10 @@ https://docs.oracle.com/cd/B13789_01/server.101/b10759/functions001.htm
 
 Numeric Functions
 ABS                 ok
-ACOS                
-ASIN                
-ATAN                
-ATAN2               
+ACOS                ok
+ASIN                ok
+ATAN                ok
+ATAN2               ok
 BITAND              
 CEIL                
 COS                 
@@ -26,7 +26,7 @@ SINH
 SQRT                
 TAN                 
 TANH                
-TRUNC (number)      
+TRUNC (number)      ok
 WIDTH_BUCKET        
 
 Character Functions Returning Character Values

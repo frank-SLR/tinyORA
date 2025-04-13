@@ -51,8 +51,8 @@ class vParser():
         self.__intMathsSeq = 0
         self.__intPipeSeq = 0
         self.__raz()
-        self.__list_of_functions = ['ABS', 'AVG', 'CHR', 'COUNT', 'DECODE', 'INSTR', 'LENGTH', 'LOWER', 'LPAD', 'LTRIM', 'MAX', 'MIN',
-                                    'NVL', 'NVL2', 'RPAD', 'RTRIM', 'SUBSTR', 'SUM', 'TO_CHAR', 'UPPER']
+        self.__list_of_functions = ['ABS', 'ACOS', 'ASIN', 'ATAN', 'ATAN2', 'AVG', 'CHR', 'COUNT', 'DECODE', 'INSTR', 'LENGTH', 'LOWER', 'LPAD', 'LTRIM', 'MAX', 'MIN',
+                                    'NVL', 'NVL2', 'RPAD', 'RTRIM', 'SUBSTR', 'SUM', 'TO_CHAR', 'TRUNC', 'UPPER']
 
     def __raz(self) -> None:
         self.__parsed_query = {"querytype": None, "select": [], "from": [], "where": [], "orderby": [], "groupby": [], "cursors": [],

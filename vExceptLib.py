@@ -294,6 +294,22 @@ class vExcept(Exception):
                 self.message = f'''Incorrect number of arguments for LENGTH function: must be 1 but {message} argument(s) provided'''
             case 2323:
                 self.message = f'''Incorrect number of arguments for {message} function: must be 1'''
+            case 2324:
+                self.message = f'''First argument for TRUNC function must have 'datetime' or 'float' format' ({message})'''
+            case 2325:
+                self.message = f'''Second (optional) argument for TRUNC function must have 'int' format' ({message})'''
+            case 2326:
+                self.message = f'''Second (optional) argument for TRUNC function must been lest or equal to 18' ({message})'''
+            case 2327:
+                self.message = f'Bad arguments number for TRUNC function: {message} supplied argument(s) but needs 1 or 2'
+            case 2328:
+                self.message = f'''First argument for ACOS function must have 'float' format' ({message})'''
+            case 2329:
+                self.message = f'''First argument for ASIN function must have 'float' format' ({message})'''
+            case 2330:
+                self.message = f'''First argument for ATAN function must have 'float' format' ({message})'''
+            case 2331:
+                self.message = f'''First argument for ATAN2 function must have 'float' format' ({message})'''
             # MATHS (2500-2599)
             case 2500:
                 self.message = '''Division by zero'''
