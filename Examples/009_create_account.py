@@ -43,16 +43,19 @@ try:
  
     # open DB
     db = vDB(_db_base_dir=db_base_dir, g_params=__meta_cfg["global_parameters"])
-    
+
     # open session with user1 on TestDB
-    session: vSession = db.create_session(username=username, password=password)
+    session: vSession = db.connect(user=username, password=password)
     print(f'session={session.session_id}')
-    
+
+    # Obtain a cursor
+    cursor = session.cursor()
+
     # query table
-    result = session.submit_query(query, bind)
+    cursor.execute(query, bind)
  
     # print result
-    print(result["message"])
+    print(cursor.message)
     
 except vExcept as e:
     print("error code: {}".format(e.errcode))

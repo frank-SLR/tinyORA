@@ -105,7 +105,7 @@ async def open_connection(database: str, username: str, password: str, request: 
             raise vExcept(600)
         else:
             try:
-                session = db.create_session(username=username, password=password)
+                session = db.connect(user=username, password=password)
                 session_id = str(session.session_id)
                 app.sessions.append([session_id, session, username, database, request.client.host])
             except vExcept as e:
@@ -184,7 +184,7 @@ async def post_query(query: str, session_id: str, request: Request, bind:str = [
             raise vExcept(1000, session_id)
         if app.sessions[n][4] != request.client.host:
             raise vExcept(680, '{} / {}'.format(app.sessions[n][4], request.client.host))
-        app.threads.append([session_id, app.executor.submit(app.sessions[n][1].submit_query, query, jbind)])
+        app.threads.append([session_id, app.executor.submit(app.sessions[n][1].execute, query, jbind)])
         result = 'Query submitted'
     except vExcept as e:
         raise UnicornException(message=e.message, err_code=e.errcode, status_code = status.HTTP_400_BAD_REQUEST)
