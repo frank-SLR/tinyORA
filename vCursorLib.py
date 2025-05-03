@@ -21,7 +21,7 @@ class vCursor(object):
         self.session_id = hex(random.randint(1, 9999999999999999999))
         self.__password = password
         self.__session_username = username
-        
+
         self.__RAZ()
         self.__updated_tables = updated_tables
         self.__group_functions = ['AVG', 'COUNT', 'MAX', 'MIN', 'SUM']
@@ -426,7 +426,7 @@ class vCursor(object):
         # print(f'execute select={self.__parsed_query["select"]}')
         # print(f'execute from={self.__parsed_query["from"]}')
         # print(f'execute where={self.__parsed_query["where"]}')
-        # print(f'executeed_where={self.__parsed_query["parsed_where"]}')
+        # print(f'execute parsed_where={self.__parsed_query["parsed_where"]}')
         # print(f'execute parsed_inner_where={self.__parsed_query["parsed_inner_where"]}')
         # print(f'execute left_outer_where={self.__parsed_query["left_outer_where"]}')
         # print(f'execute parsed_left_outer_where={self.__parsed_query["parsed_left_outer_where"]}')
@@ -1326,7 +1326,7 @@ class vCursor(object):
                                                 self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = 0
                                             else:
                                                 self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = 1
-                                        case 'DECODE'|'ACOS'|'ASIN'|'ATAN'|'ATAN2'|'CHR'|'LENGTH'|'UPPER'|'INSTR'|'LPAD'|'LTRIM'|'NVL'|'NVL2'|'RPAD'|'RTRIM'|'SUBSTR'|'TO_CHAR'|'SUBSTR'|'TO_CHAR'|'TRUNC':
+                                        case _:
                                             for ncol in range(len(self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"])):
                                                 match self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"][ncol][4]:
                                                     case 'FUNCTION'|'MATHS'|'PIPE':
@@ -1334,6 +1334,9 @@ class vCursor(object):
                                                         if self.__parsed_query["post_data_model"][WorkOnCol][fct]["done"]:
                                                             colval = self.__parsed_query["post_data_model"][WorkOnCol][fct]["result"][WorkOnRowIdx]
                                                             self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][ncol] = [colval, True]
+                                                    case _:
+                                                        colval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][ncol][0]
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = colval
                                     # set "completed" if all rows are parsed for each "obj"
                                     AllRowsParsed = True
                                     for chkcol in self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx]:
@@ -1463,6 +1466,8 @@ class vCursor(object):
                                                         self.__result[n][WorkOnCol] = self.__DECODE(param)
                                         case 'LENGTH':
                                             for n in range(len(self.__result)):
+                                                # print(self.__parsed_query["post_data_model"][WorkOnCol])
+                                                # print(f'WorkOnCol={WorkOnCol}   obj={obj}')
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     val_int = self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True

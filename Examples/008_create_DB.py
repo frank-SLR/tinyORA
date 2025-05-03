@@ -1,7 +1,7 @@
 import sys
 
 # setting path
-sys.path.append('D:/python/parser')
+sys.path.append('D:\Python\tinyORA')
 
 from vExceptLib import vExcept
 from vtinyDBLib import vDB
