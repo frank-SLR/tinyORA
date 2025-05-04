@@ -10,7 +10,7 @@ ATAN2               ok
 BITAND              
 CEIL                oK
 COS                 ok
-COSH                
+COSH                o
 EXP                 ok
 FLOOR               oK
 LN                  ok
@@ -23,10 +23,10 @@ REMAINDER
 ROUND (number)      
 SIGN                
 SIN                 ok
-SINH                
+SINH                o
 SQRT                
 TAN                 ok
-TANH                
+TANH                o
 TRUNC (number)      ok
 WIDTH_BUCKET        
 

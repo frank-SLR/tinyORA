@@ -318,7 +318,7 @@ class vCursor(object):
             "function": self.__parsed_query["functions"][fct_id][1]}
         colcount = len(res[self.__parsed_query["functions"][fct_id][0]]["colvalmodel"])
         match res[self.__parsed_query["functions"][fct_id][0]]["function"]:
-            case 'ABS'|'ACOS'|'ASIN'|'ATAN'|'AVG'|'CEIL'|'CHR'|'COS'|'COUNT'|'EXP'|'FLOOR'|'LENGTH'|'LN'|'LOG'|'LOWER'|'MAX'|'MIN'|'SIN'|'SUM'|'TAN'|'UPPER':
+            case 'ABS'|'ACOS'|'ASIN'|'ATAN'|'AVG'|'CEIL'|'CHR'|'COS'|'COSH'|'COUNT'|'EXP'|'FLOOR'|'LENGTH'|'LN'|'LOG'|'LOWER'|'MAX'|'MIN'|'SIN'|'SINH'|'SUM'|'TAN'|'TANH'|'UPPER':
                 if colcount != 1:
                     raise vExcept(2323, res[self.__parsed_query["functions"][fct_id][0]]["function"])
             case 'DECODE':
@@ -1761,6 +1761,33 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__ATAN(inval)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__ATAN(inval)
+                                        case 'COSH':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    inval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__COSH(inval)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__COSH(inval)
+                                        case 'SINH':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    inval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__SINH(inval)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__SINH(inval)
+                                        case 'TANH':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    inval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__TANH(inval)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__TANH(inval)
                                         case 'ATAN2':
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
@@ -2612,6 +2639,15 @@ class vCursor(object):
             case 'ATAN':
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__ATAN(value)
+            case 'COSH':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return self.__COSH(value)
+            case 'SINH':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return self.__SINH(value)
+            case 'TANH':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return self.__TANH(value)
             case 'ATAN2':
                 val1 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 val2 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
@@ -2633,7 +2669,7 @@ class vCursor(object):
                 return 'str'
             case 'COUNT'|'INSTR':
                 return 'int'
-            case 'AVG'|'ACOS'|'ASIN'|'ATAN'|'ATAN2'|'CEIL'|'COS'|'EXP'|'FLOOR'|'LN'|'LOG'|'MAX'|'MIN'|'PI'|'SIN'|'SUM'|'TAN':
+            case 'AVG'|'ACOS'|'ASIN'|'ATAN'|'ATAN2'|'CEIL'|'COS'|'COSH'|'EXP'|'FLOOR'|'LN'|'LOG'|'MAX'|'MIN'|'PI'|'SIN'|'SINH'|'SUM'|'TAN'|'TANH':
                 return 'float'
             case 'ABS':
                 if ref_col_typ.upper() in ['INT', 'FLOAT']:
@@ -2778,6 +2814,21 @@ class vCursor(object):
         if (not self.__check_FLOAT(inval)):
             raise vExcept(2330, inval)
         return math.atan(inval)
+
+    def __COSH(self, inval):
+        if (not self.__check_FLOAT(inval)):
+            raise vExcept(2328, inval)
+        return math.cosh(inval)
+
+    def __SINH(self, inval):
+        if (not self.__check_FLOAT(inval)):
+            raise vExcept(2329, inval)
+        return math.sinh(inval)
+
+    def __TANH(self, inval):
+        if (not self.__check_FLOAT(inval)):
+            raise vExcept(2330, inval)
+        return math.tanh(inval)
 
     def __ATAN2(self, inval1, inval2):
         if (not self.__check_FLOAT(inval1)):
