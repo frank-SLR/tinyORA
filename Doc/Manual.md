@@ -487,6 +487,45 @@ Obtain character "A":
 CHR(65)
 ```
 
+## CEIL
+Returns the smallest integer that is greater than or equal to parameter.
+
+```sql
+CEIL ( <NUMERIC_VALUE> )
+```
+
+Example:
+Function returns 4:
+```sql
+CEIL(3.141592)
+```
+
+## COS
+return cosine of parameter.
+
+```sql
+COS ( <NUMERIC_VALUE> )
+```
+
+Example:
+Obtain cosine for value 0.3:
+```sql
+COS(0.3)
+```
+
+## COSH
+return hyperbolic cosine of parameter.
+
+```sql
+COSH ( <NUMERIC_VALUE> )
+```
+
+Example:
+Obtain hyperbolic cosine for value 0.3:
+```sql
+COSH(0.3)
+```
+
 ## COUNT
 Count rows.
 
@@ -513,6 +552,32 @@ If value is 1 then return 'FIRST', if value is 2 then return 'SECOND', for other
 DECODE(value, 1, 'FIRST', 2, 'SECOND', 'LATE...')
 ```
 
+## EXP
+return e raised to the parameter value. Value of e is  2.718281...
+
+```sql
+EXP ( <NUMERIC_VALUE> )
+```
+
+Example:
+Obtain e^1.253:
+```sql
+EXP(1.253)
+```
+
+## FLOOR
+Returns the largest integer equal to or less than parameter.
+
+```sql
+FLOOR ( <NUMERIC_VALUE> )
+```
+
+Example:
+Function returns 9:
+```sql
+FLOOR(9.815)
+```
+
 ## INSTR
 Return position of SUBSTRING in STRING. Search start at POSITION and stops at OCCURENCE.
 POSITION and OCCURENCE parameters are optionnal.
@@ -531,6 +596,37 @@ Example:
 Result of function is 15:
 ```sql
 INSTR('My tailor is rich', 'i', 7, 2)
+```
+
+See: [SEL_COL](#sel_col)
+
+
+## LN
+LN returns the natural logarithm of parameter.
+
+```sql
+LN ( <SEL_COL> )
+```
+
+Example:
+Result of function is 3.1354942159291496908067528318102:
+```sql
+LN(23)
+```
+
+See: [SEL_COL](#sel_col)
+
+## LOG
+LN returns the logarithm of parameter 2 in base of paameter 1.
+
+```sql
+LOG ( <SEL_COL>, <SEL_COL> )
+```
+
+Example:
+Result of function is 6:
+```sql
+LN(2, 64)
 ```
 
 See: [SEL_COL](#sel_col)
@@ -600,6 +696,19 @@ Obtain minimum for BILL:
 MIN(BILL)
 ```
 
+## MOD
+Returns the remainder of parameter 2 divided by parameter 1. Returns parameter 2 if parameter 1 is 0.
+
+```sql
+MOD ( <COL>, <COL> )
+```
+
+Example:
+Obtain the remainder of 15 divided by 6. Result is 3:
+```sql
+MOD(15, 6)
+```
+
 ## NVL
 NVL returns first parameter if it is not null, else NVL returns second parameter
 
@@ -618,6 +727,32 @@ NVL ( <SEL_COL>, <SEL_COL>, <SEL_COL> )
 
 See: [SEL_COL](#sel_col)
 
+## PI
+Return the value of pi. Function does not tale parameter.
+
+```sql
+PI ()
+```
+
+Example:
+Result of function is 3,1415926535897932384626433832795:
+```sql
+PI()
+```
+
+## POWER
+returns parameter 1 raised to the parameter 2 power.
+
+```sql
+POWER ( <NUMERIC_VALUE>, <NUMERIC_VALUE> )
+```
+
+Example:
+Result of function is 125:
+```sql
+POWER(5, 3)
+```
+
 ## RPAD
 Return first parameter right padded to second parameter lenght. if third parameter is provide, padded part is filled with it.
 
@@ -632,6 +767,45 @@ RPAD('John', 7, '-')
 ```
 
 See: [SEL_COL](#sel_col)
+
+## SIN
+return sine of parameter.
+
+```sql
+SIN ( <NUMERIC_VALUE> )
+```
+
+Example:
+Obtain sine for value 0.3:
+```sql
+SIN(0.3)
+```
+
+## SINH
+return hyperbolic sine of parameter.
+
+```sql
+SINH ( <NUMERIC_VALUE> )
+```
+
+Example:
+Obtain hyperbolic sine for value 0.3:
+```sql
+SINH(0.3)
+```
+
+## SQRT
+Returns the square root of parameter.
+
+```sql
+SQRT ( <NUMERIC_VALUE> )
+```
+
+Example:
+Function returns 7:
+```sql
+SQRT(49)
+```
 
 ## SUBSTR
 Extract substring of supplied data.
@@ -664,6 +838,32 @@ Example:
 Obtain sum for SALARY:
 ```sql
 SUM(SALARY)
+```
+
+## TAN
+return tangent of parameter.
+
+```sql
+TAN ( <NUMERIC_VALUE> )
+```
+
+Example:
+Obtain tangent for value 0.3:
+```sql
+TAN(0.3)
+```
+
+## TANH
+return hyperbolic tangent of parameter.
+
+```sql
+TANH ( <NUMERIC_VALUE> )
+```
+
+Example:
+Obtain hyperbolic tangent for value 0.3:
+```sql
+TANH(0.3)
 ```
 
 ## TO_CHAR

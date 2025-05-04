@@ -318,7 +318,7 @@ class vCursor(object):
             "function": self.__parsed_query["functions"][fct_id][1]}
         colcount = len(res[self.__parsed_query["functions"][fct_id][0]]["colvalmodel"])
         match res[self.__parsed_query["functions"][fct_id][0]]["function"]:
-            case 'ABS'|'ACOS'|'ASIN'|'ATAN'|'AVG'|'CEIL'|'CHR'|'COS'|'COSH'|'COUNT'|'EXP'|'FLOOR'|'LENGTH'|'LN'|'LOG'|'LOWER'|'MAX'|'MIN'|'MOD'|'SIN'|'SINH'|'SQRT'|'SUM'|'TAN'|'TANH'|'UPPER':
+            case 'ABS'|'ACOS'|'ASIN'|'ATAN'|'AVG'|'CEIL'|'CHR'|'COS'|'COSH'|'COUNT'|'EXP'|'FLOOR'|'LENGTH'|'LN'|'LOWER'|'MAX'|'MIN'|'MOD'|'SIN'|'SINH'|'SQRT'|'SUM'|'TAN'|'TANH'|'UPPER':
                 if colcount != 1:
                     raise vExcept(2323, res[self.__parsed_query["functions"][fct_id][0]]["function"])
             case 'DECODE':
@@ -333,9 +333,18 @@ class vCursor(object):
             case 'LTRIM':
                 if colcount not in [1, 2]:
                     raise vExcept(2320, colcount)
-            case 'MOD'|'NVL'|'POWER':
+            case 'NVL':
                 if colcount != 2:
                     raise vExcept(2314, colcount)
+            case 'MOD':
+                if colcount != 2:
+                    raise vExcept(2349, colcount)
+            case 'POWER':
+                if colcount != 2:
+                    raise vExcept(2350, colcount)
+            case 'LOG':
+                if colcount != 2:
+                    raise vExcept(2351, colcount)
             case 'ATAN2':
                 if colcount != 2:
                     raise vExcept(2332, colcount)
@@ -1702,11 +1711,12 @@ class vCursor(object):
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
-                                                    inval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    inval1 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    inval2 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][2][0]
                                                     if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
-                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__LOG(inval)
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__LOG(inval1, inval2)
                                                     else:
-                                                        self.__result[n][WorkOnCol] = self.__LOG(inval)
+                                                        self.__result[n][WorkOnCol] = self.__LOG(inval1, inval2)
                                         case 'CEIL':
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
@@ -2649,8 +2659,9 @@ class vCursor(object):
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__LN(value)
             case 'LOG':
-                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
-                return self.__LOG(value)
+                value1 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                value2 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
+                return self.__LOG(value1, value2)
             case 'CEIL':
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__CEIL(value)
@@ -2819,10 +2830,12 @@ class vCursor(object):
             raise vExcept(2337, inval)
         return math.log(inval)
 
-    def __LOG(self, inval):
-        if (not self.__check_FLOAT(inval)):
-            raise vExcept(2338, inval)
-        return math.log10(inval)
+    def __LOG(self, inval1, inval2):
+        if (not self.__check_FLOAT(inval1)):
+            raise vExcept(2338, inval1)
+        if (not self.__check_FLOAT(inval2)):
+            raise vExcept(2352, inval2)
+        return math.log(inval2, inval1)
 
     def __CEIL(self, inval):
         if (not self.__check_FLOAT(inval)) and (not self.__check_INT(inval)):

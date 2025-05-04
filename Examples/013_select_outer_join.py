@@ -29,7 +29,7 @@ try:
     database = 'db'
     query = ("select l.id, l.name, p.id, p.name, trunc(3.14156, 1) PI_TRUNC, acos(0.5) AC , asin(0.5) AS , atan(0.5) AT , atan2(1, 2) AT2, cos(pi()/3) cos_pi_3, "
              + "  sin(pi()/3) sin_pi_3, tan(pi()/3) tan_pi_3, cosh(pi()/3) cosh_pi_3, sinh(pi()/3) sinh_pi_3, tanh(pi()/3) tanh_pi_3, exp(1) exp_1, ln(1) ln_1, "
-             + "  log(1) log_1, floor(sin(p.id)) floor_id, ceil(sin(p.id)) floor_id, mod(3*p.id, 5) mod_3_5, sqrt(p.id) sqrt_id, power(p.id, 2) power_id "
+             + "  log(10, 100) log_100, floor(sin(p.id)) floor_id, ceil(sin(p.id)) floor_id, mod(3*p.id, 5) mod_3_5, sqrt(p.id-5) sqrt_id, power(p.id, 2) power_id "
              + "from resto.plats p "
              + "left outer join resto.legumes l on l.id=p.id"
              )

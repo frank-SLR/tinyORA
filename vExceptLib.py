@@ -344,6 +344,14 @@ class vExcept(Exception):
                 self.message = f'''First argument for POWER function must have 'float' or 'int' format' ({message})'''
             case 2348:
                 self.message = f'''Second argument for MOD function must have 'float' or 'int' format' ({message})'''
+            case 2349:
+                self.message = f'''Incorrect number of arguments for MOD function: must be 2 but {message} argument(s) provided'''
+            case 2350:
+                self.message = f'''Incorrect number of arguments for POWER function: must be 2 but {message} argument(s) provided'''
+            case 2351:
+                self.message = f'''Incorrect number of arguments for LOG function: must be 2 but {message} argument(s) provided'''
+            case 2352:
+                self.message = f'''Second argument for LOG function must have 'float' format' ({message})'''
             # MATHS (2500-2599)
             case 2500:
                 self.message = '''Division by zero'''
