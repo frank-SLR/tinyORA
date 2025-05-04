@@ -318,6 +318,40 @@ class vExcept(Exception):
                 self.message = f'''First argument for SIN function must have 'float' format' ({message})'''
             case 2335:
                 self.message = f'''First argument for TAN function must have 'float' format' ({message})'''
+            case 2336:
+                self.message = f'''First argument for EXP function must have 'float' format' ({message})'''
+            case 2337:
+                self.message = f'''First argument for LN function must have 'float' format' ({message})'''
+            case 2338:
+                self.message = f'''First argument for LOG function must have 'float' format' ({message})'''
+            case 2339:
+                self.message = f'''First argument for CEIL function must have 'float' or 'int' format' ({message})'''
+            case 2340:
+                self.message = f'''First argument for FLOOR function must have 'float' or 'int' format' ({message})'''
+            case 2341:
+                self.message = f'Bad arguments number for PI function: {message} supplied argument(s) but needs no one'
+            case 2342:
+                self.message = f'''First argument for COSH function must have 'float' format' ({message})'''
+            case 2343:
+                self.message = f'''First argument for SINH function must have 'float' format' ({message})'''
+            case 2344:
+                self.message = f'''First argument for TANH function must have 'float' format' ({message})'''
+            case 2345:
+                self.message = f'''First argument for MOD function must have 'int' format' ({message})'''
+            case 2346:
+                self.message = f'''Second argument for MOD function must have 'int' format' ({message})'''
+            case 2347:
+                self.message = f'''First argument for POWER function must have 'float' or 'int' format' ({message})'''
+            case 2348:
+                self.message = f'''Second argument for MOD function must have 'float' or 'int' format' ({message})'''
+            case 2349:
+                self.message = f'''Incorrect number of arguments for MOD function: must be 2 but {message} argument(s) provided'''
+            case 2350:
+                self.message = f'''Incorrect number of arguments for POWER function: must be 2 but {message} argument(s) provided'''
+            case 2351:
+                self.message = f'''Incorrect number of arguments for LOG function: must be 2 but {message} argument(s) provided'''
+            case 2352:
+                self.message = f'''Second argument for LOG function must have 'float' format' ({message})'''
             # MATHS (2500-2599)
             case 2500:
                 self.message = '''Division by zero'''

@@ -8,24 +8,25 @@ ASIN                ok
 ATAN                ok
 ATAN2               ok
 BITAND              
-CEIL                
+CEIL                oK
 COS                 ok
-COSH                
-EXP                 
-FLOOR               
-LN                  
-LOG                 
-MOD                 
+COSH                ok
+EXP                 ok
+FLOOR               oK
+LN                  ok
+LOG                 ok
+MOD                 ok
 NANVL               
-POWER               
+PI                  oK
+POWER               ok
 REMAINDER           
 ROUND (number)      
 SIGN                
 SIN                 ok
-SINH                
-SQRT                
+SINH                ok
+SQRT                ok
 TAN                 ok
-TANH                
+TANH                ok
 TRUNC (number)      ok
 WIDTH_BUCKET        
 

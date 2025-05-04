@@ -318,7 +318,7 @@ class vCursor(object):
             "function": self.__parsed_query["functions"][fct_id][1]}
         colcount = len(res[self.__parsed_query["functions"][fct_id][0]]["colvalmodel"])
         match res[self.__parsed_query["functions"][fct_id][0]]["function"]:
-            case 'ABS'|'ACOS'|'ASIN'|'ATAN'|'AVG'|'CHR'|'COS'|'COUNT'|'LENGTH'|'LOWER'|'MAX'|'MIN'|'SIN'|'SUM'|'TAN'|'UPPER':
+            case 'ABS'|'ACOS'|'ASIN'|'ATAN'|'AVG'|'CEIL'|'CHR'|'COS'|'COSH'|'COUNT'|'EXP'|'FLOOR'|'LENGTH'|'LN'|'LOWER'|'MAX'|'MIN'|'MOD'|'SIN'|'SINH'|'SQRT'|'SUM'|'TAN'|'TANH'|'UPPER':
                 if colcount != 1:
                     raise vExcept(2323, res[self.__parsed_query["functions"][fct_id][0]]["function"])
             case 'DECODE':
@@ -336,6 +336,15 @@ class vCursor(object):
             case 'NVL':
                 if colcount != 2:
                     raise vExcept(2314, colcount)
+            case 'MOD':
+                if colcount != 2:
+                    raise vExcept(2349, colcount)
+            case 'POWER':
+                if colcount != 2:
+                    raise vExcept(2350, colcount)
+            case 'LOG':
+                if colcount != 2:
+                    raise vExcept(2351, colcount)
             case 'ATAN2':
                 if colcount != 2:
                     raise vExcept(2332, colcount)
@@ -354,6 +363,9 @@ class vCursor(object):
             case 'TO_CHAR':
                 if colcount != 2:
                     raise vExcept(2305, colcount)
+            case 'PI':
+                if colcount != 0:
+                    raise vExcept(2341, colcount)
         if self.__parsed_query["functions"][fct_id][1] in self.__group_functions:
             flg = True
         for n, col in enumerate(self.__parsed_query["functions"][fct_id][2]):
@@ -1677,6 +1689,61 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__TRUNC(instr, precision)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__TRUNC(instr, precision)
+                                        case 'EXP':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    inval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__EXP(inval)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__EXP(inval)
+                                        case 'LN':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    inval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__LN(inval)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__LN(inval)
+                                        case 'LOG':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    inval1 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    inval2 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][2][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__LOG(inval1, inval2)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__LOG(inval1, inval2)
+                                        case 'CEIL':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    inval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__CEIL(inval)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__CEIL(inval)
+                                        case 'FLOOR':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    inval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__FLOOR(inval)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__FLOOR(inval)
+                                        case 'PI':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    inval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__PI()
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__PI()
                                         case 'ACOS':
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
@@ -1704,6 +1771,33 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__ATAN(inval)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__ATAN(inval)
+                                        case 'COSH':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    inval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__COSH(inval)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__COSH(inval)
+                                        case 'SINH':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    inval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__SINH(inval)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__SINH(inval)
+                                        case 'TANH':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    inval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__TANH(inval)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__TANH(inval)
                                         case 'ATAN2':
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
@@ -1750,6 +1844,35 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = val_int
                                                     else:
                                                         self.__result[n][WorkOnCol] = val_int
+                                        case 'MOD':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    inval1 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    inval2 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][1][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__MOD(inval1, inval2)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__MOD(inval1, inval2)
+                                        case 'POWER':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    inval1 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    inval2 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][1][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__POWER(inval1, inval2)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__POWER(inval1, inval2)
+                                        case 'SQRT':
+                                            for n in range(len(self.__result)):
+                                                if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
+                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
+                                                    inval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
+                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__SQRT(inval)
+                                                    else:
+                                                        self.__result[n][WorkOnCol] = self.__SQRT(inval)
                                     AllRowsParsed = 0
                                     for n in range(len(self.__result)):
                                         if self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
@@ -2529,6 +2652,24 @@ class vCursor(object):
             case 'TAN':
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__TAN(value)
+            case 'EXP':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return self.__EXP(value)
+            case 'LN':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return self.__LN(value)
+            case 'LOG':
+                value1 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                value2 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
+                return self.__LOG(value1, value2)
+            case 'CEIL':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return self.__CEIL(value)
+            case 'FLOOR':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return self.__FLOOR(value)
+            case 'PI':
+                return self.__PI()
             case 'ACOS':
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__ACOS(value)
@@ -2538,6 +2679,15 @@ class vCursor(object):
             case 'ATAN':
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__ATAN(value)
+            case 'COSH':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return self.__COSH(value)
+            case 'SINH':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return self.__SINH(value)
+            case 'TANH':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return self.__TANH(value)
             case 'ATAN2':
                 val1 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 val2 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
@@ -2552,14 +2702,25 @@ class vCursor(object):
                 else:
                     raise vExcept(2327, len(self.__parsed_query["functions"][fct_num][2]))
                 return self.__TRUNC(valin, precision)
+            case 'MOD':
+                val1 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                val2 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
+                return self.__MOD(val1, val2)
+            case 'POWER':
+                val1 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                val2 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
+                return self.__POWER(val1, val2)
+            case 'SQRT':
+                value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
+                return self.__SQRT(value)
 
     def __get_function_type(self, fct_name: str, ref_col_typ: str):
         match fct_name:
             case 'CHR'|'LENGTH'|'LOWER'|'LPAD'|'LTRIM'|'RPAD'|'RTRIM'|'SUBSTR'|'TO_CHAR'|'UPPER':
                 return 'str'
-            case 'COUNT'|'INSTR':
+            case 'COUNT'|'INSTR'|'MOD':
                 return 'int'
-            case 'AVG'|'ACOS'|'ASIN'|'ATAN'|'ATAN2'|'COS'|'MAX'|'MIN'|'SIN'|'SUM'|'TAN':
+            case 'AVG'|'ACOS'|'ASIN'|'ATAN'|'ATAN2'|'CEIL'|'COS'|'COSH'|'EXP'|'FLOOR'|'LN'|'LOG'|'MAX'|'MIN'|'PI'|'POWER'|'SIN'|'SINH'|'SQRT'|'SUM'|'TAN'|'TANH':
                 return 'float'
             case 'ABS':
                 if ref_col_typ.upper() in ['INT', 'FLOAT']:
@@ -2659,6 +2820,39 @@ class vCursor(object):
             raise vExcept(2335, inval)
         return math.tan(inval)
 
+    def __EXP(self, inval):
+        if (not self.__check_FLOAT(inval)):
+            raise vExcept(2336, inval)
+        return math.exp(inval)
+
+    def __LN(self, inval):
+        if (not self.__check_FLOAT(inval)):
+            raise vExcept(2337, inval)
+        return math.log(inval)
+
+    def __LOG(self, inval1, inval2):
+        if (not self.__check_FLOAT(inval1)):
+            raise vExcept(2338, inval1)
+        if (not self.__check_FLOAT(inval2)):
+            raise vExcept(2352, inval2)
+        return math.log(inval2, inval1)
+
+    def __CEIL(self, inval):
+        if (not self.__check_FLOAT(inval)) and (not self.__check_INT(inval)):
+            raise vExcept(2339, inval)
+        if int(inval) == inval:
+            return float(inval)
+        else:
+            return float(int(inval)+1)
+
+    def __FLOOR(self, inval):
+        if (not self.__check_FLOAT(inval)) and (not self.__check_INT(inval)):
+            raise vExcept(2340, inval)
+        return float(int(inval))
+
+    def __PI(self):
+        return math.pi
+
     def __ACOS(self, inval):
         if (not self.__check_FLOAT(inval)):
             raise vExcept(2328, inval)
@@ -2674,9 +2868,46 @@ class vCursor(object):
             raise vExcept(2330, inval)
         return math.atan(inval)
 
+    def __COSH(self, inval):
+        if (not self.__check_FLOAT(inval)):
+            raise vExcept(2342, inval)
+        return math.cosh(inval)
+
+    def __SINH(self, inval):
+        if (not self.__check_FLOAT(inval)):
+            raise vExcept(2343, inval)
+        return math.sinh(inval)
+
+    def __TANH(self, inval):
+        if (not self.__check_FLOAT(inval)):
+            raise vExcept(2344, inval)
+        return math.tanh(inval)
+
     def __ATAN2(self, inval1, inval2):
         if (not self.__check_FLOAT(inval1)):
             raise vExcept(2331, inval1)
         if (not self.__check_FLOAT(inval2)):
             raise vExcept(2331, inval2)
         return math.atan2(inval1, inval2)
+
+    def __MOD(self, inval1, inval2):
+        if (not self.__check_INT(inval1)):
+            raise vExcept(2345, inval1)
+        if (not self.__check_INT(inval2)):
+            raise vExcept(2346, inval2)
+        return inval1 % inval2
+
+    def __POWER(self, inval1, inval2):
+        if (not self.__check_FLOAT(inval1)) and (not self.__check_INT(inval1)):
+            raise vExcept(2347, inval1)
+        if (not self.__check_FLOAT(inval2)) and (not self.__check_INT(inval2)):
+            raise vExcept(2348, inval2)
+        return inval1 ** inval2
+
+    def __SQRT(self, inval):
+        if (not self.__check_FLOAT(inval)):
+            raise vExcept(2330, inval)
+        if inval >= 0:
+            return math.sqrt(inval)
+        else:
+            return None
