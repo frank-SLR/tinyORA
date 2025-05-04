@@ -28,7 +28,7 @@ try:
     password = 'restopwd'
     database = 'db'
     # query = ("select count(1) n, substr(name, 2, 1) lettre, sum(length(name)) somme_length "
-    query = ("select count(1) n, substr(name, 2, 1) lettre, sum(length(name)) somme_length, avg(id) moyenne, min(id) mini, 2 * max(id) maxi, max(id) max_id "
+    query = ("select count(1) n, substr(name, 2, 1) lettre, sum(length(name)) somme_length, avg(id) moyenne, min(id) mini,  max(id)*2 maxi, max(id) max_id "
         + "from resto.legumes "
         + "where lower(substr(name, 2, 1)) in ('o', 'h') "
         + "group by lettre"

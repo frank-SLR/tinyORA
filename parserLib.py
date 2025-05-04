@@ -901,7 +901,14 @@ class vParser():
                     fct_col, pos = self.__parse_COL_FCT(col.upper(), pos)
                     word, pos = self.__parse_word(pos)
                     # print (f'__parse_SEL_COL apres __parse_COL_FCT  fct_col={fct_col} word={word}')
-                    if word.upper() not in [',', 'FROM']:
+                    if word in ['+', '-', '*', '/'] or col == '(':
+                        word, maths_id, pos = self.__parse_maths(fct_col, word, pos)
+                        if word.upper() in [',', 'FROM']:
+                            self.__parsed_query["select"].append([None, None, None, maths_id, None, 'MATHS', None, None, None, []])
+                        else:
+                            self.__parsed_query["select"].append([None, None, None, maths_id, word, 'MATHS', None, None, None, []])
+                            word, pos = self.__parse_word(pos)
+                    elif word.upper() not in [',', 'FROM']:
                         self.__parsed_query["select"].append([None, None, None, fct_col, word, 'FUNCTION', None, None, None, []])
                         word, pos = self.__parse_word(pos)
                     else:
@@ -958,7 +965,7 @@ class vParser():
                     last_is_pipe = True
             elif word == '(':
                 col, pos = self.__parse_word(pos)
-                word, maths_id, pos = self.__parse_maths(word, col, pos)
+                word, maths_id, pos = self.__parse_maths(col=word, word=col, pos=pos)
                 tmpP[1].append([None, None, None, maths_id, None, 'MATHS', None, None, None])
                 last_is_pipe = False
             elif word in ['+', '-', '*', '/']:
@@ -1825,6 +1832,14 @@ class vParser():
             raise vExcept(2202, varin)
 
     def __list_of_word(self, except_this:list):
+        """return list of reserved words minus supplied list of word
+
+        Args:
+            except_this (list): list of words to remove from result
+
+        Returns:
+            _type_: list of selectionned reserved words
+        """        
         lst = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'FROM', 'INNER', 'LEFT', 'RIGHT', 'WHERE', 'GROUP', 'ORDER', 'CREATE', 'DROP', 'TABLE', 'INDEX', 'CONNECT']
         for et in except_this:
             if et in lst:
