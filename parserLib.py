@@ -51,8 +51,8 @@ class vParser():
         self.__intMathsSeq = 0
         self.__intPipeSeq = 0
         self.__raz()
-        self.__list_of_functions = ['ABS', 'ACOS', 'ASIN', 'ATAN', 'ATAN2', 'AVG', 'CHR', 'COS', 'COUNT', 'DECODE', 'EXP', 'INSTR', 'LENGTH', 'LN', 'LOG', 'LOWER', 'LPAD', 'LTRIM', 'MAX', 'MIN',
-                                    'NVL', 'NVL2', 'RPAD', 'RTRIM', 'SIN', 'SUBSTR', 'SUM', 'TAN', 'TO_CHAR', 'TRUNC', 'UPPER']
+        self.__list_of_functions = ['ABS', 'ACOS', 'ASIN', 'ATAN', 'ATAN2', 'AVG', 'CEIL', 'CHR', 'COS', 'COUNT', 'DECODE', 'EXP', 'FLOOR', 'INSTR', 'LENGTH', 'LN', 'LOG', 'LOWER', 'LPAD', 'LTRIM', 'MAX', 'MIN',
+                                    'NVL', 'NVL2', 'PI', 'RPAD', 'RTRIM', 'SIN', 'SUBSTR', 'SUM', 'TAN', 'TO_CHAR', 'TRUNC', 'UPPER']
 
     def __raz(self) -> None:
         self.__parsed_query = {"querytype": None, "select": [], "from": [], "where": [], "orderby": [], "groupby": [], "cursors": [],
@@ -1061,53 +1061,70 @@ class vParser():
         #   6: table position
         #   7: position in table
         #   8: table or cursor]]]
+        # print(f'__parse_COL_FCT 0 fct_name={fct_name}')
         fct_idx = len(self.__parsed_query["functions"])
         fct_id = self.__get_fct_name()
         self.__parsed_query["functions"].append([fct_id, fct_name, []])
-        word = ''
-        while (word != ')') and (pos < len(self.__query)):
+        if fct_name == 'PI':
             word, pos = self.__parse_word(pos)
-            # print(f'__parse_COL_FCT 0 word={word}')
-            if self.__is_function(word.upper()):
-                col, pos = self.__parse_word(pos)
-                if col != '(':
-                    raise vExcept(739, col)
-                sub_fct, pos = self.__parse_COL_FCT(word.upper(), pos)
-                self.__parsed_query["functions"][fct_idx][2].append([None, None, None, sub_fct, 'FUNCTION', None, None, None])
+        else:
+            word = ''
+            while (word != ')') and (pos < len(self.__query)):
                 word, pos = self.__parse_word(pos)
-                if (word != ',') and (word != ')'):
-                    # print(f'__parse_COL_FCT 1 word={word}')
-                    raise vExcept(702, word)
-            else:
-                if word in ['-', '+']:
-                    elem = '0'
-                else:
-                    elem = word
+                # print(f'__parse_COL_FCT 1 fct_name={fct_name} word={word}')
+                if self.__is_function(word.upper()):
+                    col, pos = self.__parse_word(pos)
+                    # print(f'__parse_COL_FCT 2 fct_name={fct_name} col={col} word={word}')
+                    if col != '(':
+                        raise vExcept(739, col)
+                    # print(f'__parse_COL_FCT 3 fct_name={fct_name} word={word}')
+                    sub_fct, pos = self.__parse_COL_FCT(word.upper(), pos)
                     word, pos = self.__parse_word(pos)
-                    # print(f'__parse_COL_FCT 2 elem={elem} word={word}')
-                if word in ['+', '-', '*', '/']:
-                    # print(f'__parse_COL_FCT 3 word={word}')
-                    word, maths_id, pos = self.__parse_maths(elem, word, pos)
-                    # print(f'__parse_COL_FCT word={word} maths_id={maths_id}')
-                    self.__parsed_query["functions"][fct_idx][2].append([None, None, None, maths_id, 'MATHS', None, None, None])
+                    # print(f'__parse_COL_FCT 4 fct_name={fct_name} word={word}')
+                    if word in ['+', '-', '*', '/']:
+                        # print(f'__parse_COL_FCT 5 fct_name={fct_name} word={word}')
+                        word, maths_id, pos = self.__parse_maths(sub_fct, word, pos)
+                        # print(f'__parse_COL_FCT  6 fct_name={fct_name} word={word} maths_id={maths_id}')
+                        self.__parsed_query["functions"][fct_idx][2].append([None, None, None, maths_id, 'MATHS', None, None, None])
+                        if (word != ',') and (word != ')'):
+                            # print(f'__parse_COL_FCT 7 fct_name={fct_name} word={word}')
+                            raise vExcept(702, word)
+                    else:
+                        self.__parsed_query["functions"][fct_idx][2].append([None, None, None, sub_fct, 'FUNCTION', None, None, None])
                     if (word != ',') and (word != ')'):
-                        # print(f'__parse_COL_FCT 4 word={word}')
+                        # print(f'__parse_COL_FCT 8 fct_name={fct_name} word={word}')
                         raise vExcept(702, word)
-                elif word == '||':
-                    word, pipe_id, pos = self.__parse_pipe(elem, word, pos)
-                    if (word != ',') and (word != ')'):
-                        # print(f'__parse_COL_FCT 5 word={word}')
-                        raise vExcept(702, word)
-                    self.__parsed_query["functions"][fct_idx][2].append([None, None, None, pipe_id, 'PIPE', None, None, None])
-                elif (word != ',') and (word != ')'):
-                    # print(f'__parse_COL_FCT 6 word={word}')
-                    raise vExcept(702, word)
                 else:
-                    # print(f'__parse_COL_FCT 3 elem={elem}')
-                    self.__parsed_query["functions"][fct_idx][2].append([None, None, None, elem, None, None, None, None])
-                    if (word != ',') and (word != ')'):
-                        # print(f'__parse_COL_FCT 7 word={word}')
+                    # print(f'__parse_COL_FCT 9 fct_name={fct_name} word={word}')
+                    if word in ['-', '+']:
+                        elem = '0'
+                    else:
+                        elem = word
+                        word, pos = self.__parse_word(pos)
+                        # print(f'__parse_COL_FCT 10 fct_name={fct_name} elem={elem} word={word}')
+                    if word in ['+', '-', '*', '/']:
+                        # print(f'__parse_COL_FCT 11 fct_name={fct_name} word={word}')
+                        word, maths_id, pos = self.__parse_maths(elem, word, pos)
+                        # print(f'__parse_COL_FCT  12 fct_name={fct_name} word={word} maths_id={maths_id}')
+                        self.__parsed_query["functions"][fct_idx][2].append([None, None, None, maths_id, 'MATHS', None, None, None])
+                        if (word != ',') and (word != ')'):
+                            # print(f'__parse_COL_FCT 13 fct_name={fct_name} word={word}')
+                            raise vExcept(702, word)
+                    elif word == '||':
+                        word, pipe_id, pos = self.__parse_pipe(elem, word, pos)
+                        if (word != ',') and (word != ')'):
+                            # print(f'__parse_COL_FCT 14 fct_name={fct_name} word={word}')
+                            raise vExcept(702, word)
+                        self.__parsed_query["functions"][fct_idx][2].append([None, None, None, pipe_id, 'PIPE', None, None, None])
+                    elif (word != ',') and (word != ')'):
+                        # print(f'__parse_COL_FCT 15 fct_name={fct_name} word={word}')
                         raise vExcept(702, word)
+                    else:
+                        # print(f'__parse_COL_FCT 16 fct_name={fct_name} elem={elem}')
+                        self.__parsed_query["functions"][fct_idx][2].append([None, None, None, elem, None, None, None, None])
+                        if (word != ',') and (word != ')'):
+                            # print(f'__parse_COL_FCT 17 fct_name={fct_name} word={word}')
+                            raise vExcept(702, word)
         if word != ')':
             raise vExcept(740, col)
         return fct_id, pos

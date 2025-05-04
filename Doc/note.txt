@@ -8,15 +8,16 @@ ASIN                ok
 ATAN                ok
 ATAN2               ok
 BITAND              
-CEIL                
+CEIL                oK
 COS                 ok
 COSH                
 EXP                 ok
-FLOOR               
+FLOOR               oK
 LN                  ok
 LOG                 ok
 MOD                 
 NANVL               
+PI                  oK
 POWER               
 REMAINDER           
 ROUND (number)      
