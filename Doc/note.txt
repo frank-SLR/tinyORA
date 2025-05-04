@@ -9,7 +9,7 @@ ATAN                ok
 ATAN2               ok
 BITAND              
 CEIL                
-COS                 
+COS                 ok
 COSH                
 EXP                 
 FLOOR               
@@ -21,10 +21,10 @@ POWER
 REMAINDER           
 ROUND (number)      
 SIGN                
-SIN                 
+SIN                 ok
 SINH                
 SQRT                
-TAN                 
+TAN                 ok
 TANH                
 TRUNC (number)      ok
 WIDTH_BUCKET        
