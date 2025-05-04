@@ -27,7 +27,7 @@ try:
     username = 'resto'
     password = 'restopwd'
     database = 'db'
-    query = ("select l.id, l.name, p.id, p.name, trunc(3.14156, 1) PI_TRUNC, acos(0.5) AC , asin(0.5) AS , atan(0.5) AT , atan2(1, 2) AT2 "
+    query = ("select l.id, l.name, p.id, p.name, trunc(3.14156, 1) PI_TRUNC, acos(0.5) AC , asin(0.5) AS , atan(0.5) AT , atan2(1, 2) AT2, cos(1) cos_1, sin(1) sin_1, tan(1) tan_1 "
              + "from resto.plats p "
              + "left outer join resto.legumes l on l.id=p.id"
              )
