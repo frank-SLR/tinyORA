@@ -330,6 +330,20 @@ class vExcept(Exception):
                 self.message = f'''First argument for FLOOR function must have 'float' or 'int' format' ({message})'''
             case 2341:
                 self.message = f'Bad arguments number for PI function: {message} supplied argument(s) but needs no one'
+            case 2342:
+                self.message = f'''First argument for COSH function must have 'float' format' ({message})'''
+            case 2343:
+                self.message = f'''First argument for SINH function must have 'float' format' ({message})'''
+            case 2344:
+                self.message = f'''First argument for TANH function must have 'float' format' ({message})'''
+            case 2345:
+                self.message = f'''First argument for MOD function must have 'int' format' ({message})'''
+            case 2346:
+                self.message = f'''Second argument for MOD function must have 'int' format' ({message})'''
+            case 2347:
+                self.message = f'''First argument for POWER function must have 'float' or 'int' format' ({message})'''
+            case 2348:
+                self.message = f'''Second argument for MOD function must have 'float' or 'int' format' ({message})'''
             # MATHS (2500-2599)
             case 2500:
                 self.message = '''Division by zero'''

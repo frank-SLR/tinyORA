@@ -10,23 +10,23 @@ ATAN2               ok
 BITAND              
 CEIL                oK
 COS                 ok
-COSH                o
+COSH                ok
 EXP                 ok
 FLOOR               oK
 LN                  ok
 LOG                 ok
-MOD                 
+MOD                 ok
 NANVL               
 PI                  oK
-POWER               
+POWER               ok
 REMAINDER           
 ROUND (number)      
 SIGN                
 SIN                 ok
-SINH                o
-SQRT                
+SINH                ok
+SQRT                ok
 TAN                 ok
-TANH                o
+TANH                ok
 TRUNC (number)      ok
 WIDTH_BUCKET        
 
