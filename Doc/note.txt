@@ -11,10 +11,10 @@ BITAND
 CEIL                
 COS                 ok
 COSH                
-EXP                 
+EXP                 ok
 FLOOR               
-LN                  
-LOG                 
+LN                  ok
+LOG                 ok
 MOD                 
 NANVL               
 POWER               

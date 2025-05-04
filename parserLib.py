@@ -51,7 +51,7 @@ class vParser():
         self.__intMathsSeq = 0
         self.__intPipeSeq = 0
         self.__raz()
-        self.__list_of_functions = ['ABS', 'ACOS', 'ASIN', 'ATAN', 'ATAN2', 'AVG', 'CHR', 'COS', 'COUNT', 'DECODE', 'INSTR', 'LENGTH', 'LOWER', 'LPAD', 'LTRIM', 'MAX', 'MIN',
+        self.__list_of_functions = ['ABS', 'ACOS', 'ASIN', 'ATAN', 'ATAN2', 'AVG', 'CHR', 'COS', 'COUNT', 'DECODE', 'EXP', 'INSTR', 'LENGTH', 'LN', 'LOG', 'LOWER', 'LPAD', 'LTRIM', 'MAX', 'MIN',
                                     'NVL', 'NVL2', 'RPAD', 'RTRIM', 'SIN', 'SUBSTR', 'SUM', 'TAN', 'TO_CHAR', 'TRUNC', 'UPPER']
 
     def __raz(self) -> None:

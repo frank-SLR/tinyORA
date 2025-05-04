@@ -318,6 +318,12 @@ class vExcept(Exception):
                 self.message = f'''First argument for SIN function must have 'float' format' ({message})'''
             case 2335:
                 self.message = f'''First argument for TAN function must have 'float' format' ({message})'''
+            case 2336:
+                self.message = f'''First argument for EXP function must have 'float' format' ({message})'''
+            case 2337:
+                self.message = f'''First argument for LN function must have 'float' format' ({message})'''
+            case 2338:
+                self.message = f'''First argument for LOG function must have 'float' format' ({message})'''
             # MATHS (2500-2599)
             case 2500:
                 self.message = '''Division by zero'''
