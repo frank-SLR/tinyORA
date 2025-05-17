@@ -7,8 +7,9 @@ from vExceptLib import vExcept
 from jtinyDBLib import JSONtinyDB
 from parserLib import vParser
 
+
 class vCursor(object):
-    def __init__(self, db:JSONtinyDB, username, password, updated_tables, session):
+    def __init__(self, db: JSONtinyDB, username, password, updated_tables, session):
         self.db = db
         self.__session = session
         self.current_schema = None
@@ -24,9 +25,9 @@ class vCursor(object):
 
         self.__RAZ()
         self.__updated_tables = updated_tables
-        self.__group_functions = ['AVG', 'COUNT', 'MAX', 'MIN', 'SUM']
+        self.__group_functions = ["AVG", "COUNT", "MAX", "MIN", "SUM"]
         super().__init__()
-        
+
     def __RAZ(self):
         self.__parsed_query = None
         self.__group_post_data = {}
@@ -45,28 +46,44 @@ class vCursor(object):
             vExcept: _description_
         """
         # put locks
-        if self.__parsed_query["querytype"] in ['SELECT', 'DESCRIBE']:
+        if self.__parsed_query["querytype"] in ["SELECT", "DESCRIBE"]:
             for n in range(len(self.__parsed_query["from"])):
                 tbl = self.__parsed_query["from"][n]
-                if tbl[3] == 'TABLE':
+                if tbl[3] == "TABLE":
                     lock_flg = True
                     while lock_flg:
-                        lock_val = self.db.add_lock(session_id=self.session_id, owner=tbl[1], name=tbl[2], lock_type=10)
+                        lock_val = self.db.add_lock(
+                            session_id=self.session_id,
+                            owner=tbl[1],
+                            name=tbl[2],
+                            lock_type=10,
+                        )
                         match lock_val:
                             case 0:
                                 lock_flg = False
                             case 1:
-                                raise vExcept(1900, '{}.{}'.format(tbl[1], tbl[2]))
-        elif self.__parsed_query["querytype"] in ['INSERT']:
+                                raise vExcept(1900, "{}.{}".format(tbl[1], tbl[2]))
+        elif self.__parsed_query["querytype"] in ["INSERT"]:
             lock_flg = True
             while lock_flg:
-                lock_val = self.db.add_lock(session_id=self.session_id, owner=self.__parsed_query["insert"][0], name=self.__parsed_query["insert"][1], lock_type=1)
+                lock_val = self.db.add_lock(
+                    session_id=self.session_id,
+                    owner=self.__parsed_query["insert"][0],
+                    name=self.__parsed_query["insert"][1],
+                    lock_type=1,
+                )
                 match lock_val:
                     case 0:
                         lock_flg = False
                     case 1:
-                        raise vExcept(1900, '{}.{}'.format(self.__parsed_query["insert"][0], self.__parsed_query["insert"][1]))
-        if self.__parsed_query["querytype"] in ['UPDATE', 'DELETE']:
+                        raise vExcept(
+                            1900,
+                            "{}.{}".format(
+                                self.__parsed_query["insert"][0],
+                                self.__parsed_query["insert"][1],
+                            ),
+                        )
+        if self.__parsed_query["querytype"] in ["UPDATE", "DELETE"]:
             tbl = self.__parsed_query["from"][0]
             lock_flg = True
             while lock_flg:
@@ -75,28 +92,47 @@ class vCursor(object):
                     case 0:
                         lock_flg = False
                     case 1:
-                        raise vExcept(1900, '{}.{}'.format(tbl[1], tbl[2]))
-        elif self.__parsed_query["querytype"] in ['DROP']:
-            if self.__parsed_query["drop"][0][0] == 'TABLE':
+                        raise vExcept(1900, "{}.{}".format(tbl[1], tbl[2]))
+        elif self.__parsed_query["querytype"] in ["DROP"]:
+            if self.__parsed_query["drop"][0][0] == "TABLE":
                 lock_flg = True
                 while lock_flg:
-                    lock_val = self.db.add_lock(session_id=self.session_id, owner=self.__parsed_query["drop"][0][1], name=self.__parsed_query["drop"][0][2], lock_type=0)
+                    lock_val = self.db.add_lock(
+                        session_id=self.session_id,
+                        owner=self.__parsed_query["drop"][0][1],
+                        name=self.__parsed_query["drop"][0][2],
+                        lock_type=0,
+                    )
                     match lock_val:
                         case 0:
                             lock_flg = False
                         case 1:
-                            raise vExcept(1900, '{}.{}'.format(self.__parsed_query["drop"][0][1], self.__parsed_query["drop"][0][2]))
-            elif self.__parsed_query["drop"][0][0] == 'USER':
+                            raise vExcept(
+                                1900,
+                                "{}.{}".format(
+                                    self.__parsed_query["drop"][0][1],
+                                    self.__parsed_query["drop"][0][2],
+                                ),
+                            )
+            elif self.__parsed_query["drop"][0][0] == "USER":
                 for TAB in self.db.db["Tables"]:
                     if TAB["schema"] == self.__parsed_query["drop"][0][1]:
                         lock_flg = True
                         while lock_flg:
-                            lock_val = self.db.add_lock(session_id=self.session_id, owner=TAB["schema"], name=TAB["table_name"], lock_type=0)
+                            lock_val = self.db.add_lock(
+                                session_id=self.session_id,
+                                owner=TAB["schema"],
+                                name=TAB["table_name"],
+                                lock_type=0,
+                            )
                             match lock_val:
                                 case 0:
                                     lock_flg = False
                                 case 1:
-                                    raise vExcept(1900, '{}.{}'.format(TAB["schema"], TAB["table_name"]))
+                                    raise vExcept(
+                                        1900,
+                                        "{}.{}".format(TAB["schema"], TAB["table_name"]),
+                                    )
 
     def submit_query_check_GRANT(self, result):
         """Check the grants for all objects
@@ -111,101 +147,228 @@ class vCursor(object):
             dict: the result set of the query
         """
         match self.__parsed_query["querytype"]:
-            case 'SELECT'|'DESCRIBE':
+            case "DESCRIBE":
                 for n in range(len(self.__parsed_query["from"])):
                     tbl = self.__parsed_query["from"][n]
-                    if tbl[3] == 'TABLE':
-                        if not self.__get_grant_for_object(owner=tbl[1], obj_name=tbl[2], grant_needed='SELECT'):
-                            raise vExcept(210, '{}.{}'.format(tbl[1], tbl[2]))
-            case 'GRANT':
+                    if tbl[3] == "TABLE":
+                        if not self.__get_grant_for_object(owner=tbl[1], obj_name=tbl[2], grant_needed="SELECT"):
+                            raise vExcept(210, "{}.{}".format(tbl[1], tbl[2]))
+            case "SELECT":
+                for n in range(len(self.__parsed_query["from"])):
+                    tbl = self.__parsed_query["from"][n]
+                    if tbl[3] == "TABLE":
+                        if not self.__get_grant_for_object(owner=tbl[1], obj_name=tbl[2], grant_needed="SELECT"):
+                            raise vExcept(210, f"{tbl[1]}.{tbl[2]}")
+                for account in self.__parsed_query["sequences"].keys():
+                    for seq in self.__parsed_query["sequences"][account]:
+                        if not self.__get_grant_for_object(owner=account, obj_name=seq, grant_needed="SELECT"):
+                            raise vExcept(280, f"{account}.{seq}")
+            case "GRANT":
                 grt = self.__parsed_query["grant"][0]
+                dest_account = self.__parsed_query["grant"][0][0].lower()
+                obj_type = self.__parsed_query["grant"][0][2].upper()
+                tmp = self.__parsed_query["grant"][0][3].upper().split(".")
+                if len(tmp) == 1:
+                    account = self.current_schema
+                    obj_name = tmp
+                elif len(tmp) == 2:
+                    account = tmp[0]
+                    obj_name = tmp[1]
+                else:
+                    raise vExcept(763, tmp)
+                if obj_type == "TABLE_SEQUENCE":
+                    if self.db.checkTableExists(owner=account, table_name=obj_name):
+                        obj_type = "TABLE"
+                    elif self.db.checkSequenceExists(account=account, sequence_name=obj_name):
+                        obj_type = "SEQUENCE"
+                    else:
+                        raise vExcept(763, obj_type)
+                if not self.db.checkUserExists(username=dest_account):
+                    raise vExcept(726, dest_account)
+                if not self.db.checkUserExists(username=account):
+                    raise vExcept(726, account)
+
                 match grt[1]:
-                    case 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE':
-                        o_t = grt[3].split('.')
+                    case "SELECT" | "INSERT" | "UPDATE" | "DELETE":
+                        o_t = grt[3].split(".")
                         if len(o_t) == 1:
-                            if not self.__get_grant_for_object(owner=grt[3], obj_name=None, grant_needed=grt[1], admin='YES'):
+                            if not self.__get_grant_for_object(
+                                owner=grt[3],
+                                obj_name=None,
+                                grant_needed=grt[1],
+                                admin="YES",
+                            ):
                                 raise vExcept(900)
                         else:
-                            if not self.__get_grant_for_object(owner=o_t[0], obj_name=o_t[1], grant_needed=grt[1], admin='YES'):
+                            if not self.__get_grant_for_object(
+                                owner=o_t[0],
+                                obj_name=o_t[1],
+                                grant_needed=grt[1],
+                                admin="YES",
+                            ):
                                 raise vExcept(900)
-                        self.db.AddGrantToMeta(grant=grt[1], granted=str(grt[0]).lower(), grant_bloc=[grt[2], grt[3], grt[4]])
-                    case 'CREATE' | 'DROP':
+                        self.db.AddGrantToMeta(
+                            grant=grt[1],
+                            granted=str(grt[0]).lower(),
+                            grant_bloc=[obj_type, grt[3], grt[4]],
+                        )
+                        self.db.AddGrantToDB(
+                            grant=grt[1],
+                            granted=str(grt[0]).lower(),
+                            grant_bloc=[obj_type, grt[3], grt[4]],
+                        )
+                    case "CREATE" | "DROP":
                         match grt[2]:
-                            case 'TABLE' | 'INDEX':
-                                if not self.__get_grant_for_object(owner=grt[3], obj_name=grt[2], grant_needed=grt[1], admin='YES'):
-                                        raise vExcept(900)
-                                self.db.AddGrantToMeta(grant=grt[1], granted=grt[0], grant_bloc=[grt[2], grt[3], grt[4]])
-                            case 'USER':
-                                if not self.__get_grant_for_object(owner=None, obj_name=grt[3], grant_needed=grt[1], admin='YES'):
-                                        raise vExcept(900)
-                                self.db.AddGrantToMeta(grant=grt[1], granted=grt[0], grant_bloc=[grt[2], grt[4]])
+                            case "TABLE" | "INDEX":
+                                if not self.__get_grant_for_object(
+                                    owner=grt[3],
+                                    obj_name=grt[2],
+                                    grant_needed=grt[1],
+                                    admin="YES",
+                                ):
+                                    raise vExcept(900)
+                                self.db.AddGrantToMeta(
+                                    grant=grt[1],
+                                    granted=grt[0],
+                                    grant_bloc=[obj_type, grt[3], grt[4]],
+                                )
+                                self.db.AddGrantToDB(
+                                    grant=grt[1],
+                                    granted=grt[0],
+                                    grant_bloc=[obj_type, grt[3], grt[4]],
+                                )
+                            case "USER":
+                                if not self.__get_grant_for_object(
+                                    owner=None,
+                                    obj_name=grt[3],
+                                    grant_needed=grt[1],
+                                    admin="YES",
+                                ):
+                                    raise vExcept(900)
+                                self.db.AddGrantToMeta(
+                                    grant=grt[1],
+                                    granted=grt[0],
+                                    grant_bloc=[obj_type, grt[4]],
+                                )
+                                self.db.AddGrantToDB(
+                                    grant=grt[1],
+                                    granted=grt[0],
+                                    grant_bloc=[obj_type, grt[4]],
+                                )
                 self.db.saveDB()
                 result = {"message": "Grant processed"}
-            case 'REVOKE':
+            case "REVOKE":
                 grt = self.__parsed_query["revoke"][0]
                 match grt[1]:
-                    case 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE':
-                        o_t = grt[3].split('.')
+                    case "SELECT" | "INSERT" | "UPDATE" | "DELETE":
+                        o_t = grt[3].split(".")
                         if len(o_t) == 1:
-                            if not self.__get_grant_for_object(owner=grt[3], obj_name=None, grant_needed=grt[1], admin='YES'):
+                            if not self.__get_grant_for_object(
+                                owner=grt[3],
+                                obj_name=None,
+                                grant_needed=grt[1],
+                                admin="YES",
+                            ):
                                 raise vExcept(900)
                         else:
-                            if not self.__get_grant_for_object(owner=o_t[0], obj_name=o_t[1], grant_needed=grt[1], admin='YES'):
+                            if not self.__get_grant_for_object(
+                                owner=o_t[0],
+                                obj_name=o_t[1],
+                                grant_needed=grt[1],
+                                admin="YES",
+                            ):
                                 raise vExcept(900)
-                        self.db.DelGrantFromMeta(grant=grt[1], granted=str(grt[0]).lower(), grant_bloc=[grt[2], grt[3]])
-                    case 'CREATE' | 'DROP':
+                        self.db.DelGrantFromMeta(
+                            grant=grt[1],
+                            granted=str(grt[0]).lower(),
+                            grant_bloc=[grt[2], grt[3]],
+                        )
+                        self.db.DelGrantFromDB(
+                            grant=grt[1],
+                            granted=str(grt[0]).lower(),
+                            grant_bloc=[grt[2], grt[3]],
+                        )
+                    case "CREATE" | "DROP":
                         match grt[2]:
-                            case 'TABLE' | 'INDEX':
-                                if not self.__get_grant_for_object(owner=grt[3], obj_name=grt[2], grant_needed=grt[1], admin='YES'):
-                                        raise vExcept(900)
-                                self.db.DelGrantFromMeta(grant=grt[1], granted=grt[0], grant_bloc=[grt[2], grt[3]])
-                            case 'USER':
-                                if not self.__get_grant_for_object(owner=None, obj_name=grt[3], grant_needed=grt[1], admin='YES'):
-                                        raise vExcept(900)
+                            case "TABLE" | "INDEX":
+                                if not self.__get_grant_for_object(
+                                    owner=grt[3],
+                                    obj_name=grt[2],
+                                    grant_needed=grt[1],
+                                    admin="YES",
+                                ):
+                                    raise vExcept(900)
+                                self.db.DelGrantFromMeta(
+                                    grant=grt[1],
+                                    granted=grt[0],
+                                    grant_bloc=[grt[2], grt[3]],
+                                )
+                                self.db.DelGrantFromDB(
+                                    grant=grt[1],
+                                    granted=grt[0],
+                                    grant_bloc=[grt[2], grt[3]],
+                                )
+                            case "USER":
+                                if not self.__get_grant_for_object(
+                                    owner=None,
+                                    obj_name=grt[3],
+                                    grant_needed=grt[1],
+                                    admin="YES",
+                                ):
+                                    raise vExcept(900)
                                 self.db.DelGrantFromMeta(grant=grt[1], granted=grt[0], grant_bloc=[grt[2]])
+                                self.db.DelGrantFromDB(grant=grt[1], granted=grt[0], grant_bloc=[grt[2]])
                 self.db.saveDB()
                 result = {"message": "Revoke processed"}
-            case 'CREATE':
-                if self.__parsed_query["create"][0][0] == 'TABLE':
+            case "CREATE":
+                if self.__parsed_query["create"][0][0] == "TABLE":
                     if self.__parsed_query["create"][0][1] is None:
                         self.__parsed_query["create"][0][1] = self.current_schema
                     if self.__parsed_query["create"][0][1] != self.current_schema:
-                        if not self.__get_grant_for_object(owner=self.__parsed_query["create"][0][1], obj_name='TABLE', grant_needed='CREATE'):
+                        if not self.__get_grant_for_object(
+                            owner=self.__parsed_query["create"][0][1],
+                            obj_name="TABLE",
+                            grant_needed="CREATE",
+                        ):
                             raise vExcept(901)
-                elif self.__parsed_query["create"][0][0] == 'USER':
-                    if not self.__get_grant_for_object(owner=None, obj_name='USER', grant_needed='CREATE'):
+                elif self.__parsed_query["create"][0][0] == "USER":
+                    if not self.__get_grant_for_object(owner=None, obj_name="USER", grant_needed="CREATE"):
                         raise vExcept(901)
-            case 'DROP':
-                if self.__parsed_query["drop"][0][0] == 'TABLE':
+            case "DROP":
+                if self.__parsed_query["drop"][0][0] == "TABLE":
                     if self.__parsed_query["drop"][0][1] is None:
                         self.__parsed_query["drop"][0][1] = self.current_schema
                     if self.__parsed_query["drop"][0][1] != self.current_schema:
-                        if not self.__get_grant_for_object(owner=self.__parsed_query["drop"][0][1], obj_name='TABLE', grant_needed='DROP'):
+                        if not self.__get_grant_for_object(
+                            owner=self.__parsed_query["drop"][0][1],
+                            obj_name="TABLE",
+                            grant_needed="DROP",
+                        ):
                             raise vExcept(902)
-                elif self.__parsed_query["drop"][0][0] == 'USER':
-                    if not self.__get_grant_for_object(owner=None, obj_name='USER', grant_needed='DROP'):
+                elif self.__parsed_query["drop"][0][0] == "USER":
+                    if not self.__get_grant_for_object(owner=None, obj_name="USER", grant_needed="DROP"):
                         raise vExcept(902)
-            case 'INSERT':
+            case "INSERT":
                 if self.__parsed_query["insert"][0] is None:
                     self.__parsed_query["insert"][0] = self.current_schema
-                u_name=self.__parsed_query["insert"][0]
-                t_name=self.__parsed_query["insert"][1]
-                if not self.__get_grant_for_object(owner=u_name, obj_name=t_name, grant_needed='INSERT'):
-                    raise vExcept(210, '{}.{}'.format(u_name, t_name))
-            case 'UPDATE':
+                u_name = self.__parsed_query["insert"][0]
+                t_name = self.__parsed_query["insert"][1]
+                if not self.__get_grant_for_object(owner=u_name, obj_name=t_name, grant_needed="INSERT"):
+                    raise vExcept(210, "{}.{}".format(u_name, t_name))
+            case "UPDATE":
                 if self.__parsed_query["from"][0][1] is None:
                     self.__parsed_query["from"][0][1] = self.current_schema
-                u_name=self.__parsed_query["from"][0][1]
-                t_name=self.__parsed_query["from"][0][2]
-                if not self.__get_grant_for_object(owner=u_name, obj_name=t_name, grant_needed='UPDATE'):
-                    raise vExcept(210, '{}.{}'.format(u_name, t_name))
-            case 'DELETE':
+                u_name = self.__parsed_query["from"][0][1]
+                t_name = self.__parsed_query["from"][0][2]
+                if not self.__get_grant_for_object(owner=u_name, obj_name=t_name, grant_needed="UPDATE"):
+                    raise vExcept(210, "{}.{}".format(u_name, t_name))
+            case "DELETE":
                 if self.__parsed_query["from"][0][1] is None:
                     self.__parsed_query["from"][0][1] = self.current_schema
-                u_name=self.__parsed_query["from"][0][1]
-                t_name=self.__parsed_query["from"][0][2]
-                if not self.__get_grant_for_object(owner=u_name, obj_name=t_name, grant_needed='DELETE'):
-                    raise vExcept(210, '{}.{}'.format(u_name, t_name))
+                u_name = self.__parsed_query["from"][0][1]
+                t_name = self.__parsed_query["from"][0][2]
+                if not self.__get_grant_for_object(owner=u_name, obj_name=t_name, grant_needed="DELETE"):
+                    raise vExcept(210, "{}.{}".format(u_name, t_name))
         return result
 
     def submit_query_process_query(self, result):
@@ -218,88 +381,105 @@ class vCursor(object):
             dict: the result set of the query
         """
         match self.__parsed_query["querytype"]:
-            case 'CREATE':
-                if self.__parsed_query["create"][0][0] == 'TABLE':
-                    self.__process_create_table()
-                    result = {"message": "Table created"}
-                elif self.__parsed_query["create"][0][0] == 'USER':
-                    self.__process_create_user()
-                    result = {"message": "User created"}
-            case 'DROP':
-                if self.__parsed_query["drop"][0][0] == 'TABLE':
-                    self.__process_drop_table()
-                    result = {"message": "Table dropped"}
-                elif self.__parsed_query["drop"][0][0] == 'USER':
-                    self.__process_drop_user()
-                    result = {"message": "User dropped"}
-            case 'INSERT':
+            case "CREATE":
+                match self.__parsed_query["create"][0][0]:
+                    case "TABLE":
+                        self.__process_create_table()
+                        result = {"message": "Table created"}
+                    case "USER":
+                        self.__process_create_user()
+                        result = {"message": "User created"}
+                    case "SEQUENCE":
+                        self.__process_create_sequence()
+                        result = {"message": "Sequence created"}
+            case "DROP":
+                match self.__parsed_query["drop"][0][0]:
+                    case "TABLE":
+                        self.__process_drop_table()
+                        result = {"message": "Table dropped"}
+                    case "USER":
+                        self.__process_drop_user()
+                        result = {"message": "User dropped"}
+                    case "SEQUENCE":
+                        self.__process_drop_sequence()
+                        result = {"message": "Sequence dropped"}
+            case "INSERT":
                 cnt = self.__process_insert()
                 result = {"message": "{} line(s) inserted".format(cnt)}
-            case 'SELECT':
+            case "SELECT":
                 result = self.__process_select(result)
-            case 'UPDATE':
+            case "UPDATE":
                 cnt = self.__process_update()
                 result = {"message": "{} line(s) updated".format(cnt)}
-            case 'DELETE':
+            case "DELETE":
                 cnt = self.__process_delete()
                 result = {"message": "{} line(s) deleted".format(cnt)}
-            case 'DESCRIBE':
+            case "DESCRIBE":
                 result["schema"] = self.__parsed_query["from"][0][1]
                 result["table_name"] = self.__parsed_query["from"][0][2]
                 result["columns"] = self.__parsed_query["from"][0][4][0]["columns"]
-            case 'COMMIT':
-                self.__commit()
-                result["message"] = 'Commited'
-            case 'ROLLBACK':
-                self.__rollback()
-                result["message"] = 'Rollbacked'
+            case "COMMIT":
+                self.__session.commit()
+                result["message"] = "Commited"
+            case "ROLLBACK":
+                self.__session.rollback()
+                result["message"] = "Rollbacked"
         return result
 
     def submit_query_remove_locks(self):
-        if self.__parsed_query["querytype"] in ['SELECT', 'DESCRIBE']:
+        if self.__parsed_query["querytype"] in ["SELECT", "DESCRIBE"]:
             self.db.del_locks(session_id=self.session_id, lock_type=10)
-        elif self.__parsed_query["querytype"] in ['INSERT']:
+        elif self.__parsed_query["querytype"] in ["INSERT"]:
             self.db.del_locks(session_id=self.session_id, lock_type=10)
-        elif self.__parsed_query["querytype"] in ['DROP']:
-            if self.__parsed_query["drop"][0][0] == 'TABLE':
-                self.db.del_locks(session_id=self.session_id, owner=self.__parsed_query["drop"][0][1], name=self.__parsed_query["drop"][0][2], lock_type=0)
-            elif self.__parsed_query["drop"][0][0] == 'USER':
-                self.db.del_locks(session_id=self.session_id, owner=self.__parsed_query["drop"][0][1], lock_type=0)
-        elif self.__parsed_query["querytype"] in ['COMMIT', 'ROLLBACK']:
+        elif self.__parsed_query["querytype"] in ["DROP"]:
+            if self.__parsed_query["drop"][0][0] == "TABLE":
+                self.db.del_locks(
+                    session_id=self.session_id,
+                    owner=self.__parsed_query["drop"][0][1],
+                    name=self.__parsed_query["drop"][0][2],
+                    lock_type=0,
+                )
+            elif self.__parsed_query["drop"][0][0] == "USER":
+                self.db.del_locks(
+                    session_id=self.session_id,
+                    owner=self.__parsed_query["drop"][0][1],
+                    lock_type=0,
+                )
+        elif self.__parsed_query["querytype"] in ["COMMIT", "ROLLBACK"]:
             self.db.del_locks(session_id=self.session_id, lock_type=99)
 
     def submit_query_prepare_post_tasks(self):
-    # post_data_model : col_id= {
-    #   obj_name= {
-    #   [
-    #     table_alias, 
-    #     schema,
-    #     table_name,
-    #     col_name/value,
-    #     alias,
-    #     type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS, PIPE),
-    #     table position,
-    #     position in table,
-    #     table or cursor]
-    #     }
-    #   }
+        # post_data_model : col_id= {
+        #   obj_name= {
+        #   [
+        #     table_alias,
+        #     schema,
+        #     table_name,
+        #     col_name/value,
+        #     alias,
+        #     type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS, PIPE),
+        #     table position,
+        #     position in table,
+        #     table or cursor]
+        #     }
+        #   }
         NColGrp = 0
         for n, col in enumerate(self.__parsed_query["select"]):
             res = {}
             flg = False
             match col[5]:
-                case 'FUNCTION':
+                case "FUNCTION":
                     flg, res = self.submit_query_prepare_post_tasks_function(col[3], res, False)
-                case 'MATHS':
+                case "MATHS":
                     flg, res = self.submit_query_prepare_post_tasks_maths(col[3], res, False)
-                case 'PIPE':
+                case "PIPE":
                     flg, res = self.submit_query_prepare_post_tasks_pipe(col[3], res, False)
             if flg:
                 NColGrp += 1
                 self.__parsed_query["post_data_model"][n] = res
-        if NColGrp+len(self.__parsed_query["group_by"]) < len(self.__parsed_query["select"]):
+        if NColGrp + len(self.__parsed_query["group_by"]) < len(self.__parsed_query["select"]):
             raise vExcept(752)
-        elif NColGrp+len(self.__parsed_query["group_by"]) > len(self.__parsed_query["select"]):
+        elif NColGrp + len(self.__parsed_query["group_by"]) > len(self.__parsed_query["select"]):
             raise vExcept(754)
         # print(f'submit_query_prepare_post_tasks  post_data_model={self.__parsed_query["post_data_model"]}')
 
@@ -315,66 +495,96 @@ class vCursor(object):
             "completed": [],
             "rowscompleted": [],
             "done": False,
-            "function": self.__parsed_query["functions"][fct_id][1]}
+            "function": self.__parsed_query["functions"][fct_id][1],
+        }
         colcount = len(res[self.__parsed_query["functions"][fct_id][0]]["colvalmodel"])
         match res[self.__parsed_query["functions"][fct_id][0]]["function"]:
-            case 'ABS'|'ACOS'|'ASIN'|'ATAN'|'AVG'|'CEIL'|'CHR'|'COS'|'COSH'|'COUNT'|'EXP'|'FLOOR'|'LENGTH'|'LN'|'LOWER'|'MAX'|'MIN'|'MOD'|'SIN'|'SINH'|'SQRT'|'SUM'|'TAN'|'TANH'|'UPPER':
+            case (
+                "ABS"
+                | "ACOS"
+                | "ASIN"
+                | "ATAN"
+                | "AVG"
+                | "CEIL"
+                | "CHR"
+                | "COS"
+                | "COSH"
+                | "COUNT"
+                | "EXP"
+                | "FLOOR"
+                | "LENGTH"
+                | "LN"
+                | "LOWER"
+                | "MAX"
+                | "MIN"
+                | "MOD"
+                | "SIN"
+                | "SINH"
+                | "SQRT"
+                | "SUM"
+                | "TAN"
+                | "TANH"
+                | "UPPER"
+            ):
                 if colcount != 1:
-                    raise vExcept(2323, res[self.__parsed_query["functions"][fct_id][0]]["function"])
-            case 'DECODE':
+                    raise vExcept(
+                        2323,
+                        res[self.__parsed_query["functions"][fct_id][0]]["function"],
+                    )
+            case "DECODE":
                 if colcount % 2 != 0:
                     raise vExcept(2308, colcount)
-            case 'INSTR':
+            case "INSTR":
                 if colcount not in [2, 3, 4]:
                     raise vExcept(2313, colcount)
-            case 'LPAD':
+            case "LPAD":
                 if colcount not in [2, 3]:
                     raise vExcept(2316, colcount)
-            case 'LTRIM':
+            case "LTRIM":
                 if colcount not in [1, 2]:
                     raise vExcept(2320, colcount)
-            case 'NVL':
+            case "NVL":
                 if colcount != 2:
                     raise vExcept(2314, colcount)
-            case 'MOD':
+            case "MOD":
                 if colcount != 2:
                     raise vExcept(2349, colcount)
-            case 'POWER':
+            case "POWER":
                 if colcount != 2:
                     raise vExcept(2350, colcount)
-            case 'LOG':
+            case "LOG":
                 if colcount != 2:
                     raise vExcept(2351, colcount)
-            case 'ATAN2':
+            case "ATAN2":
                 if colcount != 2:
                     raise vExcept(2332, colcount)
-            case 'NVL2':
+            case "NVL2":
                 if colcount != 3:
                     raise vExcept(2315, colcount)
-            case 'RPAD':
+            case "RPAD":
                 if colcount not in [2, 3]:
                     raise vExcept(2318, colcount)
-            case 'RTRIM'|'TRUNC':
+            case "RTRIM" | "TRUNC":
                 if colcount not in [1, 2]:
                     raise vExcept(2321, colcount)
-            case 'SUBSTR':
+            case "SUBSTR":
                 if colcount != 3:
                     raise vExcept(2300, colcount)
-            case 'TO_CHAR':
+            case "TO_CHAR":
                 if colcount != 2:
                     raise vExcept(2305, colcount)
-            case 'PI':
+            case "PI":
                 if colcount != 0:
                     raise vExcept(2341, colcount)
         if self.__parsed_query["functions"][fct_id][1] in self.__group_functions:
             flg = True
         for n, col in enumerate(self.__parsed_query["functions"][fct_id][2]):
             match col[4]:
-                case 'FUNCTION':
+                case "FUNCTION":
                     tmpflg, res = self.submit_query_prepare_post_tasks_function(col[3], res, True)
-                case 'MATHS':
+                case "MATHS":
                     tmpflg, res = self.submit_query_prepare_post_tasks_maths(col[3], res, True)
-                case 'PIPE':
+                case "PIPE":
                     tmpflg, res = self.submit_query_prepare_post_tasks_pipe(col[3], res, True)
             if tmpflg:
                 flg = True
@@ -391,16 +601,17 @@ class vCursor(object):
             "dependant": dependant,
             "completed": [],
             "rowscompleted": [],
-            "done": False}
+            "done": False,
+        }
         for n, col in enumerate(self.__parsed_query["maths"][maths_id][2]):
-            if col[1][0] == 'META':
+            if col[1][0] == "META":
                 continue
             match col[1][5]:
-                case 'FUNCTION':
+                case "FUNCTION":
                     tmpflg, res = self.submit_query_prepare_post_tasks_function(col[1][4], res, True)
-                case 'MATHS':
+                case "MATHS":
                     tmpflg, res = self.submit_query_prepare_post_tasks_maths(col[1][4], res, True)
-                case 'PIPE':
+                case "PIPE":
                     tmpflg, res = self.submit_query_prepare_post_tasks_pipe(col[1][4], res, True)
             if tmpflg:
                 flg = True
@@ -417,20 +628,21 @@ class vCursor(object):
             "dependant": dependant,
             "completed": [],
             "rowscompleted": [],
-            "done": False}
+            "done": False,
+        }
         for n, col in enumerate(self.__parsed_query["pipe"][pipe_id][1]):
             match col[5]:
-                case 'FUNCTION':
+                case "FUNCTION":
                     tmpflg, res = self.submit_query_prepare_post_tasks_function(col[3], res, True)
-                case 'MATHS':
+                case "MATHS":
                     tmpflg, res = self.submit_query_prepare_post_tasks_maths(col[3], res, True)
-                case 'PIPE':
+                case "PIPE":
                     tmpflg, res = self.submit_query_prepare_post_tasks_pipe(col[3], res, True)
             if tmpflg:
                 flg = True
         return flg, res
 
-    def execute(self, _query:str, bind:dict = []):
+    def execute(self, _query: str, bind: dict = []):
         self.__RAZ()
         result = {}
         self.__bind = bind
@@ -451,18 +663,43 @@ class vCursor(object):
         # print(f'execute group_by={self.__parsed_query["group_by"]}')
         # print(f'execute order_by={self.__parsed_query["order_by"]}')
         # print(f'execute cursors={self.__parsed_query["cursors"]}')
-        if self.__parsed_query["querytype"] in ['SELECT']:
+        # print(f'execute cursors={self.__parsed_query["create"]}')
+        # print(f'execute grant={self.__parsed_query["grant"]}')
+        if self.__parsed_query["querytype"] in ["SELECT"]:
             result = {"columns": [], "rows": []}
-        elif self.__parsed_query["querytype"] in ['DESCRIBE']:
+        elif self.__parsed_query["querytype"] in ["DESCRIBE"]:
             result = {"columns": [], "schema": [], "table_name": []}
-        elif self.__parsed_query["querytype"] in ['GRANT', 'CREATE', 'DROP', 'INSERT', 'COMMIT', 'ROLLBACK', 'UPDATE', 'DELETE']:
+        elif self.__parsed_query["querytype"] in [
+            "GRANT",
+            "CREATE",
+            "DROP",
+            "INSERT",
+            "COMMIT",
+            "ROLLBACK",
+            "UPDATE",
+            "DELETE",
+        ]:
             result = {"message": None}
 
         # put locks
         self.submit_query_put_locks()
 
+        # load sequences
+        if self.__parsed_query["querytype"] in [
+            "SELECT",
+            "UPDATE",
+            "DELETE",
+        ]:
+            self.__validate_sequence()
+        # print(f'execute sequences={self.__parsed_query["sequences"]}')
+
         # load tables
-        if self.__parsed_query["querytype"] in ['SELECT', 'DESCRIBE', 'UPDATE', 'DELETE']:
+        if self.__parsed_query["querytype"] in [
+            "SELECT",
+            "DESCRIBE",
+            "UPDATE",
+            "DELETE",
+        ]:
             self.__validate_tables()
 
         # check GRANT
@@ -482,6 +719,9 @@ class vCursor(object):
         self.submit_query_remove_locks()
         self.__query_result = result
         self.__query_executed = True
+
+        # save sequences
+        self.db.save_sequence(self.__parsed_query["sequences"])
 
     def fetchall(self):
         if self.__query_executed:
@@ -508,18 +748,29 @@ class vCursor(object):
         return result
 
     def __searchColInFromTables(self, colin, aliasin, table_namein, schemain):
-        if colin == 'ROWNUM':
+        if colin in ["ROWNUM", "NEXTVAL", "CURRVAL"]:
             count = 1
-            memtf, memctf, ctype = None, None, 'INT'
+            memtf, memctf, ctype = None, None, "INT"
         else:
             count = 0
             # print('__searchColInFromTables in', colin, aliasin, table_namein, schemain)
             for tf in range(len(self.__parsed_query["from"])):
                 # print(self.__parsed_query["from"][tf][0:3])
-                if (aliasin is not None) and (aliasin == self.__parsed_query["from"][tf][0]) or \
-                ((aliasin is None) and ( (table_namein is None) or (\
-                (table_namein is not None) and (table_namein == self.__parsed_query["from"][tf][2]) \
-                and ((schemain is None) or (schemain == self.__parsed_query["from"][tf][1]))))):
+                if (
+                    (aliasin is not None)
+                    and (aliasin == self.__parsed_query["from"][tf][0])
+                    or (
+                        (aliasin is None)
+                        and (
+                            (table_namein is None)
+                            or (
+                                (table_namein is not None)
+                                and (table_namein == self.__parsed_query["from"][tf][2])
+                                and ((schemain is None) or (schemain == self.__parsed_query["from"][tf][1]))
+                            )
+                        )
+                    )
+                ):
                     for ctf in range(len(self.__parsed_query["from"][tf][4][0]["columns"])):
                         if colin == self.__parsed_query["from"][tf][4][0]["columns"][ctf][0]:
                             count += 1
@@ -543,16 +794,27 @@ class vCursor(object):
 
     def __searchColsInFromTables(self, colin, aliasin, table_namein, schemain):
         result = []
-        if colin == 'ROWNUM':
+        if colin == "ROWNUM":
             count = 1
-            result.append([colin, aliasin, None, None, None, None, 'INT', None])
+            result.append([colin, aliasin, None, None, None, None, "INT", None])
         else:
             count = 0
             for tf in range(len(self.__parsed_query["from"])):
-                if (aliasin is not None) and (aliasin == self.__parsed_query["from"][tf][0]) or \
-                ((aliasin is None) and ( (table_namein is None) or (\
-                (table_namein is not None) and (table_namein == self.__parsed_query["from"][tf][2]) \
-                and ((schemain is None) or (schemain == self.__parsed_query["from"][tf][1]))))):
+                if (
+                    (aliasin is not None)
+                    and (aliasin == self.__parsed_query["from"][tf][0])
+                    or (
+                        (aliasin is None)
+                        and (
+                            (table_namein is None)
+                            or (
+                                (table_namein is not None)
+                                and (table_namein == self.__parsed_query["from"][tf][2])
+                                and ((schemain is None) or (schemain == self.__parsed_query["from"][tf][1]))
+                            )
+                        )
+                    )
+                ):
                     count += 1
                     for ctf in range(len(self.__parsed_query["from"][tf][4][0]["columns"])):
                         if aliasin is None:
@@ -566,7 +828,18 @@ class vCursor(object):
                         ctype = self.__parsed_query["from"][tf][4][0]["columns"][ctf][1]
                         colin = self.__parsed_query["from"][tf][4][0]["columns"][ctf][0]
                         tab_cur = self.__parsed_query["from"][tf][3]
-                        result.append([colin, aliasin, table_namein, schemain, memtf, memctf, ctype, tab_cur])
+                        result.append(
+                            [
+                                colin,
+                                aliasin,
+                                table_namein,
+                                schemain,
+                                memtf,
+                                memctf,
+                                ctype,
+                                tab_cur,
+                            ]
+                        )
         if count == 0:
             raise vExcept(311, colin)
         elif count == 1:
@@ -584,112 +857,189 @@ class vCursor(object):
                 self.empty_table = [[False, False, False] for x in range(len(self.__parsed_query["from"]))]
             if n == 0:
                 self.empty_table[cur_idx] = [False, False, False]
-            if cur_idx < len(self.__parsed_query["from"])-1:
-                self.__get_rows(cur_idx=cur_idx+1)
+            if cur_idx < len(self.__parsed_query["from"]) - 1:
+                self.__get_rows(cur_idx=cur_idx + 1)
             else:
                 if self.__process_tests():
                     rrow = []
-                    for n, s in enumerate(self.__parsed_query['select']):
-                        if self.__parsed_query['post_tasks'] and (n in self.__parsed_query['post_data_model']):
+                    for n, s in enumerate(self.__parsed_query["select"]):
+                        if self.__parsed_query["post_tasks"] and (n in self.__parsed_query["post_data_model"]):
                             rrow.append(None)
-                            for colkey in self.__parsed_query['post_data_model'][n].keys():
+                            for colkey in self.__parsed_query["post_data_model"][n].keys():
                                 match colkey[0:3]:
-                                    case 'MAT':
-                                        for ncol, col_parse in enumerate(self.__parsed_query['post_data_model'][n][colkey]["columns"]):
-                                            if len(self.__parsed_query['post_data_model'][n][colkey]["colval"]) < len(self.__result) + 1:
-                                                self.__parsed_query['post_data_model'][n][colkey]["colval"].append(copy.deepcopy(self.__parsed_query['post_data_model'][n][colkey]["colvalmodel"]))
-                                                self.__parsed_query['post_data_model'][n][colkey]["result"].append(None)
-                                                self.__parsed_query['post_data_model'][n][colkey]["completed"].append(False)
-                                                self.__parsed_query['post_data_model'][n][colkey]["rowscompleted"].append(False)
+                                    case "MAT":
+                                        for ncol, col_parse in enumerate(self.__parsed_query["post_data_model"][n][colkey]["columns"]):
+                                            if len(self.__parsed_query["post_data_model"][n][colkey]["colval"]) < len(self.__result) + 1:
+                                                self.__parsed_query["post_data_model"][n][colkey]["colval"].append(
+                                                    copy.deepcopy(self.__parsed_query["post_data_model"][n][colkey]["colvalmodel"])
+                                                )
+                                                self.__parsed_query["post_data_model"][n][colkey]["result"].append(None)
+                                                self.__parsed_query["post_data_model"][n][colkey]["completed"].append(False)
+                                                self.__parsed_query["post_data_model"][n][colkey]["rowscompleted"].append(False)
                                             if len(col_parse) == 2:
                                                 col = col_parse[1][1:]
                                                 match col[4]:
-                                                    case 'COLUMN':
-                                                        if col[3] == 'ROWNUM':
-                                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [len(self.__result), True]
-                                                        elif col[3] == '*':
-                                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = ['||ALL_ROWS||', True]
+                                                    case "COLUMN":
+                                                        if col[3] == "ROWNUM":
+                                                            self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                                len(self.__result),
+                                                                True,
+                                                            ]
+                                                        elif col[3] == "*":
+                                                            self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                                "||ALL_ROWS||",
+                                                                True,
+                                                            ]
                                                         else:
-                                                            self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [self.__parsed_query["from"][col[5]][4][0]["rows"][self.__RowsPosInTables[col[5]]][col[6]], True]
-                                                    case 'INT':
-                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [int(col[3]), True]
-                                                    case 'FLOAT':
-                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [float(col[3]), True]
-                                                    case 'HEX':
-                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [col[3], True]
-                                                    case 'DATETIME':
-                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [col[3], True]
-                                                    case 'STR':
-                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [self.__remove_quote(col[3]).replace("''", "'"), True]
-                                                    case 'FUNCTION':
-                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [None, False]
-                                                    case 'MATHS':
-                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [None, False]
-                                                    case 'PIPE':
-                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [None, False]
+                                                            self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                                self.__parsed_query["from"][col[5]][4][0]["rows"][self.__RowsPosInTables[col[5]]][col[6]],
+                                                                True,
+                                                            ]
+                                                    case "INT":
+                                                        self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                            int(col[3]),
+                                                            True,
+                                                        ]
+                                                    case "FLOAT":
+                                                        self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                            float(col[3]),
+                                                            True,
+                                                        ]
+                                                    case "HEX":
+                                                        self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                            col[3],
+                                                            True,
+                                                        ]
+                                                    case "DATETIME":
+                                                        self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                            col[3],
+                                                            True,
+                                                        ]
+                                                    case "STR":
+                                                        self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                            self.__remove_quote(col[3]).replace("''", "'"),
+                                                            True,
+                                                        ]
+                                                    case "FUNCTION":
+                                                        self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                            None,
+                                                            False,
+                                                        ]
+                                                    case "MATHS":
+                                                        self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                            None,
+                                                            False,
+                                                        ]
+                                                    case "PIPE":
+                                                        self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                            None,
+                                                            False,
+                                                        ]
                                                     case _:
                                                         raise vExcept(801)
                                             else:
-                                                self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [None, False]
-                                    case 'FCT':
-                                        for ncol, col in enumerate(self.__parsed_query['post_data_model'][n][colkey]["columns"]):
-                                            if len(self.__parsed_query['post_data_model'][n][colkey]["colval"]) < len(self.__result) + 1:
-                                                self.__parsed_query['post_data_model'][n][colkey]["colval"].append(copy.deepcopy(self.__parsed_query['post_data_model'][n][colkey]["colvalmodel"]))
-                                                self.__parsed_query['post_data_model'][n][colkey]["result"].append(None)
-                                                self.__parsed_query['post_data_model'][n][colkey]["completed"].append(False)
-                                                self.__parsed_query['post_data_model'][n][colkey]["rowscompleted"].append(False)
+                                                self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                    None,
+                                                    False,
+                                                ]
+                                    case "FCT":
+                                        for ncol, col in enumerate(self.__parsed_query["post_data_model"][n][colkey]["columns"]):
+                                            if len(self.__parsed_query["post_data_model"][n][colkey]["colval"]) < len(self.__result) + 1:
+                                                self.__parsed_query["post_data_model"][n][colkey]["colval"].append(
+                                                    copy.deepcopy(self.__parsed_query["post_data_model"][n][colkey]["colvalmodel"])
+                                                )
+                                                self.__parsed_query["post_data_model"][n][colkey]["result"].append(None)
+                                                self.__parsed_query["post_data_model"][n][colkey]["completed"].append(False)
+                                                self.__parsed_query["post_data_model"][n][colkey]["rowscompleted"].append(False)
                                             match col[4]:
-                                                case 'COLUMN':
-                                                    if col[3] == 'ROWNUM':
-                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [len(self.__result), True]
-                                                    elif col[3] == '*':
-                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = ['||ALL_ROWS||', True]
+                                                case "COLUMN":
+                                                    if col[3] == "ROWNUM":
+                                                        self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                            len(self.__result),
+                                                            True,
+                                                        ]
+                                                    elif col[3] == "*":
+                                                        self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                            "||ALL_ROWS||",
+                                                            True,
+                                                        ]
                                                     else:
-                                                        self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [self.__parsed_query["from"][col[5]][4][0]["rows"][self.__RowsPosInTables[col[5]]][col[6]], True]
-                                                case 'INT':
-                                                    self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [int(col[3]), True]
-                                                case 'FLOAT':
-                                                    self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [float(col[3]), True]
-                                                case 'HEX':
-                                                    self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [col[3], True]
-                                                case 'DATETIME':
-                                                    self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [col[3], True]
-                                                case 'STR':
-                                                    self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [self.__remove_quote(col[3]).replace("''", "'"), True]
-                                                case 'FUNCTION':
-                                                    self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [None, False]
-                                                case 'MATHS':
-                                                    self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [None, False]
-                                                case 'PIPE':
-                                                    self.__parsed_query['post_data_model'][n][colkey]["colval"][len(self.__result)][ncol] = [None, False]
+                                                        self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                            self.__parsed_query["from"][col[5]][4][0]["rows"][self.__RowsPosInTables[col[5]]][col[6]],
+                                                            True,
+                                                        ]
+                                                case "INT":
+                                                    self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                        int(col[3]),
+                                                        True,
+                                                    ]
+                                                case "FLOAT":
+                                                    self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                        float(col[3]),
+                                                        True,
+                                                    ]
+                                                case "HEX":
+                                                    self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                        col[3],
+                                                        True,
+                                                    ]
+                                                case "DATETIME":
+                                                    self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                        col[3],
+                                                        True,
+                                                    ]
+                                                case "STR":
+                                                    self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                        self.__remove_quote(col[3]).replace("''", "'"),
+                                                        True,
+                                                    ]
+                                                case "FUNCTION":
+                                                    self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                        None,
+                                                        False,
+                                                    ]
+                                                case "MATHS":
+                                                    self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                        None,
+                                                        False,
+                                                    ]
+                                                case "PIPE":
+                                                    self.__parsed_query["post_data_model"][n][colkey]["colval"][len(self.__result)][ncol] = [
+                                                        None,
+                                                        False,
+                                                    ]
                                                 case _:
                                                     raise vExcept(801)
                             # self.__parsed_query['post_data_model'][n][colkey]["columns"]
                         else:
                             match s[5]:
-                                case 'COLUMN':
-                                    if s[3] == 'ROWNUM':
+                                case "SEQUENCE":
+                                    if s[3] == "NEXTVAL":
+                                        self.__parsed_query["sequences"][s[1]][s[2]] += 1
+                                    rrow.append(self.__parsed_query["sequences"][s[1]][s[2]])
+                                case "COLUMN":
+                                    if s[3] == "ROWNUM":
                                         rrow.append(len(self.__result))
                                     else:
                                         if self.empty_table[s[6]][0] and self.empty_table[s[6]][1]:
                                             rrow.append(None)
                                         else:
                                             rrow.append(self.__parsed_query["from"][s[6]][4][0]["rows"][self.__RowsPosInTables[s[6]]][s[7]])
-                                case 'INT':
+                                case "INT":
                                     rrow.append(int(s[3]))
-                                case 'FLOAT':
+                                case "FLOAT":
                                     rrow.append(float(s[3]))
-                                case 'HEX':
+                                case "HEX":
                                     rrow.append(s[3])
-                                case 'DATETIME':
+                                case "DATETIME":
                                     rrow.append(s[3])
-                                case 'STR':
+                                case "STR":
                                     rrow.append(self.__remove_quote(s[3]).replace("''", "'"))
-                                case 'FUNCTION':
+                                case "FUNCTION":
                                     rrow.append(self.__compute_function(s[3]))
-                                case 'MATHS':
+                                case "MATHS":
                                     rrow.append(self.__compute_maths(s[3]))
-                                case 'PIPE':
+                                case "PIPE":
                                     rrow.append(self.__remove_quote(self.__compute_pipe(s[3])).replace("''", "'"))
                                 case _:
                                     raise vExcept(801)
@@ -726,28 +1076,28 @@ class vCursor(object):
                 strin = strin[1:-1]
         return strin
 
-    def __convert_value(self, varin, fmtin:str):
+    def __convert_value(self, varin, fmtin: str):
         try:
             match fmtin.upper():
-                case 'INT'|'FLOAT'|'HEX'|'DATETIME':
+                case "INT" | "FLOAT" | "HEX" | "DATETIME":
                     if self.__check_STR(varin):
                         if varin[0] in ['"', "'"]:
                             varin = varin[1:]
                         if varin[-1] in ['"', "'"]:
                             varin = varin[:-1]
             match fmtin.upper():
-                case 'INT':
+                case "INT":
                     return int(varin)
-                case 'FLOAT':
+                case "FLOAT":
                     return float(varin)
-                case 'STR':
+                case "STR":
                     return str(varin)
-                case 'HEX':
+                case "HEX":
                     return hex(varin)
-                case 'DATETIME':
+                case "DATETIME":
                     return datetime(varin)
-        except vExcept as e:
-            raise vExcept(2200, "convert {} into '{}'".format(fmtin, fmtin))
+        except vExcept:
+            raise vExcept(2200, f"convert {fmtin} into '{fmtin}'")
         raise vExcept(2201, fmtin)
 
     def __check_cols_name(self, result):
@@ -758,7 +1108,7 @@ class vCursor(object):
 
         Returns:
             _type_: _description_
-        """        
+        """
         for x, name1 in enumerate(result["columns"]):
             cpt = 1
             for y, name2 in enumerate(result["columns"]):
@@ -770,13 +1120,22 @@ class vCursor(object):
 
     def __prefetch_get_rows(self):
         for cur_idx in range(len(self.__parsed_query["from"])):
-            if self.__parsed_query["from"][cur_idx][3] == 'TABLE':
+            if self.__parsed_query["from"][cur_idx][3] == "TABLE":
                 Validate_prefetch_process = False
-                for tst in self.__parsed_query['parsed_where']:
+                for tst in self.__parsed_query["parsed_where"]:
                     if tst[1][0] == "TST":
-                        if (tst[1][5] == "COLUMN") and (tst[1][1] == cur_idx) and (tst[3][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]) or \
-                           (tst[3][5] == "COLUMN") and (tst[3][1] == cur_idx) and (tst[1][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]) or \
-                           (tst[1][5] == "COLUMN") and (tst[1][1] == cur_idx) and (tst[3][5] == "COLUMN") and (tst[3][1] == cur_idx):
+                        if (
+                            (tst[1][5] == "COLUMN")
+                            and (tst[1][1] == cur_idx)
+                            and (tst[3][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"])
+                            or (tst[3][5] == "COLUMN")
+                            and (tst[3][1] == cur_idx)
+                            and (tst[1][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"])
+                            or (tst[1][5] == "COLUMN")
+                            and (tst[1][1] == cur_idx)
+                            and (tst[3][5] == "COLUMN")
+                            and (tst[3][1] == cur_idx)
+                        ):
                             Validate_prefetch_process = True
                             break
                 # print (f'__prefetch_get_rows {self.__parsed_query["from"][cur_idx][2]}  {Validate_prefetch_process}')
@@ -794,7 +1153,7 @@ class vCursor(object):
         #            or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], oper, ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
         if len(self.__parsed_query["parsed_where"]) > 0:
             temp_res = []
-            for tst in self.__parsed_query['parsed_where']:
+            for tst in self.__parsed_query["parsed_where"]:
                 if tst[1][0] != tst[3][0]:
                     raise vExcept(899, tst)
                 if len(tst) == 5:
@@ -808,9 +1167,9 @@ class vCursor(object):
                             c1 = self.__parsed_query["from"][tst[1][1]][4][0]["rows"][self.__RowsPosInTables[tst[1][1]]][tst[1][2]]
                     elif tst[1][5] == "FUNCTION":
                         c1 = self.__compute_function(tst[1][4])
-                    elif tst[1][5] == 'MATHS':
+                    elif tst[1][5] == "MATHS":
                         c1 = self.__compute_maths(tst[1][4])
-                    elif tst[1][5] == 'PIPE':
+                    elif tst[1][5] == "PIPE":
                         c1 = self.__compute_pipe(tst[1][4])
                     else:
                         c1 = tst[1][4]
@@ -821,9 +1180,9 @@ class vCursor(object):
                             c2 = self.__parsed_query["from"][tst[3][1]][4][0]["rows"][self.__RowsPosInTables[tst[3][1]]][tst[3][2]]
                     elif tst[3][5] == "FUNCTION":
                         c2 = self.__compute_function(tst[3][4])
-                    elif tst[3][5] == 'MATHS':
+                    elif tst[3][5] == "MATHS":
                         c2 = self.__compute_maths(tst[3][4])
-                    elif tst[3][5] == 'PIPE':
+                    elif tst[3][5] == "PIPE":
                         c2 = self.__compute_pipe(tst[3][4])
                     else:
                         c2 = tst[3][4]
@@ -836,33 +1195,42 @@ class vCursor(object):
                                 c3 = self.__parsed_query["from"][tst[4][1]][4][0]["rows"][self.__RowsPosInTables[tst[4][1]]][tst[4][2]]
                         elif tst[4][5] == "FUNCTION":
                             c3 = self.__compute_function(tst[4][4])
-                        elif tst[4][5] == 'MATHS':
+                        elif tst[4][5] == "MATHS":
                             c3 = self.__compute_maths(tst[4][4])
-                        elif tst[4][5] == 'PIPE':
+                        elif tst[4][5] == "PIPE":
                             c3 = self.__compute_pipe(tst[4][4])
                         else:
                             c3 = tst[4][4]
-                        result = self.__compare_cols(str(c1), str(c2), '>=') and self.__compare_cols(str(c1), str(c3), '<=')
+                        result = self.__compare_cols(str(c1), str(c2), ">=") and self.__compare_cols(str(c1), str(c3), "<=")
                         # print(f'__process_tests c1={c1} BETWEEN c2={c2} AND c3={c3}  result={result}')
-                    elif tstoper == 'IN':
+                    elif tstoper == "IN":
                         in_id = self.__get_in(c2)
                         result = False
                         for mbr in self.__parsed_query["in"][in_id][2]:
                             if c1 == mbr[3]:
                                 result = True
                                 break
-                    elif tstoper == 'IN_SELECT':
+                    elif tstoper == "IN_SELECT":
                         cid = self.__getCursorID(c2)
-                        if len(self.__parsed_query['cursors'][cid]) == 2:
-                            vsess = vCursor(self.db, self.__session_username, self.__password, self.__updated_tables, self.__session)
+                        if len(self.__parsed_query["cursors"][cid]) == 2:
+                            vsess = vCursor(
+                                self.db,
+                                self.__session_username,
+                                self.__password,
+                                self.__updated_tables,
+                                self.__session,
+                            )
                             vsess.execute(_query=self.__getCursorQuery(c2), bind=self.__bind)
-                            sel_cur = {"rows":vsess.fetchall(), "columns":vsess.description}
+                            sel_cur = {
+                                "rows": vsess.fetchall(),
+                                "columns": vsess.description,
+                            }
                             if len(sel_cur["columns"]) > 1:
                                 raise vExcept(500)
                             del vsess
-                            self.__parsed_query['cursors'][cid].append(sel_cur)
+                            self.__parsed_query["cursors"][cid].append(sel_cur)
                         else:
-                            sel_cur = self.__parsed_query['cursors'][cid][2]
+                            sel_cur = self.__parsed_query["cursors"][cid][2]
                         result = False
                         for mbr in sel_cur["rows"]:
                             if c1 == mbr[0]:
@@ -881,7 +1249,7 @@ class vCursor(object):
         if len(self.__parsed_query["parsed_inner_where"]) > 0:
             for blk in range(len(self.__parsed_query["parsed_inner_where"])):
                 temp_res = []
-                for tst in self.__parsed_query['parsed_inner_where'][blk]:
+                for tst in self.__parsed_query["parsed_inner_where"][blk]:
                     if tst[1][0] != tst[3][0]:
                         raise vExcept(899, tst)
                     if tst[1][0] == "TST":
@@ -963,7 +1331,7 @@ class vCursor(object):
                 self.empty_table[table_idx][0] = True
                 self.empty_table[table_idx][1] = not left_outer_tests
                 self.empty_table[table_idx][2] = self.empty_table[table_idx][2] or left_outer_tests
-                if self.__RowsPosInTables[table_idx]+1 == len(self.__parsed_query["from"][table_idx][4][0]["rows"]) and not self.empty_table[table_idx][2]:
+                if self.__RowsPosInTables[table_idx] + 1 == len(self.__parsed_query["from"][table_idx][4][0]["rows"]) and not self.empty_table[table_idx][2]:
                     self.empty_table[table_idx][1] = True
                     left_outer_tests = True
         # print(f'__process_tests result={where_tests and inner_tests}')
@@ -975,7 +1343,7 @@ class vCursor(object):
         #            or item_id, ['TST', num_table, num_col, alias1, field1, type, schema, table_name, table or cursor], oper, ['TST', num_table, num_col, alias2, field2, type, schema, table_name, table or cursor]
         if len(self.__parsed_query["parsed_where"]) > 0:
             temp_res = []
-            for tst in self.__parsed_query['parsed_where']:
+            for tst in self.__parsed_query["parsed_where"]:
                 no_test = False
                 if tst[1][0] != tst[3][0]:
                     raise vExcept(899, tst)
@@ -994,24 +1362,42 @@ class vCursor(object):
                     elif len(tst) == 5:
                         if (tst[4][5] == "COLUMN") and (tst[4][1] == tab_num):
                             c3 = self.__parsed_query["from"][tst[4][1]][4][0]["rows"][self.__RowsPosInTables[tst[4][1]]][tst[4][2]]
-                            if (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]) or \
-                            (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num) and (tst[1][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]) or \
-                            (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num):
-                                result = self.__compare_cols(str(c1), str(c2), '>=')
-                                if (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[4][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]) or \
-                                (tst[4][5] == "COLUMN") and (tst[4][1] == tab_num) and (tst[1][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]) or \
-                                (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[4][5] == "COLUMN") and (tst[4][1] == tab_num):
-                                    result = result and self.__compare_cols(str(c1), str(c3), '<=')
+                            if (
+                                (tst[1][5] == "COLUMN")
+                                and (tst[1][1] == tab_num)
+                                and (tst[3][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"])
+                                or (tst[3][5] == "COLUMN")
+                                and (tst[3][1] == tab_num)
+                                and (tst[1][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"])
+                                or (tst[1][5] == "COLUMN")
+                                and (tst[1][1] == tab_num)
+                                and (tst[3][5] == "COLUMN")
+                                and (tst[3][1] == tab_num)
+                            ):
+                                result = self.__compare_cols(str(c1), str(c2), ">=")
+                                if (
+                                    (tst[1][5] == "COLUMN")
+                                    and (tst[1][1] == tab_num)
+                                    and (tst[4][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"])
+                                    or (tst[4][5] == "COLUMN")
+                                    and (tst[4][1] == tab_num)
+                                    and (tst[1][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"])
+                                    or (tst[1][5] == "COLUMN")
+                                    and (tst[1][1] == tab_num)
+                                    and (tst[4][5] == "COLUMN")
+                                    and (tst[4][1] == tab_num)
+                                ):
+                                    result = result and self.__compare_cols(str(c1), str(c3), "<=")
                                 else:
                                     result = None
                             else:
                                 result = None
                         else:
                             result = None
-                    elif (tstoper == 'IN'):
+                    elif tstoper == "IN":
                         in_id = self.__get_in(c2)
                         result = False
-                        if self.__parsed_query["in"][in_id][1] == 'LIST':
+                        if self.__parsed_query["in"][in_id][1] == "LIST":
                             for mbr in self.__parsed_query["in"][in_id][2]:
                                 if mbr[5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]:
                                     if c1 == mbr[3]:
@@ -1021,27 +1407,45 @@ class vCursor(object):
                                     result = None
                         else:
                             result = None
-                    elif tstoper == 'IN_SELECT':
+                    elif tstoper == "IN_SELECT":
                         cid = self.__getCursorID(c2)
-                        if len(self.__parsed_query['cursors'][cid]) == 2:
-                            vsess = vCursor(self.db, self.__session_username, self.__password, self.__updated_tables, self.__session)
+                        if len(self.__parsed_query["cursors"][cid]) == 2:
+                            vsess = vCursor(
+                                self.db,
+                                self.__session_username,
+                                self.__password,
+                                self.__updated_tables,
+                                self.__session,
+                            )
                             vsess.execute(_query=self.__getCursorQuery(c2), bind=self.__bind)
-                            sel_cur = {"rows":vsess.fetchall(), "columns":vsess.description}
+                            sel_cur = {
+                                "rows": vsess.fetchall(),
+                                "columns": vsess.description,
+                            }
                             if len(sel_cur["columns"]) > 1:
                                 raise vExcept(500)
                             del vsess
-                            self.__parsed_query['cursors'][cid].append(sel_cur)
+                            self.__parsed_query["cursors"][cid].append(sel_cur)
                         else:
-                            sel_cur = self.__parsed_query['cursors'][cid][2]
+                            sel_cur = self.__parsed_query["cursors"][cid][2]
                         result = False
                         for mbr in sel_cur["rows"]:
                             if c1 == mbr[0]:
                                 result = True
                                 break
                     else:
-                        if (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]) or \
-                        (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num) and (tst[1][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]) or \
-                        (tst[1][5] == "COLUMN") and (tst[1][1] == tab_num) and (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num):
+                        if (
+                            (tst[1][5] == "COLUMN")
+                            and (tst[1][1] == tab_num)
+                            and (tst[3][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"])
+                            or (tst[3][5] == "COLUMN")
+                            and (tst[3][1] == tab_num)
+                            and (tst[1][5] in ["INT", "FLOAT", "STR", "HEX", "DATETIME"])
+                            or (tst[1][5] == "COLUMN")
+                            and (tst[1][1] == tab_num)
+                            and (tst[3][5] == "COLUMN")
+                            and (tst[3][1] == tab_num)
+                        ):
                             result = self.__compare_cols(str(c1), str(c2), tstoper)
                         else:
                             result = None
@@ -1103,23 +1507,32 @@ class vCursor(object):
         return result
 
     def __process_create_table(self):
-        if len(self.__parsed_query["create"][0][3]) == 1: # create table with cursor
-            vsess = vCursor(self.db, self.__session_username, self.__password, self.__updated_tables, self.__session)
-            vsess.execute(_query=self.__getCursorQuery(self.__parsed_query["create"][0][3][0]), bind=self.__bind)
+        if len(self.__parsed_query["create"][0][3]) == 1:  # create table with cursor
+            vsess = vCursor(
+                self.db,
+                self.__session_username,
+                self.__password,
+                self.__updated_tables,
+                self.__session,
+            )
+            vsess.execute(
+                _query=self.__getCursorQuery(self.__parsed_query["create"][0][3][0]),
+                bind=self.__bind,
+            )
             # print(f'__process_create_table, cur={vsess.message}')
             blck = {
                 "table_name": self.__parsed_query["create"][0][2].upper(),
                 "schema": self.__parsed_query["create"][0][1].upper(),
                 "columns": vsess.description,
-                "rows": vsess.fetchall()
-                }
-        else: # create table with columns
+                "rows": vsess.fetchall(),
+            }
+        else:  # create table with columns
             blck = {
                 "table_name": self.__parsed_query["create"][0][2].upper(),
                 "schema": self.__parsed_query["create"][0][1].upper(),
                 "columns": self.__parsed_query["create"][0][3],
-                "rows": []
-                }
+                "rows": [],
+            }
         # define upper/lower for columns
         for n in range(len(blck["columns"])):
             blck["columns"][n][0] = blck["columns"][n][0].upper()
@@ -1147,13 +1560,19 @@ class vCursor(object):
                 "UPDATE": [],
                 "DELETE": [],
                 "CREATE": [],
-                "DROP": []
-                }
-            }
+                "DROP": [],
+            },
+        }
         if self.db.checkUserExists(username=self.__parsed_query["create"][0][1]):
             raise vExcept(1801, self.__parsed_query["create"][0][1])
         self.db.AddAccountToMeta(account_bloc=blk)
         self.db.AddAccountToDB(account_bloc=blk)
+        self.db.saveDB()
+
+    def __process_create_sequence(self):
+        sequence = self.__parsed_query["create"][0][1].upper()
+        self.db.AddSequenceToMeta(account=self.current_schema, sequence=sequence)
+        self.db.AddSequenceToDB(account=self.current_schema, sequence=sequence)
         self.db.saveDB()
 
     def __process_drop_table(self):
@@ -1165,7 +1584,7 @@ class vCursor(object):
             self.db.DelTableFile(owner=owner, table_name=table_name)
             self.db.saveDB()
         else:
-            raise vExcept(210, '{}.{}'.format(owner, table_name))
+            raise vExcept(210, f"{owner}.{table_name}")
 
     def __process_drop_user(self):
         usr = self.__parsed_query["drop"][0][1]
@@ -1176,8 +1595,20 @@ class vCursor(object):
         else:
             raise vExcept(1800, usr)
 
+    def __process_drop_sequence(self):
+        sequence = self.__parsed_query["drop"][0][1]
+        if self.db.checkSequenceExists(account=self.current_schema, sequence=sequence):
+            self.db.DelSequenceFromMeta(account=self.current_schema, sequence=sequence)
+            self.db.DelSequenceFromDB(account=self.current_schema, sequence=sequence)
+            self.db.saveDB()
+        else:
+            raise vExcept(381, sequence)
+
     def __process_insert(self):
-        tbl =  self.__get_table(owner=self.__parsed_query["insert"][0], table_name=self.__parsed_query["insert"][1])
+        tbl = self.__get_table(
+            owner=self.__parsed_query["insert"][0],
+            table_name=self.__parsed_query["insert"][1],
+        )
         if len(self.__parsed_query["insert"][2]) > len(tbl["columns"]):
             raise vExcept(310)
         col_mat = []
@@ -1200,13 +1631,25 @@ class vCursor(object):
             for n in range(len(tbl["columns"])):
                 row.append(None)
             for cm in col_mat:
-                row[cm[0]] = self.__format_value(value=self.__parsed_query["insert"][3][cm[1]], type_value=tbl["columns"][cm[0]][1])
+                row[cm[0]] = self.__format_value(
+                    value=self.__parsed_query["insert"][3][cm[1]],
+                    type_value=tbl["columns"][cm[0]][1],
+                )
             tbl["rows"].append(row)
             self.__add_updated_table(tbl)
             return 1
         else:
-            vsess = vCursor(self.db, self.__session_username, self.__password, self.__updated_tables, self.__session)
-            vsess.execute(_query=self.__getCursorQuery(self.__parsed_query['insert'][4]), bind=self.__bind)
+            vsess = vCursor(
+                self.db,
+                self.__session_username,
+                self.__password,
+                self.__updated_tables,
+                self.__session,
+            )
+            vsess.execute(
+                _query=self.__getCursorQuery(self.__parsed_query["insert"][4]),
+                bind=self.__bind,
+            )
             if len(vsess.description) != len(self.__parsed_query["insert"][2]):
                 raise vExcept(312)
             for lgn in vsess.fetchall():
@@ -1224,11 +1667,21 @@ class vCursor(object):
         self.__validate_where()
         # redefine columns to update
         for n in range(len(self.__parsed_query["update"])):
-            colin, aliasin, table_namein, schemain, memtf, memctf, ctype = self.__searchColInFromTables(colin=self.__parsed_query["update"][n][0].upper(),
-                                                                                                        aliasin=self.__parsed_query["from"][0][0],
-                                                                                                        table_namein=None,
-                                                                                                        schemain=None)
-            self.__parsed_query["update"][n][0] = [colin, aliasin, table_namein, schemain, memtf, memctf, ctype]
+            colin, aliasin, table_namein, schemain, memtf, memctf, ctype = self.__searchColInFromTables(
+                colin=self.__parsed_query["update"][n][0].upper(),
+                aliasin=self.__parsed_query["from"][0][0],
+                table_namein=None,
+                schemain=None,
+            )
+            self.__parsed_query["update"][n][0] = [
+                colin,
+                aliasin,
+                table_namein,
+                schemain,
+                memtf,
+                memctf,
+                ctype,
+            ]
         col_mat = []
         for i in range(len(self.__parsed_query["update"])):
             for n in range(len(self.__parsed_query["from"][0][4][0]["columns"])):
@@ -1248,17 +1701,17 @@ class vCursor(object):
                 updt_rows_cnt += 1
                 for updt in self.__parsed_query["update"]:
                     match updt[0][6]:
-                        case 'int':
+                        case "int":
                             self.__parsed_query["from"][0][4][0]["rows"][n][updt[0][5]] = int(updt[2])
-                        case 'float':
+                        case "float":
                             self.__parsed_query["from"][0][4][0]["rows"][n][updt[0][5]] = float(updt[2])
-                        case 'str':
+                        case "str":
                             if (updt[2][0] == "'") and (updt[2][-1] == "'") or (updt[2][0] == '"') and (updt[2][-1] == '"'):
                                 updt[2] = updt[2][1:-1]
                             self.__parsed_query["from"][0][4][0]["rows"][n][updt[0][5]] = str(updt[2])
-                        case 'hex':
+                        case "hex":
                             self.__parsed_query["from"][0][4][0]["rows"][n][updt[0][5]] = hex(updt[2])
-                        case 'datetime':
+                        case "datetime":
                             self.__parsed_query["from"][0][4][0]["rows"][n][updt[0][5]] = updt[2]
         del self.__RowsPosInTables
         self.__add_updated_table(self.__parsed_query["from"][0][4][0])
@@ -1317,23 +1770,28 @@ class vCursor(object):
                 for WorkOnCol in self.__parsed_query["post_data_model"].keys():
                     for obj in self.__parsed_query["post_data_model"][WorkOnCol].keys():
                         # test if "obj" is fully computed
-                        if not (self.__parsed_query["post_data_model"][WorkOnCol][obj]["done"] or self.__parsed_query["post_data_model"][WorkOnCol][obj]["completed"][WorkOnRowIdx]):
+                        if not (
+                            self.__parsed_query["post_data_model"][WorkOnCol][obj]["done"] or self.__parsed_query["post_data_model"][WorkOnCol][obj]["completed"][WorkOnRowIdx]
+                        ):
                             match obj[0:3]:
-                                case 'FCT':
+                                case "FCT":
                                     # all columns data are available, function can be parsed
                                     match self.__parsed_query["post_data_model"][WorkOnCol][obj]["function"]:
-                                        case 'ABS'|'AVG'|'LOWER'|'MAX'|'MIN'|'SUM':
+                                        case "ABS" | "AVG" | "LOWER" | "MAX" | "MIN" | "SUM":
                                             match self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"][0][4]:
-                                                case 'FUNCTION'|'MATHS'|'PIPE':
+                                                case "FUNCTION" | "MATHS" | "PIPE":
                                                     fct = self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"][0][3]
                                                     if self.__parsed_query["post_data_model"][WorkOnCol][fct]["done"]:
                                                         colval = self.__parsed_query["post_data_model"][WorkOnCol][fct]["result"][WorkOnRowIdx]
-                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][0] = [colval, True]
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][0] = [
+                                                            colval,
+                                                            True,
+                                                        ]
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = colval
                                                 case _:
                                                     colval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][0][0]
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = colval
-                                        case 'COUNT':
+                                        case "COUNT":
                                             if self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][0][0] is None:
                                                 self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = 0
                                             else:
@@ -1341,11 +1799,14 @@ class vCursor(object):
                                         case _:
                                             for ncol in range(len(self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"])):
                                                 match self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"][ncol][4]:
-                                                    case 'FUNCTION'|'MATHS'|'PIPE':
+                                                    case "FUNCTION" | "MATHS" | "PIPE":
                                                         fct = self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"][ncol][3]
                                                         if self.__parsed_query["post_data_model"][WorkOnCol][fct]["done"]:
                                                             colval = self.__parsed_query["post_data_model"][WorkOnCol][fct]["result"][WorkOnRowIdx]
-                                                            self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][ncol] = [colval, True]
+                                                            self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][ncol] = [
+                                                                colval,
+                                                                True,
+                                                            ]
                                                     case _:
                                                         colval = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][ncol][0]
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = colval
@@ -1356,35 +1817,53 @@ class vCursor(object):
                                             AllRowsParsed = False
                                     if AllRowsParsed:
                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["completed"][WorkOnRowIdx] = True
-                                case 'MAT':
+                                case "MAT":
                                     # all columns data are available, function can be parsed
                                     for n, column in enumerate(self.__parsed_query["post_data_model"][WorkOnCol][obj]["columns"]):
                                         if not self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][n][1]:
                                             match column[1][0]:
-                                                case 'META':
-                                                    if self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][column[1][1]][1] and self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][column[3][1]][1]:
+                                                case "META":
+                                                    if (
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][column[1][1]][1]
+                                                        and self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][column[3][1]][1]
+                                                    ):
                                                         v1 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][column[1][1]][0]
                                                         v2 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][column[3][1]][0]
                                                         match column[2]:
-                                                            case '+':
-                                                                self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][n] = [v1 + v2, True]
-                                                            case '-':
-                                                                self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][n] = [v1 - v2, True]
-                                                            case '*':
-                                                                self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][n] = [v1 * v2, True]
-                                                            case '/':
+                                                            case "+":
+                                                                self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][n] = [
+                                                                    v1 + v2,
+                                                                    True,
+                                                                ]
+                                                            case "-":
+                                                                self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][n] = [
+                                                                    v1 - v2,
+                                                                    True,
+                                                                ]
+                                                            case "*":
+                                                                self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][n] = [
+                                                                    v1 * v2,
+                                                                    True,
+                                                                ]
+                                                            case "/":
                                                                 if v2 != 0:
-                                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][n] = [v1 / v2, True]
+                                                                    self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][n] = [
+                                                                        v1 / v2,
+                                                                        True,
+                                                                    ]
                                                                 else:
                                                                     raise vExcept(2500)
-                                                case 'TST':
+                                                case "TST":
                                                     match column[1][4][0:3]:
-                                                        case 'FCT':
+                                                        case "FCT":
                                                             if self.__parsed_query["post_data_model"][WorkOnCol][column[1][4]]["done"]:
-                                                                self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][n] = [self.__parsed_query["post_data_model"][WorkOnCol][column[1][4]]["result"][WorkOnRowIdx], True]
-                                                        case 'MAT':
+                                                                self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][n] = [
+                                                                    self.__parsed_query["post_data_model"][WorkOnCol][column[1][4]]["result"][WorkOnRowIdx],
+                                                                    True,
+                                                                ]
+                                                        case "MAT":
                                                             pass
-                                                        case 'PIP':
+                                                        case "PIP":
                                                             pass
                                     # set "completed" if all rows are parsed for each "obj"
                                     AllRowsParsed = True
@@ -1393,7 +1872,9 @@ class vCursor(object):
                                             AllRowsParsed = False
                                     if AllRowsParsed:
                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["completed"][WorkOnRowIdx] = True
-                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][WorkOnRowIdx][-1][0]
+                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = self.__parsed_query["post_data_model"][WorkOnCol][obj][
+                                            "colval"
+                                        ][WorkOnRowIdx][-1][0]
             for WorkOnRowIdx, WorkOnRow in enumerate(matriceROW):
                 for WorkOnCol in self.__parsed_query["post_data_model"].keys():
                     for obj in self.__parsed_query["post_data_model"][WorkOnCol].keys():
@@ -1405,9 +1886,12 @@ class vCursor(object):
                             if self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][WorkOnRowIdx] or NotAllCompleted:
                                 continue
                             match obj[0:3]:
-                                case 'MAT':
+                                case "MAT":
                                     for n in range(len(self.__result)):
-                                        if not self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"] and self.__parsed_query["post_data_model"][WorkOnCol][obj]["completed"][n]:
+                                        if (
+                                            not self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]
+                                            and self.__parsed_query["post_data_model"][WorkOnCol][obj]["completed"][n]
+                                        ):
                                             self.__result[n][WorkOnCol] = self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
                                             self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
                                     AllRowsParsed = 0
@@ -1416,17 +1900,19 @@ class vCursor(object):
                                             AllRowsParsed += 1
                                     if AllRowsParsed == len(self.__result):
                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["done"] = True
-                                case 'FCT':
+                                case "FCT":
                                     match self.__parsed_query["post_data_model"][WorkOnCol][obj]["function"]:
-                                        case 'ABS':
+                                        case "ABS":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
                                                     if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
-                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = abs(self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n])
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = abs(
+                                                            self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
+                                                        )
                                                     else:
                                                         self.__result[n][WorkOnCol] = abs(self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n])
-                                        case 'AVG':
+                                        case "AVG":
                                             total = 0
                                             nbrows = 0
                                             for n in range(len(self.__result)):
@@ -1441,7 +1927,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = total
                                                     else:
                                                         self.__result[n][WorkOnCol] = total
-                                        case 'CHR':
+                                        case "CHR":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     val_int = self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
@@ -1453,7 +1939,7 @@ class vCursor(object):
                                                             self.__result[n][WorkOnCol] = str(chr(int(val_int)))
                                                     else:
                                                         raise vExcept(2310, val_int)
-                                        case 'COUNT':
+                                        case "COUNT":
                                             total = 0
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n]:
@@ -1465,7 +1951,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = total
                                                     else:
                                                         self.__result[n][WorkOnCol] = total
-                                        case 'DECODE':
+                                        case "DECODE":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     param = []
@@ -1476,7 +1962,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__DECODE(param)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__DECODE(param)
-                                        case 'LENGTH':
+                                        case "LENGTH":
                                             for n in range(len(self.__result)):
                                                 # print(self.__parsed_query["post_data_model"][WorkOnCol])
                                                 # print(f'WorkOnCol={WorkOnCol}   obj={obj}')
@@ -1487,7 +1973,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = len(val_int)
                                                     else:
                                                         self.__result[n][WorkOnCol] = len(val_int)
-                                        case 'LOWER':
+                                        case "LOWER":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1496,44 +1982,44 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = val_int
                                                     else:
                                                         self.__result[n][WorkOnCol] = val_int
-                                        case 'LPAD':
+                                        case "LPAD":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
                                                     v1 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
                                                     v2 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][1][0]
-                                                    if len (self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n]) == 3:
+                                                    if len(self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n]) == 3:
                                                         v3 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][2][0]
                                                     else:
-                                                        v3 = ' '
-                                                    vbegin = str(v3 * v2)[0:v2-len(v1)]
-                                                    r = f'{vbegin}{v1}'
+                                                        v3 = " "
+                                                    vbegin = str(v3 * v2)[0 : v2 - len(v1)]
+                                                    r = f"{vbegin}{v1}"
                                                     if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = r
                                                     else:
                                                         self.__result[n][WorkOnCol] = r
-                                        case 'LTRIM':
+                                        case "LTRIM":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
                                                     v1 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
-                                                    if len (self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n]) == 2:
+                                                    if len(self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n]) == 2:
                                                         v2 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][1][0]
                                                     else:
-                                                        v2 = ' '
-                                                    while v1[0:len(v2)] == v2:
-                                                        v1 = v1[len(v2):]
+                                                        v2 = " "
+                                                    while v1[0 : len(v2)] == v2:
+                                                        v1 = v1[len(v2) :]
                                                     if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = v1
                                                     else:
                                                         self.__result[n][WorkOnCol] = v1
-                                        case 'NVL':
+                                        case "NVL":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
                                                     v1 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
                                                     v2 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][1][0]
-                                                    if (v1 is None) or (v1 == ''):
+                                                    if (v1 is None) or (v1 == ""):
                                                         if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
                                                             self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = v2
                                                         else:
@@ -1543,14 +2029,14 @@ class vCursor(object):
                                                             self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = v1
                                                         else:
                                                             self.__result[n][WorkOnCol] = v1
-                                        case 'NVL2':
+                                        case "NVL2":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
                                                     v1 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
                                                     v2 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][1][0]
                                                     v3 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][2][0]
-                                                    if (v1 is None) or (v1 == ''):
+                                                    if (v1 is None) or (v1 == ""):
                                                         if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
                                                             self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = v3
                                                         else:
@@ -1560,7 +2046,7 @@ class vCursor(object):
                                                             self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = v2
                                                         else:
                                                             self.__result[n][WorkOnCol] = v2
-                                        case 'MAX':
+                                        case "MAX":
                                             total = None
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n]:
@@ -1575,7 +2061,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = total
                                                     else:
                                                         self.__result[n][WorkOnCol] = total
-                                        case 'MIN':
+                                        case "MIN":
                                             total = None
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n]:
@@ -1590,38 +2076,38 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = total
                                                     else:
                                                         self.__result[n][WorkOnCol] = total
-                                        case 'RPAD':
+                                        case "RPAD":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
                                                     v1 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
                                                     v2 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][1][0]
-                                                    if len (self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n]) == 3:
+                                                    if len(self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n]) == 3:
                                                         v3 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][2][0]
                                                     else:
-                                                        v3 = ' '
-                                                    vbegin = str(v3 * v2)[0:v2-len(v1)]
+                                                        v3 = " "
+                                                    vbegin = str(v3 * v2)[0 : v2 - len(v1)]
                                                     r = str(v1 + vbegin)
                                                     if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = r
                                                     else:
                                                         self.__result[n][WorkOnCol] = r
-                                        case 'RTRIM':
+                                        case "RTRIM":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
                                                     v1 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][0][0]
-                                                    if len (self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n]) == 2:
+                                                    if len(self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n]) == 2:
                                                         v2 = self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][1][0]
                                                     else:
-                                                        v2 = ' '
-                                                    while v1[-len(v2):] == v2:
-                                                        v1 = v1[:-len(v2)]
+                                                        v2 = " "
+                                                    while v1[-len(v2) :] == v2:
+                                                        v1 = v1[: -len(v2)]
                                                     if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = v1
                                                     else:
                                                         self.__result[n][WorkOnCol] = v1
-                                        case 'SUBSTR':
+                                        case "SUBSTR":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1632,7 +2118,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__SUBSTR(strin, sttin, lenin)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__SUBSTR(strin, sttin, lenin)
-                                        case 'SUM':
+                                        case "SUM":
                                             total = 0
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n]:
@@ -1644,7 +2130,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = total
                                                     else:
                                                         self.__result[n][WorkOnCol] = total
-                                        case 'TO_CHAR':
+                                        case "TO_CHAR":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1654,7 +2140,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__TO_CHAR(dtein, fmtin)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__TO_CHAR(dtein, fmtin)
-                                        case 'INSTR':
+                                        case "INSTR":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1671,10 +2157,20 @@ class vCursor(object):
                                                             inposition = int(self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][2][0])
                                                             inoccurence = int(self.__parsed_query["post_data_model"][WorkOnCol][obj]["colval"][n][3][0])
                                                     if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
-                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__INSTR(instr, insubstr, inposition, inoccurence)
+                                                        self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__INSTR(
+                                                            instr,
+                                                            insubstr,
+                                                            inposition,
+                                                            inoccurence,
+                                                        )
                                                     else:
-                                                        self.__result[n][WorkOnCol] = self.__INSTR(instr, insubstr, inposition, inoccurence)
-                                        case 'TRUNC':
+                                                        self.__result[n][WorkOnCol] = self.__INSTR(
+                                                            instr,
+                                                            insubstr,
+                                                            inposition,
+                                                            inoccurence,
+                                                        )
+                                        case "TRUNC":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1689,7 +2185,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__TRUNC(instr, precision)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__TRUNC(instr, precision)
-                                        case 'EXP':
+                                        case "EXP":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1698,7 +2194,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__EXP(inval)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__EXP(inval)
-                                        case 'LN':
+                                        case "LN":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1707,7 +2203,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__LN(inval)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__LN(inval)
-                                        case 'LOG':
+                                        case "LOG":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1717,7 +2213,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__LOG(inval1, inval2)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__LOG(inval1, inval2)
-                                        case 'CEIL':
+                                        case "CEIL":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1726,7 +2222,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__CEIL(inval)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__CEIL(inval)
-                                        case 'FLOOR':
+                                        case "FLOOR":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1735,7 +2231,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__FLOOR(inval)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__FLOOR(inval)
-                                        case 'PI':
+                                        case "PI":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1744,7 +2240,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__PI()
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__PI()
-                                        case 'ACOS':
+                                        case "ACOS":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1753,7 +2249,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__ACOS(inval)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__ACOS(inval)
-                                        case 'ASIN':
+                                        case "ASIN":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1762,7 +2258,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__ASIN(inval)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__ASIN(inval)
-                                        case 'ATAN':
+                                        case "ATAN":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1771,7 +2267,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__ATAN(inval)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__ATAN(inval)
-                                        case 'COSH':
+                                        case "COSH":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1780,7 +2276,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__COSH(inval)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__COSH(inval)
-                                        case 'SINH':
+                                        case "SINH":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1789,7 +2285,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__SINH(inval)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__SINH(inval)
-                                        case 'TANH':
+                                        case "TANH":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1798,7 +2294,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__TANH(inval)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__TANH(inval)
-                                        case 'ATAN2':
+                                        case "ATAN2":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1808,7 +2304,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__ATAN2(inval1, inval2)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__ATAN2(inval1, inval2)
-                                        case 'COS':
+                                        case "COS":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1817,7 +2313,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__COS(inval)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__COS(inval)
-                                        case 'SIN':
+                                        case "SIN":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1826,7 +2322,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__SIN(inval)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__SIN(inval)
-                                        case 'TAN':
+                                        case "TAN":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1835,7 +2331,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__TAN(inval)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__TAN(inval)
-                                        case 'UPPER':
+                                        case "UPPER":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1844,7 +2340,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = val_int
                                                     else:
                                                         self.__result[n][WorkOnCol] = val_int
-                                        case 'MOD':
+                                        case "MOD":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1854,7 +2350,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__MOD(inval1, inval2)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__MOD(inval1, inval2)
-                                        case 'POWER':
+                                        case "POWER":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1864,7 +2360,7 @@ class vCursor(object):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = self.__POWER(inval1, inval2)
                                                     else:
                                                         self.__result[n][WorkOnCol] = self.__POWER(inval1, inval2)
-                                        case 'SQRT':
+                                        case "SQRT":
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
@@ -1906,10 +2402,15 @@ class vCursor(object):
         self.__result = tmpres
 
     def __process_orderby(self, col_lst):
-        self.__result = self.__sort(self.__result, col_lst, 0, bool(self.__parsed_query["order_by"][0][1] == 'ASC'))
+        self.__result = self.__sort(
+            self.__result,
+            col_lst,
+            0,
+            bool(self.__parsed_query["order_by"][0][1] == "ASC"),
+        )
 
     def __sort(self, src, col_lst, col, asc):
-        a=0
+        a = 0
         result = []
         colsort = self.__parsed_query["order_by"][col][0]
         while len(src) > 0:
@@ -1918,14 +2419,14 @@ class vCursor(object):
             # print(f'__sort len={len(src)} col={colsort} asc={asc}')
             for n in range(len(src)):
                 match col_lst[colsort][1].upper():
-                    case 'INT':
+                    case "INT":
                         if asc:
                             if int(src[n][colsort]) < int(src[min_idx][colsort]):
                                 min_idx = n
                         else:
                             if int(src[n][colsort]) > int(src[min_idx][colsort]):
                                 min_idx = n
-                    case 'FLOAT':
+                    case "FLOAT":
                         if asc:
                             if float(src[n][colsort]) < float(src[min_idx][colsort]):
                                 min_idx = n
@@ -1940,13 +2441,18 @@ class vCursor(object):
                             if str(src[n][colsort]) > str(src[min_idx][colsort]):
                                 min_idx = n
             min_val = src[min_idx][colsort]
-            for n in range(len(src)-1, -1, -1):
+            for n in range(len(src) - 1, -1, -1):
                 # print(f'__sort src[n][colsort]={src[n][colsort]} src[min_idx][colsort]={min_val}')
                 if src[n][colsort] == min_val:
                     srt_cols.append(src[n])
                     del src[n]
-            if col < len(self.__parsed_query["order_by"])-1:
-                srt_cols = self.__sort(srt_cols, col_lst, col+1, bool(self.__parsed_query["order_by"][col+1][1] == 'ASC'))
+            if col < len(self.__parsed_query["order_by"]) - 1:
+                srt_cols = self.__sort(
+                    srt_cols,
+                    col_lst,
+                    col + 1,
+                    bool(self.__parsed_query["order_by"][col + 1][1] == "ASC"),
+                )
             result = result + copy.deepcopy(srt_cols)
             a += 1
             if a > 10:
@@ -1972,8 +2478,8 @@ class vCursor(object):
                         return value
                 case _:
                     raise vExcept(2200, '"{}" as {}'.format(value, type_value))
-        except vExcept as e:
-            raise vExcept(2200, '"{}" as {}'.format(value, type_value))
+        except vExcept:
+            raise vExcept(2200, f'"{value}" as {type_value}')
 
     def __compare_cols(self, c1, c2, oper):
         # print(f'__compare_cols c1={c1} c2={c2} oper={oper}')
@@ -1984,9 +2490,9 @@ class vCursor(object):
             if ((c2[0] == '"') and (c2[-1] == '"')) or ((c2[0] == "'") and (c2[-1] == "'")):
                 c2 = c2[1:-1]
         match oper:
-            case '=':
+            case "=":
                 result = bool(c1 == c2)
-            case '>':
+            case ">":
                 if self.__check_FLOAT(c1) and self.__check_FLOAT(c2):
                     result = bool(float(c1) > float(c2))
                 elif self.__check_INT(c1) and self.__check_INT(c2):
@@ -1997,7 +2503,7 @@ class vCursor(object):
                     result = bool(c1 > c2)
                 else:
                     result = bool(c1 > c2)
-            case '>=':
+            case ">=":
                 if self.__check_FLOAT(c1) and self.__check_FLOAT(c2):
                     result = bool(float(c1) >= float(c2))
                 elif self.__check_INT(c1) and self.__check_INT(c2):
@@ -2008,11 +2514,11 @@ class vCursor(object):
                     result = bool(c1 >= c2)
                 else:
                     result = bool(c1 >= c2)
-            case '<>':
+            case "<>":
                 result = bool(c1 != c2)
-            case '!=':
+            case "!=":
                 result = bool(c1 != c2)
-            case '<':
+            case "<":
                 if self.__check_FLOAT(c1) and self.__check_FLOAT(c2):
                     result = bool(float(c1) < float(c2))
                 elif self.__check_INT(c1) and self.__check_INT(c2):
@@ -2023,7 +2529,7 @@ class vCursor(object):
                     result = bool(c1 < c2)
                 else:
                     result = bool(c1 < c2)
-            case '<=':
+            case "<=":
                 if self.__check_FLOAT(c1) and self.__check_FLOAT(c2):
                     result = bool(float(c1) <= float(c2))
                 elif self.__check_INT(c1) and self.__check_INT(c2):
@@ -2034,9 +2540,9 @@ class vCursor(object):
                     result = bool(c1 <= c2)
                 else:
                     result = bool(c1 <= c2)
-            case 'AND':
+            case "AND":
                 result = bool(c1 and c2)
-            case 'OR':
+            case "OR":
                 result = bool(c1 or c2)
             case _:
                 raise vExcept(510, oper)
@@ -2046,7 +2552,7 @@ class vCursor(object):
     def __check_INT(self, varin):
         try:
             return isinstance(int(varin), int)
-        except Exception as e:
+        except Exception:
             return False
 
     def __check_STR(self, varin):
@@ -2057,55 +2563,75 @@ class vCursor(object):
             return isinstance(float(varin), float)
         #     reg = re.search(r"^[-+]?(\d+([.,]\d*)?|[.,]\d+)([eE][-+]?\d+)?$", varin)
         #     return bool(reg is not None)
-        except Exception as e:
+        except Exception:
             return False
 
     def __check_HEX(self, varin):
         try:
             reg = re.search(r"^[-+]?(0[xX][\dA-Fa-f]+|0[0-7]*|\d+)$", varin)
             return bool(reg is not None)
-        except Exception as e:
+        except Exception:
             return False
 
     def __check_DATETIME(self, varin):
         try:
             reg = datetime.fromtimestamp(varin, tz=None)
             return bool(reg is not None)
-        except Exception as e:
+        except Exception:
             return False
+
+    def __validate_sequence(self):
+        for n in range(len(self.__parsed_query["select"])):
+            cln = self.__parsed_query["select"][n]
+            if cln[5] == "SEQUENCE":
+                r1, r2, r3 = self.db.get_sequence(owner=cln[1], sequence_name=cln[2])
+                if self.__parsed_query["select"][n][1] is None:
+                    self.__parsed_query["select"][n][1] = r1
+                if r1 in self.__parsed_query["sequences"].keys():
+                    self.__parsed_query["sequences"][r1][r2] = r3
+                else:
+                    self.__parsed_query["sequences"][r1] = {r2: r3}
 
     def __validate_tables(self):
         # from: table_alias, schema, table_name, TABLE or CURSOR, {table}
         for n in range(len(self.__parsed_query["from"])):
             tbl = self.__parsed_query["from"][n]
-            if tbl[3] == 'TABLE':
+            if tbl[3] == "TABLE":
                 self.__parsed_query["from"][n].append([self.__get_table(owner=tbl[1], table_name=tbl[2])])
-            elif tbl[3] == 'CURSOR':
-                vsess = vCursor(self.db, self.__session_username, self.__password, self.__updated_tables, self.__session)
+            elif tbl[3] == "CURSOR":
+                vsess = vCursor(
+                    self.db,
+                    self.__session_username,
+                    self.__password,
+                    self.__updated_tables,
+                    self.__session,
+                )
                 vsess.execute(_query=self.__getCursorQuery(tbl[2]), bind=self.__bind)
-                result = {"rows":vsess.fetchall(), "columns":vsess.description}
+                result = {"rows": vsess.fetchall(), "columns": vsess.description}
                 self.__parsed_query["from"][n].append([result])
 
     def __get_table(self, owner, table_name):
         for ut in self.__updated_tables:
-            if (ut['schema'] == owner) and (ut['table_name'] == table_name):
+            if (ut["schema"] == owner) and (ut["table_name"] == table_name):
                 # print('table locale: ', table_name)
                 return copy.deepcopy(ut)
         # print('table de la base: ', table_name)
         tbl = copy.deepcopy(self.db.getTable(owner=owner, table_name=table_name))
-        if len(self.__parsed_query['connect']) == 2:
-            if self.__parsed_query['connect'][0] == '<':
-                for n in range(self.__parsed_query['connect'][1]-1):
-                    tbl["rows"].append([n+1, None])
+        if len(self.__parsed_query["connect"]) == 2:
+            if self.__parsed_query["connect"][0] == "<":
+                for n in range(self.__parsed_query["connect"][1] - 1):
+                    tbl["rows"].append([n + 1, None])
             else:
-                for n in range(self.__parsed_query['connect'][1]):
-                    tbl["rows"].append([n+1, None])
+                for n in range(self.__parsed_query["connect"][1]):
+                    tbl["rows"].append([n + 1, None])
+        elif (len(self.__parsed_query["sequences"]) > 0) and (len(self.__parsed_query["from"]) == 1) and (table_name == "DUAL"):
+            tbl["rows"].append([None, None])
         return tbl
 
     def __add_updated_table(self, tbl):
         found = False
         for n in range(len(self.__updated_tables)):
-            if (self.__updated_tables[n]['schema'] == tbl['schema']) and (self.__updated_tables[n]['table_name'] == tbl['table_name']):
+            if (self.__updated_tables[n]["schema"] == tbl["schema"]) and (self.__updated_tables[n]["table_name"] == tbl["table_name"]):
                 self.__updated_tables[n] = copy.deepcopy(tbl)
                 found = True
                 break
@@ -2113,7 +2639,7 @@ class vCursor(object):
             self.__updated_tables.append(copy.deepcopy(tbl))
 
     def __validate_select(self, result):
-        # select format: 
+        # select format:
         #   0: table_alias
         #   1: schema
         #   2: table_name
@@ -2128,25 +2654,43 @@ class vCursor(object):
         cs = 0
         while chk:
             # print('ckh', cs, self.__parsed_query["select"][cs])
-            if self.__parsed_query["select"][cs][3] == '*':
-                col_mat = self.__searchColsInFromTables(colin=self.__parsed_query["select"][cs][3],
-                                                        aliasin=self.__parsed_query["select"][cs][0],
-                                                        table_namein=self.__parsed_query["select"][cs][2],
-                                                        schemain=self.__parsed_query["select"][cs][1])
+            if self.__parsed_query["select"][cs][3] == "*":
+                col_mat = self.__searchColsInFromTables(
+                    colin=self.__parsed_query["select"][cs][3],
+                    aliasin=self.__parsed_query["select"][cs][0],
+                    table_namein=self.__parsed_query["select"][cs][2],
+                    schemain=self.__parsed_query["select"][cs][1],
+                )
                 # print(f'__validate_select self.__parsed_query["select"][cs]={self.__parsed_query["select"][cs]}')
                 # print(f'__validate_select col_mat={col_mat}')
                 # [colin, aliasin, table_namein, schemain, memtf, memctf, ctype, tab_cur]
                 del self.__parsed_query["select"][cs]
                 for cm in range(len(col_mat)):
-                    self.__parsed_query["select"].insert(cs+cm, [col_mat[cm][1], col_mat[cm][3], col_mat[cm][2], col_mat[cm][0], None, 'COLUMN', col_mat[cm][4], col_mat[cm][5], col_mat[cm][7], []])
+                    self.__parsed_query["select"].insert(
+                        cs + cm,
+                        [
+                            col_mat[cm][1],
+                            col_mat[cm][3],
+                            col_mat[cm][2],
+                            col_mat[cm][0],
+                            None,
+                            "COLUMN",
+                            col_mat[cm][4],
+                            col_mat[cm][5],
+                            col_mat[cm][7],
+                            [],
+                        ],
+                    )
                     result["columns"].append([col_mat[cm][0], col_mat[cm][6]])
                 cs += len(col_mat)
             else:
-                if self.__parsed_query["select"][cs][5] == 'COLUMN':
-                    colin, aliasin, table_namein, schemain, tf, ctf, ctype = self.__searchColInFromTables(colin=self.__parsed_query["select"][cs][3],
-                                                                                                          aliasin=self.__parsed_query["select"][cs][0],
-                                                                                                          table_namein=self.__parsed_query["select"][cs][2],
-                                                                                                          schemain=self.__parsed_query["select"][cs][1])
+                if self.__parsed_query["select"][cs][5] == "COLUMN":
+                    colin, aliasin, table_namein, schemain, tf, ctf, ctype = self.__searchColInFromTables(
+                        colin=self.__parsed_query["select"][cs][3],
+                        aliasin=self.__parsed_query["select"][cs][0],
+                        table_namein=self.__parsed_query["select"][cs][2],
+                        schemain=self.__parsed_query["select"][cs][1],
+                    )
                     # print('ckh0', cs, self.__parsed_query["select"][cs])
                     self.__parsed_query["select"][cs][6] = tf
                     self.__parsed_query["select"][cs][7] = ctf
@@ -2157,28 +2701,41 @@ class vCursor(object):
                         result["columns"].append([self.__parsed_query["select"][cs][3], ctype])
                     else:
                         result["columns"].append([self.__parsed_query["select"][cs][4], ctype])
-                elif self.__parsed_query["select"][cs][5] == 'FUNCTION':
+                elif self.__parsed_query["select"][cs][5] == "FUNCTION":
                     fct_id = self.__get_function(self.__parsed_query["select"][cs][3])
-                    fct_type = self.__get_function_type(self.__parsed_query['functions'][fct_id][1], self.__parsed_query['functions'][fct_id][2][0][4])
+                    fct_type = self.__get_function_type(
+                        self.__parsed_query["functions"][fct_id][1],
+                        self.__parsed_query["functions"][fct_id][2][0][4],
+                    )
                     if self.__parsed_query["select"][cs][4] is None:
                         result["columns"].append([self.__parsed_query["select"][cs][3], fct_type])
                     else:
                         result["columns"].append([self.__parsed_query["select"][cs][4], fct_type])
-                elif self.__parsed_query["select"][cs][5] == 'PIPE':
+                elif self.__parsed_query["select"][cs][5] == "PIPE":
                     if self.__parsed_query["select"][cs][4] is None:
-                        result["columns"].append([self.__parsed_query["select"][cs][3], 'str'])
+                        result["columns"].append([self.__parsed_query["select"][cs][3], "str"])
                     else:
-                        result["columns"].append([self.__parsed_query["select"][cs][4], 'str'])
-                elif self.__parsed_query["select"][cs][5] == 'MATHS':
+                        result["columns"].append([self.__parsed_query["select"][cs][4], "str"])
+                elif self.__parsed_query["select"][cs][5] == "MATHS":
                     if self.__parsed_query["select"][cs][4] is None:
-                        result["columns"].append([self.__parsed_query["select"][cs][3], 'float'])
+                        result["columns"].append([self.__parsed_query["select"][cs][3], "float"])
                     else:
-                        result["columns"].append([self.__parsed_query["select"][cs][4], 'float'])
+                        result["columns"].append([self.__parsed_query["select"][cs][4], "float"])
                 else:
                     if self.__parsed_query["select"][cs][4] is None:
-                        result["columns"].append([self.__parsed_query["select"][cs][3], self.__parsed_query["select"][cs][5]])
+                        result["columns"].append(
+                            [
+                                self.__parsed_query["select"][cs][3],
+                                self.__parsed_query["select"][cs][5],
+                            ]
+                        )
                     else:
-                        result["columns"].append([self.__parsed_query["select"][cs][4], self.__parsed_query["select"][cs][5]])
+                        result["columns"].append(
+                            [
+                                self.__parsed_query["select"][cs][4],
+                                self.__parsed_query["select"][cs][5],
+                            ]
+                        )
                 cs += 1
             if cs >= len(self.__parsed_query["select"]):
                 chk = False
@@ -2188,11 +2745,13 @@ class vCursor(object):
         for n in range(len(self.__parsed_query["maths"])):
             for m in range(len(self.__parsed_query["maths"][n][2])):
                 cblk = self.__parsed_query["maths"][n][2][m]
-                if (len(cblk) == 2) and (cblk[1][5] == 'COLUMN'):
-                    colin, aliasin, table_namein, schemain, tf, ctf, ctype = self.__searchColInFromTables(colin=cblk[1][4],
-                                                                                                          aliasin=cblk[1][1],
-                                                                                                          table_namein=cblk[1][3],
-                                                                                                          schemain=cblk[1][2])
+                if (len(cblk) == 2) and (cblk[1][5] == "COLUMN"):
+                    colin, aliasin, table_namein, schemain, tf, ctf, ctype = self.__searchColInFromTables(
+                        colin=cblk[1][4],
+                        aliasin=cblk[1][1],
+                        table_namein=cblk[1][3],
+                        schemain=cblk[1][2],
+                    )
                     self.__parsed_query["maths"][n][2][m][1][1] = aliasin
                     self.__parsed_query["maths"][n][2][m][1][2] = schemain
                     self.__parsed_query["maths"][n][2][m][1][3] = table_namein
@@ -2201,23 +2760,25 @@ class vCursor(object):
 
     def __validate_pipe(self):
         # pipe : pipe_id, [[
-            # 0: table_alias
-            # 1: schema
-            # 2: table_name
-            # 3: col_name/value
-            # 4: alias
-            # 5: type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS, PIPE)
-            # 6: table position
-            # 7: position in table
-            # 8: table or cursor]]
+        # 0: table_alias
+        # 1: schema
+        # 2: table_name
+        # 3: col_name/value
+        # 4: alias
+        # 5: type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS, PIPE)
+        # 6: table position
+        # 7: position in table
+        # 8: table or cursor]]
         for n in range(len(self.__parsed_query["pipe"])):
             for m in range(len(self.__parsed_query["pipe"][n][1])):
                 cblk = self.__parsed_query["pipe"][n][1][m]
-                if (len(cblk) == 9) and (cblk[5] == 'COLUMN'):
-                    colin, aliasin, table_namein, schemain, tf, ctf, ctype = self.__searchColInFromTables(colin=cblk[3],
-                                                                                                          aliasin=cblk[0],
-                                                                                                          table_namein=cblk[2],
-                                                                                                          schemain=cblk[1])
+                if (len(cblk) == 9) and (cblk[5] == "COLUMN"):
+                    colin, aliasin, table_namein, schemain, tf, ctf, ctype = self.__searchColInFromTables(
+                        colin=cblk[3],
+                        aliasin=cblk[0],
+                        table_namein=cblk[2],
+                        schemain=cblk[1],
+                    )
                     # print(f'__validate_pipe colin={colin}, aliasin={aliasin}, table_namein={table_namein}, schemain={schemain}, tf={tf}, ctf={ctf}, ctype={ctype}')
                     self.__parsed_query["pipe"][n][1][m][0] = aliasin
                     self.__parsed_query["pipe"][n][1][m][1] = schemain
@@ -2241,13 +2802,15 @@ class vCursor(object):
         for n in range(len(self.__parsed_query["functions"])):
             for m in range(len(self.__parsed_query["functions"][n][2])):
                 cblk = self.__parsed_query["functions"][n][2][m]
-                if (cblk[3] == '*') and (self.__parsed_query["functions"][n][1] == 'COUNT'):
+                if (cblk[3] == "*") and (self.__parsed_query["functions"][n][1] == "COUNT"):
                     pass
-                elif cblk[4] == 'COLUMN':
-                    colin, aliasin, table_namein, schemain, tf, ctf, ctype = self.__searchColInFromTables(colin=cblk[3],
-                                                                                                          aliasin=cblk[0],
-                                                                                                          table_namein=cblk[2],
-                                                                                                          schemain=cblk[1])
+                elif cblk[4] == "COLUMN":
+                    colin, aliasin, table_namein, schemain, tf, ctf, ctype = self.__searchColInFromTables(
+                        colin=cblk[3],
+                        aliasin=cblk[0],
+                        table_namein=cblk[2],
+                        schemain=cblk[1],
+                    )
                     self.__parsed_query["functions"][n][2][m][0] = aliasin
                     self.__parsed_query["functions"][n][2][m][1] = schemain
                     self.__parsed_query["functions"][n][2][m][2] = table_namein
@@ -2255,22 +2818,26 @@ class vCursor(object):
                     self.__parsed_query["functions"][n][2][m][6] = ctf
 
     def __validate_where(self):
-        for n in range (len(self.__parsed_query["parsed_where"])):
-            if (self.__parsed_query["parsed_where"][n][1][0] == "TST") and (self.__parsed_query["parsed_where"][n][1][5] == 'COLUMN'):
-                _, aliasin, table_namein, schemain, tf, ctf, ctype = self.__searchColInFromTables(colin=self.__parsed_query["parsed_where"][n][1][4],
-                                                                                                  aliasin=self.__parsed_query["parsed_where"][n][1][3],
-                                                                                                  table_namein=self.__parsed_query["parsed_where"][n][1][7],
-                                                                                                  schemain=self.__parsed_query["parsed_where"][n][1][6])
+        for n in range(len(self.__parsed_query["parsed_where"])):
+            if (self.__parsed_query["parsed_where"][n][1][0] == "TST") and (self.__parsed_query["parsed_where"][n][1][5] == "COLUMN"):
+                _, aliasin, table_namein, schemain, tf, ctf, ctype = self.__searchColInFromTables(
+                    colin=self.__parsed_query["parsed_where"][n][1][4],
+                    aliasin=self.__parsed_query["parsed_where"][n][1][3],
+                    table_namein=self.__parsed_query["parsed_where"][n][1][7],
+                    schemain=self.__parsed_query["parsed_where"][n][1][6],
+                )
                 self.__parsed_query["parsed_where"][n][1][1] = tf
                 self.__parsed_query["parsed_where"][n][1][2] = ctf
                 self.__parsed_query["parsed_where"][n][1][7] = table_namein
                 self.__parsed_query["parsed_where"][n][1][6] = schemain
                 self.__parsed_query["parsed_where"][n][1][3] = aliasin
-            if (self.__parsed_query["parsed_where"][n][3][0] == "TST") and (self.__parsed_query["parsed_where"][n][3][5] == 'COLUMN'):
-                _, aliasin, table_namein, schemain, tf, ctf, _ = self.__searchColInFromTables(colin=self.__parsed_query["parsed_where"][n][3][4],
-                                                                                              aliasin=self.__parsed_query["parsed_where"][n][3][3],
-                                                                                              table_namein=self.__parsed_query["parsed_where"][n][3][7],
-                                                                                              schemain=self.__parsed_query["parsed_where"][n][3][6])
+            if (self.__parsed_query["parsed_where"][n][3][0] == "TST") and (self.__parsed_query["parsed_where"][n][3][5] == "COLUMN"):
+                _, aliasin, table_namein, schemain, tf, ctf, _ = self.__searchColInFromTables(
+                    colin=self.__parsed_query["parsed_where"][n][3][4],
+                    aliasin=self.__parsed_query["parsed_where"][n][3][3],
+                    table_namein=self.__parsed_query["parsed_where"][n][3][7],
+                    schemain=self.__parsed_query["parsed_where"][n][3][6],
+                )
                 self.__parsed_query["parsed_where"][n][3][1] = tf
                 self.__parsed_query["parsed_where"][n][3][2] = ctf
                 self.__parsed_query["parsed_where"][n][3][7] = table_namein
@@ -2278,41 +2845,49 @@ class vCursor(object):
                 self.__parsed_query["parsed_where"][n][3][3] = aliasin
 
     def __validate_inner_where(self):
-        for b in range (len(self.__parsed_query["parsed_inner_where"])):
-            for n in range (len(self.__parsed_query["parsed_inner_where"][b])):
-                if (self.__parsed_query["parsed_inner_where"][b][n][1][0] == "TST") and (self.__parsed_query["parsed_inner_where"][b][n][1][5] == 'COLUMN'):
-                    _, aliasin, _, _, tf, ctf, _ = self.__searchColInFromTables(colin=self.__parsed_query["parsed_inner_where"][b][n][1][4],
-                                                                                aliasin=self.__parsed_query["parsed_inner_where"][b][n][1][3],
-                                                                                table_namein=self.__parsed_query["parsed_inner_where"][b][n][1][7],
-                                                                                schemain=self.__parsed_query["parsed_inner_where"][b][n][1][6])
+        for b in range(len(self.__parsed_query["parsed_inner_where"])):
+            for n in range(len(self.__parsed_query["parsed_inner_where"][b])):
+                if (self.__parsed_query["parsed_inner_where"][b][n][1][0] == "TST") and (self.__parsed_query["parsed_inner_where"][b][n][1][5] == "COLUMN"):
+                    _, aliasin, _, _, tf, ctf, _ = self.__searchColInFromTables(
+                        colin=self.__parsed_query["parsed_inner_where"][b][n][1][4],
+                        aliasin=self.__parsed_query["parsed_inner_where"][b][n][1][3],
+                        table_namein=self.__parsed_query["parsed_inner_where"][b][n][1][7],
+                        schemain=self.__parsed_query["parsed_inner_where"][b][n][1][6],
+                    )
                     self.__parsed_query["parsed_inner_where"][b][n][1][1] = tf
                     self.__parsed_query["parsed_inner_where"][b][n][1][2] = ctf
                     self.__parsed_query["parsed_inner_where"][b][n][1][3] = aliasin
-                if (self.__parsed_query["parsed_inner_where"][b][n][3][0] == "TST") and (self.__parsed_query["parsed_inner_where"][b][n][3][5] == 'COLUMN'):
-                    _, aliasin, _, _, tf, ctf, _ = self.__searchColInFromTables(colin=self.__parsed_query["parsed_inner_where"][b][n][3][4],
-                                                                                aliasin=self.__parsed_query["parsed_inner_where"][b][n][3][3],
-                                                                                table_namein=self.__parsed_query["parsed_inner_where"][b][n][3][7],
-                                                                                schemain=self.__parsed_query["parsed_inner_where"][b][n][3][6])
+                if (self.__parsed_query["parsed_inner_where"][b][n][3][0] == "TST") and (self.__parsed_query["parsed_inner_where"][b][n][3][5] == "COLUMN"):
+                    _, aliasin, _, _, tf, ctf, _ = self.__searchColInFromTables(
+                        colin=self.__parsed_query["parsed_inner_where"][b][n][3][4],
+                        aliasin=self.__parsed_query["parsed_inner_where"][b][n][3][3],
+                        table_namein=self.__parsed_query["parsed_inner_where"][b][n][3][7],
+                        schemain=self.__parsed_query["parsed_inner_where"][b][n][3][6],
+                    )
                     self.__parsed_query["parsed_inner_where"][b][n][3][1] = tf
                     self.__parsed_query["parsed_inner_where"][b][n][3][2] = ctf
                     self.__parsed_query["parsed_inner_where"][b][n][3][3] = aliasin
 
     def __validate_left_outer_where(self):
-        for b in range (len(self.__parsed_query["parsed_left_outer_where"])):
-            for n in range (len(self.__parsed_query["parsed_left_outer_where"][b][1])):
-                if (self.__parsed_query["parsed_left_outer_where"][b][1][n][1][0] == "TST") and (self.__parsed_query["parsed_left_outer_where"][b][1][n][1][5] == 'COLUMN'):
-                    _, aliasin, _, _, tf, ctf, _ = self.__searchColInFromTables(colin=self.__parsed_query["parsed_left_outer_where"][b][1][n][1][4],
-                                                                                aliasin=self.__parsed_query["parsed_left_outer_where"][b][1][n][1][3],
-                                                                                table_namein=self.__parsed_query["parsed_left_outer_where"][b][1][n][1][7],
-                                                                                schemain=self.__parsed_query["parsed_left_outer_where"][b][1][n][1][6])
+        for b in range(len(self.__parsed_query["parsed_left_outer_where"])):
+            for n in range(len(self.__parsed_query["parsed_left_outer_where"][b][1])):
+                if (self.__parsed_query["parsed_left_outer_where"][b][1][n][1][0] == "TST") and (self.__parsed_query["parsed_left_outer_where"][b][1][n][1][5] == "COLUMN"):
+                    _, aliasin, _, _, tf, ctf, _ = self.__searchColInFromTables(
+                        colin=self.__parsed_query["parsed_left_outer_where"][b][1][n][1][4],
+                        aliasin=self.__parsed_query["parsed_left_outer_where"][b][1][n][1][3],
+                        table_namein=self.__parsed_query["parsed_left_outer_where"][b][1][n][1][7],
+                        schemain=self.__parsed_query["parsed_left_outer_where"][b][1][n][1][6],
+                    )
                     self.__parsed_query["parsed_left_outer_where"][b][1][n][1][1] = tf
                     self.__parsed_query["parsed_left_outer_where"][b][1][n][1][2] = ctf
                     self.__parsed_query["parsed_left_outer_where"][b][1][n][1][3] = aliasin
-                if (self.__parsed_query["parsed_left_outer_where"][b][1][n][3][0] == "TST") and (self.__parsed_query["parsed_left_outer_where"][b][1][n][3][5] == 'COLUMN'):
-                    _, aliasin, _, _, tf, ctf, _ = self.__searchColInFromTables(colin=self.__parsed_query["parsed_left_outer_where"][b][1][n][3][4],
-                                                                                aliasin=self.__parsed_query["parsed_left_outer_where"][b][1][n][3][3],
-                                                                                table_namein=self.__parsed_query["parsed_left_outer_where"][b][1][n][3][7],
-                                                                                schemain=self.__parsed_query["parsed_left_outer_where"][b][1][n][3][6])
+                if (self.__parsed_query["parsed_left_outer_where"][b][1][n][3][0] == "TST") and (self.__parsed_query["parsed_left_outer_where"][b][1][n][3][5] == "COLUMN"):
+                    _, aliasin, _, _, tf, ctf, _ = self.__searchColInFromTables(
+                        colin=self.__parsed_query["parsed_left_outer_where"][b][1][n][3][4],
+                        aliasin=self.__parsed_query["parsed_left_outer_where"][b][1][n][3][3],
+                        table_namein=self.__parsed_query["parsed_left_outer_where"][b][1][n][3][7],
+                        schemain=self.__parsed_query["parsed_left_outer_where"][b][1][n][3][6],
+                    )
                     self.__parsed_query["parsed_left_outer_where"][b][1][n][3][1] = tf
                     self.__parsed_query["parsed_left_outer_where"][b][1][n][3][2] = ctf
                     self.__parsed_query["parsed_left_outer_where"][b][1][n][3][3] = aliasin
@@ -2320,8 +2895,8 @@ class vCursor(object):
     def __getCursorQuery(self, cur_name):
         # cursors: cursor_alias, query
         count = 0
-        for n in range(len(self.__parsed_query['cursors'])):
-            c = self.__parsed_query['cursors'][n]
+        for n in range(len(self.__parsed_query["cursors"])):
+            c = self.__parsed_query["cursors"][n]
             if c[0] == cur_name:
                 count += 1
                 result = c[1]
@@ -2335,8 +2910,8 @@ class vCursor(object):
     def __getCursorID(self, cur_name):
         # cursors: cursor_alias, query
         id = None
-        for n in range(len(self.__parsed_query['cursors'])):
-            if self.__parsed_query['cursors'][n][0] == cur_name:
+        for n in range(len(self.__parsed_query["cursors"])):
+            if self.__parsed_query["cursors"][n][0] == cur_name:
                 id = n
                 break
         if id is None:
@@ -2344,41 +2919,46 @@ class vCursor(object):
         else:
             return id
 
-    def __get_grant_for_object(self, owner, obj_name, grant_needed, admin='NO'):
+    def __get_grant_for_object(self, owner, obj_name, grant_needed, admin="NO"):
         # print(owner, obj_name, grant_needed, admin)
-        if ((owner is not None) and (owner.upper() == str(self.current_schema).upper())) or (str(self.current_schema).upper() == 'ADMIN'):
+        if ((owner is not None) and (owner.upper() == str(self.current_schema).upper())) or (str(self.current_schema).upper() == "ADMIN"):
             result = True
         else:
             result = False
-            for n in range(len(self.db.db["Accounts"])):
-                account = self.db.db["Accounts"][n]
-                if str(account["username"]).upper() == str(self.current_schema).upper():
-                    grants = account["grants"]
-                    break
+            grants = self.db.db["Accounts"][self.db.getAccountID(username=str(self.current_schema).lower())]["grants"]
+            # for n in range(len(self.db.db["Accounts"])):
+            #     account = self.db.db["Accounts"][n]
+            #     if str(account["username"]).upper() == str(self.current_schema).upper():
+            #         grants = account["grants"]
+            #         break
             match str(grant_needed).upper():
-                case 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE':
-                    if str(grant_needed).upper() == 'SELECT' and  obj_name == 'DUAL':
+                case "SELECT":
+                    if obj_name == "DUAL":
                         result = True
                     else:
                         for grant in grants[str(grant_needed).upper()]:
-                            if (((grant[1] == str(owner).upper()) and (grant[0] == 'SCHEMA')) or \
-                            ((grant[1] == '{}.{}'.format(owner, obj_name).upper()) and (grant[0] == 'TABLE'))) and \
-                            (admin == 'NO' or admin == grant[2]):
+                            if (
+                                ((grant[1] == str(owner).upper()) and (grant[0] == "SCHEMA"))
+                                or ((grant[1] == f"{owner}.{obj_name}".upper()) and (grant[0] in ["TABLE", "SEQUENCE"]))
+                            ) and (admin == "NO" or admin == grant[2]):
                                 result = True
                                 break
-                case 'CREATE' | 'DROP' :
+                case "INSERT" | "UPDATE" | "DELETE":
+                    for grant in grants[str(grant_needed).upper()]:
+                        if (((grant[1] == str(owner).upper()) and (grant[0] == "SCHEMA")) or ((grant[1] == f"{owner}.{obj_name}".upper()) and (grant[0] == "TABLE"))) and (
+                            admin == "NO" or admin == grant[2]
+                        ):
+                            result = True
+                            break
+                case "CREATE" | "DROP":
                     for grant in grants[str(grant_needed).upper()]:
                         match grant[0]:
-                            case 'TABLE' | 'INDEX':
-                                if (obj_name == grant[0]) and \
-                                   ((owner is not None) and (grant[1] == owner.upper())) and \
-                                   (admin == 'NO' or admin == grant[2]):
+                            case "TABLE" | "INDEX":
+                                if (obj_name == grant[0]) and ((owner is not None) and (grant[1] == owner.upper())) and (admin == "NO" or admin == grant[2]):
                                     result = True
                                     break
-                            case 'USER':
-                                if (obj_name == grant[0]) and \
-                                   (owner is None) and \
-                                   (admin == 'NO' or admin == grant[1]):
+                            case "USER":
+                                if (obj_name == grant[0]) and (owner is None) and (admin == "NO" or admin == grant[1]):
                                     result = True
                                     break
         return result
@@ -2397,30 +2977,30 @@ class vCursor(object):
         maths_num = self.__get_maths(maths_id)
         tmp_res = []
         for blk in self.__parsed_query["maths"][maths_num][2]:
-            if blk[1][0] == 'TST':
+            if blk[1][0] == "TST":
                 match blk[1][5]:
-                    case 'INT':
+                    case "INT":
                         tmp_res.append(int(blk[1][4]))
-                    case 'FLOAT':
+                    case "FLOAT":
                         tmp_res.append(float(blk[1][4]))
-                    case 'FUNCTION':
+                    case "FUNCTION":
                         tmp_res.append(self.__compute_function(blk[1][4]))
-                    case 'PIPE':
+                    case "PIPE":
                         tmp_res.append(self.__compute_pipe(blk[1][4]))
-                    case 'COLUMN':
-                        if blk[1][4] == 'ROWNUM':
+                    case "COLUMN":
+                        if blk[1][4] == "ROWNUM":
                             tmp_res.append(len(self.__result))
                         else:
                             tmp_res.append(self.__parsed_query["from"][blk[1][6]][4][0]["rows"][self.__RowsPosInTables[blk[1][6]]][blk[1][7]])
             else:
                 match blk[2]:
-                    case '+':
+                    case "+":
                         tmp_res.append(tmp_res[blk[1][1]] + tmp_res[blk[3][1]])
-                    case '-':
+                    case "-":
                         tmp_res.append(tmp_res[blk[1][1]] - tmp_res[blk[3][1]])
-                    case '*':
+                    case "*":
                         tmp_res.append(tmp_res[blk[1][1]] * tmp_res[blk[3][1]])
-                    case '/':
+                    case "/":
                         if tmp_res[blk[3][1]] != 0:
                             tmp_res.append(tmp_res[blk[1][1]] / tmp_res[blk[3][1]])
                         else:
@@ -2439,35 +3019,35 @@ class vCursor(object):
         # 7: position in table
         # 8: table or cursor]]
         pipe_num = self.__get_pipe(pipe_id)
-        tmp_res : str = ''
+        tmp_res: str = ""
         for blk in self.__parsed_query["pipe"][pipe_num][1]:
             match blk[5]:
-                case 'STR':
+                case "STR":
                     tmp_res = tmp_res + self.__remove_quote(blk[3])
-                case 'FUNCTION':
+                case "FUNCTION":
                     tmp_res = tmp_res + self.__remove_quote(self.__compute_function(blk[3]))
-                case 'MATHS':
+                case "MATHS":
                     tmp_res = tmp_res + str(self.__compute_maths(blk[3]))
-                case 'COLUMN':
-                    if blk[4] == 'ROWNUM':
-                        tmp_res = tmp_res + f'{len(self.__result)}'
+                case "COLUMN":
+                    if blk[4] == "ROWNUM":
+                        tmp_res = tmp_res + f"{len(self.__result)}"
                     else:
                         val = self.__remove_quote(self.__parsed_query["from"][blk[6]][4][0]["rows"][self.__RowsPosInTables[blk[6]]][blk[7]])
-                        if (val is not None) and (val != ''):
+                        if (val is not None) and (val != ""):
                             tmp_res = tmp_res + str(self.__remove_quote(val))
         return tmp_res
 
     def __get_function_col(self, colblk):
-        if colblk[4] == 'COLUMN':
-            if colblk[3] == 'ROWNUM':
+        if colblk[4] == "COLUMN":
+            if colblk[3] == "ROWNUM":
                 return len(self.__result)
             else:
                 return self.__parsed_query["from"][colblk[5]][4][0]["rows"][self.__RowsPosInTables[colblk[5]]][colblk[6]]
-        elif colblk[4] == 'FUNCTION':
+        elif colblk[4] == "FUNCTION":
             return self.__compute_function(colblk[3])
-        elif colblk[4] == 'MATHS':
+        elif colblk[4] == "MATHS":
             return self.__compute_maths(colblk[3])
-        elif colblk[4] == 'PIPE':
+        elif colblk[4] == "PIPE":
             return self.__compute_pipe(colblk[3])
         else:
             if colblk[4] is None:
@@ -2479,23 +3059,26 @@ class vCursor(object):
         # functions : [fct_id, fct_name, [[table_alias, schema, table_name, col_name/value, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS, PIPE), table position, position in table, table or cursor]]]
         fct_num = self.__get_function(fct_id)
         match self.__parsed_query["functions"][fct_num][1]:
-            case 'ABS':
+            case "ABS":
                 if len(self.__parsed_query["functions"][fct_num][2]) != 1:
                     raise vExcept(2311, len(self.__parsed_query["functions"][fct_num][2]))
                 val_int = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
-                if self.__parsed_query['functions'][fct_num][2][0][4].upper() == 'INT':
+                if self.__parsed_query["functions"][fct_num][2][0][4].upper() == "INT":
                     return abs(int(val_int))
-                elif self.__parsed_query['functions'][fct_num][2][0][4].upper() == 'FLOAT':
+                elif self.__parsed_query["functions"][fct_num][2][0][4].upper() == "FLOAT":
                     return abs(float(val_int))
-                elif self.__parsed_query['functions'][fct_num][2][0][4].upper() == 'MATHS':
-                    maths_num = self.__get_maths(self.__parsed_query['functions'][fct_num][2][0][3])
-                    if self.__parsed_query["maths"][maths_num][3] == 'INT':
+                elif self.__parsed_query["functions"][fct_num][2][0][4].upper() == "MATHS":
+                    maths_num = self.__get_maths(self.__parsed_query["functions"][fct_num][2][0][3])
+                    if self.__parsed_query["maths"][maths_num][3] == "INT":
                         return abs(int(val_int))
                     else:
                         return abs(float(val_int))
                 else:
-                    raise vExcept(2312, f'{val_int} [{self.__parsed_query['functions'][fct_num][2][0][4].upper()}]')
-            case 'CHR':
+                    raise vExcept(
+                        2312,
+                        f"{val_int} [{self.__parsed_query['functions'][fct_num][2][0][4].upper()}]",
+                    )
+            case "CHR":
                 if len(self.__parsed_query["functions"][fct_num][2]) != 1:
                     raise vExcept(2309, len(self.__parsed_query["functions"][fct_num][2]))
                 val_int = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
@@ -2503,7 +3086,7 @@ class vCursor(object):
                     return str(chr(int(val_int)))
                 else:
                     raise vExcept(2310, val_int)
-            case 'DECODE':
+            case "DECODE":
                 if len(self.__parsed_query["functions"][fct_num][2]) % 2 != 0:
                     raise vExcept(2308, len(self.__parsed_query["functions"][fct_num][2]))
                 param = []
@@ -2522,7 +3105,7 @@ class vCursor(object):
                 # if dont_stop_flg:
                 #     res = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][-1])
                 # return res
-            case 'INSTR':
+            case "INSTR":
                 if len(self.__parsed_query["functions"][fct_num][2]) not in [2, 3, 4]:
                     raise vExcept(2313, len(self.__parsed_query["functions"][fct_num][2]))
                 instr = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
@@ -2553,14 +3136,14 @@ class vCursor(object):
                 #             return 0
                 #     except ValueError:
                 #         return 0
-            case 'LENGTH':
+            case "LENGTH":
                 if len(self.__parsed_query["functions"][fct_num][2]) != 1:
                     raise vExcept(2322, len(self.__parsed_query["functions"][fct_num][2]))
                 return len(self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])))
-            case 'LOWER':
+            case "LOWER":
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return str(value).lower()
-            case 'LPAD':
+            case "LPAD":
                 if len(self.__parsed_query["functions"][fct_num][2]) not in [2, 3]:
                     raise vExcept(2316, len(self.__parsed_query["functions"][fct_num][2]))
                 v1 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
@@ -2570,40 +3153,40 @@ class vCursor(object):
                 if len(self.__parsed_query["functions"][fct_num][2]) == 3:
                     v3 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]))
                 else:
-                    v3 = ' '
-                vbegin = str(v3 * v2)[0:v2-len(v1)]
+                    v3 = " "
+                vbegin = str(v3 * v2)[0 : v2 - len(v1)]
                 return str(vbegin + v1)
-            case 'LTRIM':
+            case "LTRIM":
                 if len(self.__parsed_query["functions"][fct_num][2]) not in [1, 2]:
                     raise vExcept(2320, len(self.__parsed_query["functions"][fct_num][2]))
                 v1 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
                 if len(self.__parsed_query["functions"][fct_num][2]) == 2:
                     v2 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1]))
                 else:
-                    v2 = ' '
-                while v1[0:len(v2)] == v2:
-                    v1 = v1[len(v2):]
+                    v2 = " "
+                while v1[0 : len(v2)] == v2:
+                    v1 = v1[len(v2) :]
                 return v1
-            case 'NVL':
+            case "NVL":
                 if len(self.__parsed_query["functions"][fct_num][2]) != 2:
                     raise vExcept(2314, len(self.__parsed_query["functions"][fct_num][2]))
                 v1 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
                 v2 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1]))
-                if (v1 is None) or (v1 == ''):
+                if (v1 is None) or (v1 == ""):
                     return v2
                 else:
                     return v1
-            case 'NVL2':
+            case "NVL2":
                 if len(self.__parsed_query["functions"][fct_num][2]) != 3:
                     raise vExcept(2315, len(self.__parsed_query["functions"][fct_num][2]))
                 v1 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
                 v2 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1]))
                 v3 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]))
-                if (v1 is None) or (v1 == ''):
+                if (v1 is None) or (v1 == ""):
                     return v3
                 else:
                     return v2
-            case 'RPAD':
+            case "RPAD":
                 if len(self.__parsed_query["functions"][fct_num][2]) not in [2, 3]:
                     raise vExcept(2318, len(self.__parsed_query["functions"][fct_num][2]))
                 v1 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
@@ -2613,86 +3196,86 @@ class vCursor(object):
                 if len(self.__parsed_query["functions"][fct_num][2]) == 3:
                     v3 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]))
                 else:
-                    v3 = ' '
-                vbegin = str(v3 * v2)[0:v2-len(v1)]
+                    v3 = " "
+                vbegin = str(v3 * v2)[0 : v2 - len(v1)]
                 return str(v1 + vbegin)
-            case 'RTRIM':
+            case "RTRIM":
                 if len(self.__parsed_query["functions"][fct_num][2]) not in [1, 2]:
                     raise vExcept(2321, len(self.__parsed_query["functions"][fct_num][2]))
                 v1 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
                 if len(self.__parsed_query["functions"][fct_num][2]) == 2:
                     v2 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1]))
                 else:
-                    v2 = ' '
-                while v1[-len(v2):] == v2:
-                    v1 = v1[:-len(v2)]
+                    v2 = " "
+                while v1[-len(v2) :] == v2:
+                    v1 = v1[: -len(v2)]
                 return v1
-            case 'SUBSTR':
+            case "SUBSTR":
                 if len(self.__parsed_query["functions"][fct_num][2]) != 3:
                     raise vExcept(2300, len(self.__parsed_query["functions"][fct_num][2]))
                 strin = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
                 sttin = int(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])) - 1
                 lenin = int(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]))
                 return self.__SUBSTR(strin, sttin, lenin)
-            case 'TO_CHAR':
+            case "TO_CHAR":
                 if len(self.__parsed_query["functions"][fct_num][2]) != 2:
                     raise vExcept(2305, len(self.__parsed_query["functions"][fct_num][2]))
                 dtein = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 fmtin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
                 return self.__TO_CHAR(dtein, fmtin)
-            case 'UPPER':
+            case "UPPER":
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return str(value).upper()
-            case 'SIN':
+            case "SIN":
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__SIN(value)
-            case 'COS':
+            case "COS":
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__COS(value)
-            case 'TAN':
+            case "TAN":
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__TAN(value)
-            case 'EXP':
+            case "EXP":
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__EXP(value)
-            case 'LN':
+            case "LN":
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__LN(value)
-            case 'LOG':
+            case "LOG":
                 value1 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 value2 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
                 return self.__LOG(value1, value2)
-            case 'CEIL':
+            case "CEIL":
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__CEIL(value)
-            case 'FLOOR':
+            case "FLOOR":
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__FLOOR(value)
-            case 'PI':
+            case "PI":
                 return self.__PI()
-            case 'ACOS':
+            case "ACOS":
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__ACOS(value)
-            case 'ASIN':
+            case "ASIN":
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__ASIN(value)
-            case 'ATAN':
+            case "ATAN":
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__ATAN(value)
-            case 'COSH':
+            case "COSH":
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__COSH(value)
-            case 'SINH':
+            case "SINH":
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__SINH(value)
-            case 'TANH':
+            case "TANH":
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__TANH(value)
-            case 'ATAN2':
+            case "ATAN2":
                 val1 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 val2 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
                 return self.__ATAN2(val1, val2)
-            case 'TRUNC':
+            case "TRUNC":
                 if len(self.__parsed_query["functions"][fct_num][2]) == 1:
                     valin = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                     precision = 0
@@ -2702,41 +3285,64 @@ class vCursor(object):
                 else:
                     raise vExcept(2327, len(self.__parsed_query["functions"][fct_num][2]))
                 return self.__TRUNC(valin, precision)
-            case 'MOD':
+            case "MOD":
                 val1 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 val2 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
                 return self.__MOD(val1, val2)
-            case 'POWER':
+            case "POWER":
                 val1 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 val2 = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1])
                 return self.__POWER(val1, val2)
-            case 'SQRT':
+            case "SQRT":
                 value = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
                 return self.__SQRT(value)
 
     def __get_function_type(self, fct_name: str, ref_col_typ: str):
         match fct_name:
-            case 'CHR'|'LENGTH'|'LOWER'|'LPAD'|'LTRIM'|'RPAD'|'RTRIM'|'SUBSTR'|'TO_CHAR'|'UPPER':
-                return 'str'
-            case 'COUNT'|'INSTR'|'MOD':
-                return 'int'
-            case 'AVG'|'ACOS'|'ASIN'|'ATAN'|'ATAN2'|'CEIL'|'COS'|'COSH'|'EXP'|'FLOOR'|'LN'|'LOG'|'MAX'|'MIN'|'PI'|'POWER'|'SIN'|'SINH'|'SQRT'|'SUM'|'TAN'|'TANH':
-                return 'float'
-            case 'ABS':
-                if ref_col_typ.upper() in ['INT', 'FLOAT']:
+            case "CHR" | "LENGTH" | "LOWER" | "LPAD" | "LTRIM" | "RPAD" | "RTRIM" | "SUBSTR" | "TO_CHAR" | "UPPER":
+                return "str"
+            case "COUNT" | "INSTR" | "MOD":
+                return "int"
+            case (
+                "AVG"
+                | "ACOS"
+                | "ASIN"
+                | "ATAN"
+                | "ATAN2"
+                | "CEIL"
+                | "COS"
+                | "COSH"
+                | "EXP"
+                | "FLOOR"
+                | "LN"
+                | "LOG"
+                | "MAX"
+                | "MIN"
+                | "PI"
+                | "POWER"
+                | "SIN"
+                | "SINH"
+                | "SQRT"
+                | "SUM"
+                | "TAN"
+                | "TANH"
+            ):
+                return "float"
+            case "ABS":
+                if ref_col_typ.upper() in ["INT", "FLOAT"]:
                     return ref_col_typ.lower()
                 else:
-                    return 'float'
-            case 'DECODE'|'NVL'|'NVL2':
-                if ref_col_typ.upper() in ['INT', 'FLOAT', 'STR', 'HEX', 'DATETIME']:
+                    return "float"
+            case "DECODE" | "NVL" | "NVL2":
+                if ref_col_typ.upper() in ["INT", "FLOAT", "STR", "HEX", "DATETIME"]:
                     return ref_col_typ.lower()
                 else:
-                    return 'str'
-            case 'TRUNC':
-                if ref_col_typ.upper() == 'DATETIME':
-                    return 'datetime'
+                    return "str"
+            case "TRUNC":
+                if ref_col_typ.upper() == "DATETIME":
+                    return "datetime"
                 else:
-                    return 'float'
+                    return "float"
             case _:
                 raise vExcept(2304, fct_name)
 
@@ -2748,28 +3354,23 @@ class vCursor(object):
                 foundin = instr[inposition:].index(insubstr)
                 if foundin >= 0:
                     if inoccurence == 1:
-                        return foundin+inposition+1
+                        return foundin + inposition + 1
                     else:
                         inoccurence -= 1
-                        inposition = inposition+foundin+1
+                        inposition = inposition + foundin + 1
                 else:
                     return 0
             except ValueError:
                 return 0
 
     def __DECODE(self, param):
-        mainval = param[0]
         n = 1
-        dont_stop_flg = True
-        while (n+1 < len(param)) and dont_stop_flg:
-            if param[n] == mainval:
-                res = param[n+1]
-                dont_stop_flg = False
+        while n + 1 < len(param):
+            if param[n] == param[0]:
+                return param[n + 1]
             else:
                 n += 2
-        if dont_stop_flg:
-            res = param[-1]
-        return res
+        return param[-1]
 
     def __SUBSTR(self, strin, sttin, lenin):
         if sttin < 0:
@@ -2780,19 +3381,19 @@ class vCursor(object):
             raise vExcept(2302, sttin)
         if not self.__check_INT(lenin):
             raise vExcept(2303, lenin)
-        return strin[sttin:sttin+lenin]
-        
+        return strin[sttin : sttin + lenin]
+
     def __TO_CHAR(self, dtein, fmtin):
         if (not self.__check_DATETIME(dtein)) and (not self.__check_FLOAT(dtein)):
             raise vExcept(2306, dtein)
         if not self.__check_STR(fmtin):
             raise vExcept(2307, fmtin)
-        fmtin = fmtin.replace('YYYY', '%Y').replace('YY', '%y')
-        fmtin = fmtin.replace('MM', '%m').replace('MONTH', '%B').replace('MON', '%'+'b')
-        fmtin = fmtin.replace('DDD', '%j').replace('DD', '%'+'d').replace('DAY', '%A').replace('DY', '%'+'a')
-        fmtin = fmtin.replace('HH24', '%H').replace('HH', '%I')
-        fmtin = fmtin.replace('MI', '%M')
-        fmtin = fmtin.replace('SS', '%S')
+        fmtin = fmtin.replace("YYYY", "%Y").replace("YY", "%y")
+        fmtin = fmtin.replace("MM", "%m").replace("MONTH", "%B").replace("MON", "%" + "b")
+        fmtin = fmtin.replace("DDD", "%j").replace("DD", "%" + "d").replace("DAY", "%A").replace("DY", "%" + "a")
+        fmtin = fmtin.replace("HH24", "%H").replace("HH", "%I")
+        fmtin = fmtin.replace("MI", "%M")
+        fmtin = fmtin.replace("SS", "%S")
         return datetime.fromtimestamp(dtein).strftime(fmtin)[1:-1]
 
     def __TRUNC(self, inval, precision):
@@ -2802,38 +3403,38 @@ class vCursor(object):
             raise vExcept(2325, precision)
         if precision > 18:
             raise vExcept(2326, precision)
-        factor = 10 ** precision
+        factor = 10**precision
         return int(inval * factor) / factor
 
     def __COS(self, inval):
-        if (not self.__check_FLOAT(inval)):
+        if not self.__check_FLOAT(inval):
             raise vExcept(2333, inval)
         return math.cos(inval)
 
     def __SIN(self, inval):
-        if (not self.__check_FLOAT(inval)):
+        if not self.__check_FLOAT(inval):
             raise vExcept(2334, inval)
         return math.sin(inval)
 
     def __TAN(self, inval):
-        if (not self.__check_FLOAT(inval)):
+        if not self.__check_FLOAT(inval):
             raise vExcept(2335, inval)
         return math.tan(inval)
 
     def __EXP(self, inval):
-        if (not self.__check_FLOAT(inval)):
+        if not self.__check_FLOAT(inval):
             raise vExcept(2336, inval)
         return math.exp(inval)
 
     def __LN(self, inval):
-        if (not self.__check_FLOAT(inval)):
+        if not self.__check_FLOAT(inval):
             raise vExcept(2337, inval)
         return math.log(inval)
 
     def __LOG(self, inval1, inval2):
-        if (not self.__check_FLOAT(inval1)):
+        if not self.__check_FLOAT(inval1):
             raise vExcept(2338, inval1)
-        if (not self.__check_FLOAT(inval2)):
+        if not self.__check_FLOAT(inval2):
             raise vExcept(2352, inval2)
         return math.log(inval2, inval1)
 
@@ -2843,7 +3444,7 @@ class vCursor(object):
         if int(inval) == inval:
             return float(inval)
         else:
-            return float(int(inval)+1)
+            return float(int(inval) + 1)
 
     def __FLOOR(self, inval):
         if (not self.__check_FLOAT(inval)) and (not self.__check_INT(inval)):
@@ -2854,46 +3455,46 @@ class vCursor(object):
         return math.pi
 
     def __ACOS(self, inval):
-        if (not self.__check_FLOAT(inval)):
+        if not self.__check_FLOAT(inval):
             raise vExcept(2328, inval)
         return math.acos(inval)
 
     def __ASIN(self, inval):
-        if (not self.__check_FLOAT(inval)):
+        if not self.__check_FLOAT(inval):
             raise vExcept(2329, inval)
         return math.asin(inval)
 
     def __ATAN(self, inval):
-        if (not self.__check_FLOAT(inval)):
+        if not self.__check_FLOAT(inval):
             raise vExcept(2330, inval)
         return math.atan(inval)
 
     def __COSH(self, inval):
-        if (not self.__check_FLOAT(inval)):
+        if not self.__check_FLOAT(inval):
             raise vExcept(2342, inval)
         return math.cosh(inval)
 
     def __SINH(self, inval):
-        if (not self.__check_FLOAT(inval)):
+        if not self.__check_FLOAT(inval):
             raise vExcept(2343, inval)
         return math.sinh(inval)
 
     def __TANH(self, inval):
-        if (not self.__check_FLOAT(inval)):
+        if not self.__check_FLOAT(inval):
             raise vExcept(2344, inval)
         return math.tanh(inval)
 
     def __ATAN2(self, inval1, inval2):
-        if (not self.__check_FLOAT(inval1)):
+        if not self.__check_FLOAT(inval1):
             raise vExcept(2331, inval1)
-        if (not self.__check_FLOAT(inval2)):
+        if not self.__check_FLOAT(inval2):
             raise vExcept(2331, inval2)
         return math.atan2(inval1, inval2)
 
     def __MOD(self, inval1, inval2):
-        if (not self.__check_INT(inval1)):
+        if not self.__check_INT(inval1):
             raise vExcept(2345, inval1)
-        if (not self.__check_INT(inval2)):
+        if not self.__check_INT(inval2):
             raise vExcept(2346, inval2)
         return inval1 % inval2
 
@@ -2902,10 +3503,10 @@ class vCursor(object):
             raise vExcept(2347, inval1)
         if (not self.__check_FLOAT(inval2)) and (not self.__check_INT(inval2)):
             raise vExcept(2348, inval2)
-        return inval1 ** inval2
+        return inval1**inval2
 
     def __SQRT(self, inval):
-        if (not self.__check_FLOAT(inval)):
+        if not self.__check_FLOAT(inval):
             raise vExcept(2330, inval)
         if inval >= 0:
             return math.sqrt(inval)

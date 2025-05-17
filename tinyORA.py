@@ -13,6 +13,7 @@ from vtinyDBLib import vDB
 from jtinyDBLib import JSONtinyDB
 from vExceptLib import vExcept
 
+
 class UnicornException(Exception):
     def __init__(self, err_code: int, message: str, status_code: int):
         self.message = message
@@ -23,7 +24,7 @@ class UnicornException(Exception):
 # load parameters file
 parameters_file = "./parameters.json"
 if os.path.isfile(parameters_file):
-    __id_db = open(parameters_file)
+    __id_db = open(parameters_file, encoding="utf-8")
     __meta_cfg = json.load(__id_db)
     __id_db.close()
 else:
@@ -33,23 +34,33 @@ else:
 if "root_path" in __meta_cfg["global_parameters"]:
     app: FastAPI = FastAPI(root_path=__meta_cfg["global_parameters"]["root_path"])
 else:
-    app: FastAPI = FastAPI(root_path='/tinyORA')
+    app: FastAPI = FastAPI(root_path="/tinyORA")
 
 # init internal variables
-app.sessions = [] # [session_id, session, username, database, request.client.host]
+app.sessions = []  # [session_id, session, username, database, request.client.host]
 app.dbs = []
 app.parameters_file = parameters_file
 app.__meta_cfg = __meta_cfg
 if "background_process" in app.__meta_cfg["global_parameters"]:
-    app.executor = concurrent.futures.ThreadPoolExecutor(max_workers=app.__meta_cfg["global_parameters"]["background_process"])
+    app.executor = concurrent.futures.ThreadPoolExecutor(
+        max_workers=app.__meta_cfg["global_parameters"]["background_process"]
+    )
 else:
-    app.executor = concurrent.futures.ThreadPoolExecutor() # max_workers=61 default
+    app.executor = concurrent.futures.ThreadPoolExecutor()  # max_workers=61 default
 app.threads = []
 
 # load and open DB(s)
 for db in app.__meta_cfg["db_list"]:
     if os.path.exists(db["base_dir"]):
-        app.dbs.append([db["name"], vDB(_db_base_dir=db["base_dir"], g_params=app.__meta_cfg["global_parameters"])])
+        app.dbs.append(
+            [
+                db["name"],
+                vDB(
+                    _db_base_dir=db["base_dir"],
+                    g_params=app.__meta_cfg["global_parameters"],
+                ),
+            ]
+        )
     else:
         raise vExcept(23, db["base_dir"])
 
@@ -64,6 +75,7 @@ async def unicorn_exception_handler(request: Request, exc: UnicornException):
         content={"err_message": exc.message, "err_code": exc.err_code},
     )
 
+
 # --------------------------------------------------------------------
 # Welcome
 # --------------------------------------------------------------------
@@ -73,14 +85,17 @@ async def read_root(request: Request):
 
     Returns:
         str: welcome message
-    """    
+    """
     return {"Welcome in tinyORA !! your IP is {}".format(request.client.host)}
+
 
 # --------------------------------------------------------------------
 # CONNECT
 # --------------------------------------------------------------------
 @app.get("/connect/db", status_code=status.HTTP_200_OK)
-async def open_connection(database: str, username: str, password: str, request: Request) -> dict:
+async def open_connection(
+    database: str, username: str, password: str, request: Request
+) -> dict:
     """Open connection into "database" with "username" and "password"
 
     Args:
@@ -107,14 +122,21 @@ async def open_connection(database: str, username: str, password: str, request: 
             try:
                 session = db.connect(user=username, password=password)
                 session_id = str(session.session_id)
-                app.sessions.append([session_id, session, username, database, request.client.host])
+                app.sessions.append(
+                    [session_id, session, username, database, request.client.host]
+                )
             except vExcept as e:
                 Response.status_code = status.HTTP_401_UNAUTHORIZED
                 session_id = None
                 err_message = e
     except vExcept as e:
-        raise UnicornException(message=e.message, err_code=e.errcode, status_code = status.HTTP_503_SERVICE_UNAVAILABLE)
-    return {"session_id": session_id, "err_message":err_message}
+        raise UnicornException(
+            message=e.message,
+            err_code=e.errcode,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+    return {"session_id": session_id, "err_message": err_message}
+
 
 # --------------------------------------------------------------------
 # DISCONNECT
@@ -144,19 +166,25 @@ def close_connection(session_id: str, request: Request) -> dict:
         if not found_sess:
             raise vExcept(1000, session_id)
         if app.sessions[n][4] != request.client.host:
-            raise vExcept(680, '{} / {}'.format(app.sessions[n][4], request.client.host))
+            raise vExcept(680, f"{app.sessions[n][4]} / {request.client.host}")
         del app.sessions[n][1]
         del app.sessions[n]
     except vExcept as e:
-        raise UnicornException(message=e.message, err_code=e.errcode, status_code = status.HTTP_401_UNAUTHORIZED)
-    return {"result":result, "err_message":err_message}
+        raise UnicornException(
+            message=e.message,
+            err_code=e.errcode,
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+    return {"result": result, "err_message": err_message}
 
 
 # --------------------------------------------------------------------
 # QUERY POST
 # --------------------------------------------------------------------
 @app.post("/query", status_code=status.HTTP_200_OK)
-async def post_query(query: str, session_id: str, request: Request, bind:str = []) -> dict:
+async def post_query(
+    query: str, session_id: str, request: Request, bind: str = []
+) -> dict:
     """Submit SQL query
 
     Args:
@@ -171,7 +199,7 @@ async def post_query(query: str, session_id: str, request: Request, bind:str = [
         dict: dict{result, err_message{errcode, message}}
     """
     # print(f'post_query bind={bind}')
-    jbind:dict = json.loads(bind)
+    jbind: dict = json.loads(bind)
     err_message = {}
     result = {}
     found_sess = False
@@ -183,19 +211,29 @@ async def post_query(query: str, session_id: str, request: Request, bind:str = [
         if not found_sess:
             raise vExcept(1000, session_id)
         if app.sessions[n][4] != request.client.host:
-            raise vExcept(680, '{} / {}'.format(app.sessions[n][4], request.client.host))
-        app.threads.append([session_id, app.executor.submit(app.sessions[n][1].execute, query, jbind)])
-        result = 'Query submitted'
+            raise vExcept(
+                680, "{} / {}".format(app.sessions[n][4], request.client.host)
+            )
+        app.threads.append(
+            [session_id, app.executor.submit(app.sessions[n][1].execute, query, jbind)]
+        )
+        result = "Query submitted"
     except vExcept as e:
-        raise UnicornException(message=e.message, err_code=e.errcode, status_code = status.HTTP_400_BAD_REQUEST)
-    return {"result":result, "err_message":err_message}
+        raise UnicornException(
+            message=e.message,
+            err_code=e.errcode,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    return {"result": result, "err_message": err_message}
 
 
 # --------------------------------------------------------------------
 # QUERY GET
 # --------------------------------------------------------------------
 @app.get("/query", status_code=status.HTTP_200_OK)
-async def get_query(session_id: str, request: Request, response: Response, table='JSON') -> dict:
+async def get_query(
+    session_id: str, request: Request, response: Response, table="JSON"
+) -> dict:
     """Fetch result of SQL query
 
     Args:
@@ -212,7 +250,7 @@ async def get_query(session_id: str, request: Request, response: Response, table
     result = {}
     found_sess = False
     try:
-        if table.upper() not in ['JSON', 'TEXT', 'HTML']:
+        if table.upper() not in ["JSON", "TEXT", "HTML"]:
             raise vExcept(9000, table)
         for n, curses in enumerate(app.sessions):
             if str(curses[0]) == str(session_id):
@@ -222,8 +260,8 @@ async def get_query(session_id: str, request: Request, response: Response, table
             raise vExcept(1000, session_id)
         else:
             if app.sessions[n][4] != request.client.host:
-                raise vExcept(680, f'{app.sessions[n][4]} / {request.client.host}')
-        
+                raise vExcept(680, f"{app.sessions[n][4]} / {request.client.host}")
+
         thrd_found = False
         if len(app.threads) > 0:
             for n, sesid_thrd in enumerate(app.threads):
@@ -239,27 +277,40 @@ async def get_query(session_id: str, request: Request, response: Response, table
         if not thrd_found:
             raise vExcept(1001)
     except vExcept as e:
-        raise UnicornException(message=e.message, err_code=e.errcode, status_code = status.HTTP_400_BAD_REQUEST)
+        raise UnicornException(
+            message=e.message,
+            err_code=e.errcode,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
     if ("rows" in result) and ("columns" in result):
         match table.upper():
-            case 'JSON':
-                return {"result":result, "err_message":err_message}
-            case 'HTML':
+            case "JSON":
+                return {"result": result, "err_message": err_message}
+            case "HTML":
                 tmp = result["rows"]
                 tmpcols = []
-                for n in result['columns']:
+                for n in result["columns"]:
                     tmpcols.append(n[0])
                 tmp.insert(0, tmpcols)
-                return {"result":tabulate.tabulate(tmp, headers="firstrow", tablefmt="html"), "err_message":err_message}
-            case 'TEXT':
+                return {
+                    "result": tabulate.tabulate(
+                        tmp, headers="firstrow", tablefmt="html"
+                    ),
+                    "err_message": err_message,
+                }
+            case "TEXT":
                 tmp = result["rows"]
                 tmpcols = []
-                for n in result['columns']:
+                for n in result["columns"]:
                     tmpcols.append(n[0])
                 tmp.insert(0, tmpcols)
-                return {"result":tabulate.tabulate(tmp, headers="firstrow"), "err_message":err_message}
+                return {
+                    "result": tabulate.tabulate(tmp, headers="firstrow"),
+                    "err_message": err_message,
+                }
     else:
-        return {"result":result, "err_message":err_message}
+        return {"result": result, "err_message": err_message}
+
 
 # --------------------------------------------------------------------
 # CREATE DB
@@ -286,36 +337,40 @@ async def create_db(mgrpassword: str, database: str, adminpwd: str) -> dict:
         if len(database.strip()) == 0:
             raise vExcept(600)
         # remove space from database name
-        dbn = ''
-        for dbnmbr in database.strip().split(' '):
-            if dbn == '':
+        dbn = ""
+        for dbnmbr in database.strip().split(" "):
+            if dbn == "":
                 dbn = dbnmbr
             else:
-                dbn += '_{}'.format(dbnmbr)
+                dbn += "_{}".format(dbnmbr)
         # check database already exists
         for dbdesc in app.__meta_cfg["db_list"]:
-            if dbdesc['name'] == dbn:
+            if dbdesc["name"] == dbn:
                 raise vExcept(601, dbn)
-        
-        db_base_dir = '{}/{}'.format(app.__meta_cfg["root_dir"], dbn)
+
+        db_base_dir = "{}/{}".format(app.__meta_cfg["root_dir"], dbn)
         # create JSON DB on disk
         db = JSONtinyDB(None)
         db.create_db(_db_base_dir=db_base_dir, admin_password=adminpwd)
         del db
         # open DB
-        db = vDB(_db_base_dir= db_base_dir, g_params=app.__meta_cfg["global_parameters"])
+        db = vDB(_db_base_dir=db_base_dir, g_params=app.__meta_cfg["global_parameters"])
         try:
             # append DB in catalog
-            __id_db = open(app.parameters_file, mode='w')
+            __id_db = open(app.parameters_file, mode="w")
             app.__meta_cfg["db_list"].append({"name": dbn, "base_dir": db_base_dir})
             json.dump(app.__meta_cfg, indent=4, fp=__id_db)
         finally:
             __id_db.close()
         app.dbs.append([dbn, db])
-        result = 'Database {} successfuly created'.format(dbn)
+        result = "Database {} successfuly created".format(dbn)
     except vExcept as e:
-        raise UnicornException(message=e.message, err_code=e.errcode, status_code = status.HTTP_400_BAD_REQUEST)
-    return {"result":result, "err_message":err_message}
+        raise UnicornException(
+            message=e.message,
+            err_code=e.errcode,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    return {"result": result, "err_message": err_message}
 
 
 # --------------------------------------------------------------------
@@ -346,11 +401,17 @@ async def list_tables(session_id: str, request: Request):
         if not found_sess:
             raise vExcept(1000, session_id)
         if app.sessions[n][4] != request.client.host:
-            raise vExcept(680, '{} / {}'.format(app.sessions[n][4], request.client.host))
+            raise vExcept(
+                680, "{} / {}".format(app.sessions[n][4], request.client.host)
+            )
         result = await app.sessions[n][1].get_tables()
     except vExcept as e:
-        raise UnicornException(message=e.message, err_code=e.errcode, status_code = status.HTTP_400_BAD_REQUEST)
-    return {"result":result, "err_message":err_message}
+        raise UnicornException(
+            message=e.message,
+            err_code=e.errcode,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    return {"result": result, "err_message": err_message}
 
 
 # --------------------------------------------------------------------
@@ -379,8 +440,13 @@ async def list_sessions(mgrpassword: str):
         else:
             raise vExcept(660)
     except vExcept as e:
-        raise UnicornException(message=e.message, err_code=e.errcode, status_code = status.HTTP_400_BAD_REQUEST)
-    return {"result":result, "err_message":err_message}
+        raise UnicornException(
+            message=e.message,
+            err_code=e.errcode,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    return {"result": result, "err_message": err_message}
+
 
 # --------------------------------------------------------------------
 # LIST DB
@@ -408,5 +474,9 @@ async def list_dbs(mgrpassword: str):
         else:
             raise vExcept(660)
     except vExcept as e:
-        raise UnicornException(message=e.message, err_code=e.errcode, status_code = status.HTTP_400_BAD_REQUEST)
-    return {"result":result, "err_message":err_message}
+        raise UnicornException(
+            message=e.message,
+            err_code=e.errcode,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+    return {"result": result, "err_message": err_message}

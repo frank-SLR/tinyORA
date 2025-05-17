@@ -4,14 +4,15 @@ FROM_OBJ : { <FROM_TAB> | ( <SELECT> ) <CUR_ALIAS> }
 COLUMN_NAME : str
 SCHEMA : str
 TABLE_NAME : str
+SEQUENCE_NAME : str
 CONSTANT : { str | int | hex | float }
 COL_ALIAS : str
 USERNAME: str
 PASSWORD: str
 FORMAT: { str | int | hex | float }
-GENERIC_COL : [ { [ <SCHEMA>. ] <TABLE_NAME> . | <TAB_ALIAS> . } ] <COLUMN_NAME> [COL_ALIAS]
-SEL_COL : { [ { [ <SCHEMA>. ] <TABLE_NAME> . | <TAB_ALIAS> . } ] { <COLUMN_NAME> [COL_ALIAS] | * } | <FUNCTION> | <CONSTANT> }
-GROUP_COL : { [ { [ <SCHEMA>. ] <TABLE_NAME> . | <TAB_ALIAS> . } ] { <COLUMN_NAME> } | [COL_ALIAS] }
+GENERIC_COL : [ { [ <SCHEMA>. ] <TABLE_NAME>. | <TAB_ALIAS>. } ] <COLUMN_NAME> [COL_ALIAS]
+SEL_COL : { [ { [ <SCHEMA>. ] <TABLE_NAME>. | <TAB_ALIAS>. } ] { <COLUMN_NAME> [COL_ALIAS] | * } | <FUNCTION> | <CONSTANT> | [ <SCHEMA>. ] <SEQUENCE_NAME>. { CURRVAL | NEXTVAL } [COL_ALIAS] }
+GROUP_COL : { [ { [ <SCHEMA>. ] <TABLE_NAME>. | <TAB_ALIAS>. } ] { <COLUMN_NAME> } | [COL_ALIAS] }
 WHERE_COMPARE : { = | > | < | >= | <= | <> | != }
 WHERE_CMP : [[ ( ]] <SEL_COL> <WHERE_COMPARE> <SEL_COL> [[ ) ]]
 WHERE_BETWEEN : [[ ( ]] <SEL_COL> between <SEL_COL> and <SEL_COL> [[ ) ]]
@@ -44,6 +45,7 @@ desc [ <SCHEMA>. ] <TABLE_NAME>
 
 GRANT :
 grant { select | insert | update | delete } on <SCHEMA> [ . <TABLE_NAME> ] to <USERNAME> [ with admin option ]
+grant select on  <SCHEMA>.<SEQUENCE_NAME> to <USERNAME> [ with admin option ]
 grant { create | drop } user to <USERNAME> [ with admin option ]
 grant { create | drop } { table | index } on <SCHEMA> to <USERNAME> [ with admin option ]
 
@@ -56,10 +58,12 @@ CREATE :
 create table [ <SCHEMA>. ] <TABLE_NAME> ( <COLUMN_NAME> <FORMAT> [ , <COLUMN_NAME> <FORMAT> ...])
 create table [ <SCHEMA>. ] <TABLE_NAME> as { <SELECT> | <WITH> } 
 create user <USERNAME> identified by <PASSWORD>
+create sequence [ <SCHEMA>. ] <SEQUENCE_NAME>
 
 DROP :
 drop table [ <SCHEMA>. ] <TABLE_NAME>
 drop user <USERNAME>
+drop sequence [ <SCHEMA>. ] <SEQUENCE_NAME>
 
 INSERT :
 insert into [ <SCHEMA>. ] <TABLE_NAME> [ ( <COLUMN_NAME> [ , <COLUMN_NAME> ...] ) ] { <WITH> | <SELECT> }

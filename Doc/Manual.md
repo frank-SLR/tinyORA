@@ -94,6 +94,7 @@ See: [SELECT](#select)
 
 ```
 grant { select | insert | update | delete } on <SCHEMA> [ . <TABLE_NAME> ] to <USERNAME> [ with admin option ]
+grant select  on [ <SCHEMA>. ] <SEQUENCE_NAME> to <USERNAME> [ with admin option ]
 grant { create | drop } user to <USERNAME> [ with admin option ]
 grant { create | drop } { table | index } on <SCHEMA> to <USERNAME> [ with admin option ]
 ```
@@ -218,6 +219,7 @@ In SELECT statement, the column is identified with:
 [[<SCHEMA>.]<TABLE_NAME>.]<COLUMN_NAME> [<COL_ALIAS>]
 [<TABLE_ALIAS>.]<COLUMN_NAME> [<COL_ALIAS>]
 ```
+
 Example:
 Select name and age columns from table using his alias:
 ```sql
@@ -229,6 +231,7 @@ select t1.name, t1.age from emp_with_dep t1 where emp_id=12;
 [[<SCHEMA>.]<TABLE_NAME>.]*
 [<TABLE_ALIAS>.]*
 ```
+
 Example:
 Select all columns from table using his alias:
 ```sql
@@ -239,18 +242,34 @@ Data, can have various formats (string, number,...):
 ```
 <CONSTANT>
 ```
+
 Example:
 Select constant plus name column from table using his alias:
 ```sql
 select 'The name :', t1.name from emp_with_dep t1 where emp_id=12;
 ```
 
+### Using sequence
+Two reserved words for sequence: NEXTVAL and CURRVAL.
+NEXTVAL returns new value of sequence.
+CURRVAL returns the current value of sequence.
+```
+[ <SCHEMA>. ] <SEQUENCE_NAME>. { CURRVAL | NEXTVAL }
+```
+
+Example:
+Generate an identifer:
+```sql
+select myschema.mysequence.NEXTVAL from dual;
+```
+
 ### Bind variable
 Bind variable is replaced in query with his value while parsing.
-Bind varaible mus been supplied with the query and has format :
+Bind variable must been supplied with the query and has format :
 ```
 :NAME_Of_BIND
 ```
+
 Example:
 Concatenate bind variable VAR1 with column NAME:
 ```sql
@@ -266,6 +285,7 @@ In GROUP BY statement, the column is identified with:
 [<TABLE_ALIAS>.]<COLUMN_NAME>
 [<COL_ALIAS>]
 ```
+
 Example:
 Select age columns and count lines from table using his alias:
 ```sql
@@ -282,6 +302,7 @@ In ORDER BY statement, the column is identified with:
 [<TABLE_ALIAS>.]<COLUMN_NAME>
 [<COL_ALIAS>]
 ```
+
 Example:
 Select age columns and count lines from table using his alias:
 ```sql

@@ -3,8 +3,9 @@ from vExceptLib import vExcept
 from jtinyDBLib import JSONtinyDB
 from vCursorLib import vCursor
 
+
 class vSession(object):
-    def __init__(self, db:JSONtinyDB, username, password, mode=0):
+    def __init__(self, db: JSONtinyDB, username, password, mode=0):
         self.db = db
         self.current_schema = None
         for account in self.db.db["Accounts"]:
@@ -19,15 +20,23 @@ class vSession(object):
         self.__mode = mode
         self.__updated_tables = []
         super().__init__()
-        
+
     def cursor(self):
-        return vCursor(username=self.__session_username, password=self.__password, db=self.db, updated_tables=self.__updated_tables, session=self)
+        return vCursor(
+            username=self.__session_username,
+            password=self.__password,
+            db=self.db,
+            updated_tables=self.__updated_tables,
+            session=self,
+        )
 
     def commit(self):
         __obj_to_commit = {"Tables": []}
-        for TAB in self.__updated_tables:
-            self.db.UpdTableToDB(table_data=TAB)
-            __obj_to_commit["Tables"].append([TAB["schema"], TAB["table_name"]])
+        for tab_to_save in self.__updated_tables:
+            self.db.UpdTableToDB(table_data=tab_to_save)
+            __obj_to_commit["Tables"].append(
+                [tab_to_save["schema"], tab_to_save["table_name"]]
+            )
         self.db.save(obj_to_commit=__obj_to_commit)
         self.__updated_tables = []
 
