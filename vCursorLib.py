@@ -1,5 +1,10 @@
+# pylint: disable=line-too-long
+# pylint: disable=too-many-lines
+# pylint: disable=missing-module-docstring
+# pylint: disable=invalid-name
+# pylint: disable=consider-using-enumerate
+# pylint: disable=line-too-long
 from __future__ import annotations
-import re
 import copy
 import random
 import math
@@ -7,6 +12,7 @@ from datetime import datetime
 from vExceptLib import vExcept
 from jtinyDBLib import JSONtinyDB
 from parserLib import vParser
+from vToolsLib import vTools
 
 
 class vCursor(object):
@@ -35,9 +41,12 @@ class vCursor(object):
         self.session_id = hex(random.randint(1, 9999999999999999999))
         self.__password = password
         self.__session_username = username
-
+        self.__parsed_query, self.__bind, self.__query_result, self.__query_executed = None, None, None, None
         self.__RAZ()
         self.__updated_tables = updated_tables
+        self.__result = []
+        self.__RowsPosInTables = []
+        self.empty_table = []
         self.__group_functions = ["AVG", "COUNT", "MAX", "MIN", "SUM"]
         super().__init__()
 
@@ -205,7 +214,7 @@ class vCursor(object):
                     tbl = self.__parsed_query["from"][n]
                     if tbl[3] == "TABLE":
                         if not self.__get_grant_for_object(owner=tbl[1], obj_name=tbl[2], grant_needed="SELECT"):
-                            raise vExcept(210, "{}.{}".format(tbl[1], tbl[2]))
+                            raise vExcept(210, f"{tbl[1]}.{tbl[2]}")
             case "SELECT":
                 for n in range(len(self.__parsed_query["from"])):
                     tbl = self.__parsed_query["from"][n]
@@ -429,21 +438,21 @@ class vCursor(object):
                 u_name = self.__parsed_query["insert"][0]
                 t_name = self.__parsed_query["insert"][1]
                 if not self.__get_grant_for_object(owner=u_name, obj_name=t_name, grant_needed="INSERT"):
-                    raise vExcept(210, "{}.{}".format(u_name, t_name))
+                    raise vExcept(210, f"{u_name}.{t_name}")
             case "UPDATE":
                 if self.__parsed_query["from"][0][1] is None:
                     self.__parsed_query["from"][0][1] = self.current_schema
                 u_name = self.__parsed_query["from"][0][1]
                 t_name = self.__parsed_query["from"][0][2]
                 if not self.__get_grant_for_object(owner=u_name, obj_name=t_name, grant_needed="UPDATE"):
-                    raise vExcept(210, "{}.{}".format(u_name, t_name))
+                    raise vExcept(210, f"{u_name}.{t_name}")
             case "DELETE":
                 if self.__parsed_query["from"][0][1] is None:
                     self.__parsed_query["from"][0][1] = self.current_schema
                 u_name = self.__parsed_query["from"][0][1]
                 t_name = self.__parsed_query["from"][0][2]
                 if not self.__get_grant_for_object(owner=u_name, obj_name=t_name, grant_needed="DELETE"):
-                    raise vExcept(210, "{}.{}".format(u_name, t_name))
+                    raise vExcept(210, f"{u_name}.{t_name}")
         return result
 
     def submit_query_process_query(self, result):
@@ -480,15 +489,15 @@ class vCursor(object):
                         result = {"message": "Sequence dropped"}
             case "INSERT":
                 cnt = self.__process_insert()
-                result = {"message": "{} line(s) inserted".format(cnt)}
+                result = {"message": f"{cnt} line(s) inserted"}
             case "SELECT":
                 result = self.__process_select(result)
             case "UPDATE":
                 cnt = self.__process_update()
-                result = {"message": "{} line(s) updated".format(cnt)}
+                result = {"message": f"{cnt} line(s) updated"}
             case "DELETE":
                 cnt = self.__process_delete()
-                result = {"message": "{} line(s) deleted".format(cnt)}
+                result = {"message": f"{cnt} line(s) deleted"}
             case "DESCRIBE":
                 result["schema"] = self.__parsed_query["from"][0][1]
                 result["table_name"] = self.__parsed_query["from"][0][2]
@@ -508,25 +517,25 @@ class vCursor(object):
             vExcept: Exceptions handling
         """
         if self.__parsed_query["querytype"] in ["SELECT", "DESCRIBE"]:
-            self.db.del_locks(session_id=self.session_id, lock_type=10)
+            self.db.del_locks(session_id=self.session_id, lock_type=self.db.lock_read_only)
         elif self.__parsed_query["querytype"] in ["INSERT"]:
-            self.db.del_locks(session_id=self.session_id, lock_type=10)
+            self.db.del_locks(session_id=self.session_id, lock_type=self.db.lock_read_only)
         elif self.__parsed_query["querytype"] in ["DROP"]:
             if self.__parsed_query["drop"][0][0] in ["TABLE" | "SEQUENCE"]:
                 self.db.del_locks(
                     session_id=self.session_id,
                     owner=self.__parsed_query["drop"][0][1],
                     name=self.__parsed_query["drop"][0][2],
-                    lock_type=0,
+                    lock_type=self.db.lock_exclusive,
                 )
             elif self.__parsed_query["drop"][0][0] == "USER":
                 self.db.del_locks(
                     session_id=self.session_id,
                     owner=self.__parsed_query["drop"][0][1],
-                    lock_type=0,
+                    lock_type=self.db.lock_exclusive,
                 )
         elif self.__parsed_query["querytype"] in ["COMMIT", "ROLLBACK"]:
-            self.db.del_locks(session_id=self.session_id, lock_type=99)
+            self.db.del_locks(session_id=self.session_id, lock_type=self.db.lock_none)
 
     def submit_query_prepare_post_tasks(self):
         # post_data_model : col_id= {
@@ -658,7 +667,7 @@ class vCursor(object):
                     raise vExcept(2341, colcount)
         if self.__parsed_query["functions"][fct_id][1] in self.__group_functions:
             flg = True
-        for n, col in enumerate(self.__parsed_query["functions"][fct_id][2]):
+        for _, col in enumerate(self.__parsed_query["functions"][fct_id][2]):
             match col[4]:
                 case "FUNCTION":
                     tmpflg, res = self.submit_query_prepare_post_tasks_function(col[3], res, True)
@@ -683,7 +692,7 @@ class vCursor(object):
             "rowscompleted": [],
             "done": False,
         }
-        for n, col in enumerate(self.__parsed_query["maths"][maths_id][2]):
+        for _, col in enumerate(self.__parsed_query["maths"][maths_id][2]):
             if col[1][0] == "META":
                 continue
             match col[1][5]:
@@ -710,7 +719,7 @@ class vCursor(object):
             "rowscompleted": [],
             "done": False,
         }
-        for n, col in enumerate(self.__parsed_query["pipe"][pipe_id][1]):
+        for _, col in enumerate(self.__parsed_query["pipe"][pipe_id][1]):
             match col[5]:
                 case "FUNCTION":
                     tmpflg, res = self.submit_query_prepare_post_tasks_function(col[3], res, True)
@@ -1151,7 +1160,7 @@ class vCursor(object):
         raise vExcept(803, in_id)
 
     def __remove_quote(self, strin):
-        if self.__check_STR(strin) and (len(strin) >= 2):
+        if vTools.check_STR(strin) and (len(strin) >= 2):
             if (strin[0] == '"' and strin[-1] == '"') or (strin[0] == "'" and strin[-1] == "'"):
                 strin = strin[1:-1]
         return strin
@@ -1160,7 +1169,7 @@ class vCursor(object):
         try:
             match fmtin.upper():
                 case "INT" | "FLOAT" | "HEX" | "DATETIME":
-                    if self.__check_STR(varin):
+                    if vTools.check_STR(varin):
                         if varin[0] in ['"', "'"]:
                             varin = varin[1:]
                         if varin[-1] in ['"', "'"]:
@@ -1567,7 +1576,7 @@ class vCursor(object):
         # init gloal variable for rows fetch
         self.__result = []
         self.__RowsPosInTables = []
-        for n in range(len(self.__parsed_query["from"])):
+        for _ in range(len(self.__parsed_query["from"])):
             self.__RowsPosInTables.append(None)
         # prefetch rows in source tables
         self.__prefetch_get_rows()
@@ -1852,9 +1861,7 @@ class vCursor(object):
                         matriceROW[numrow] = True
                         parsedROW[numrow] = True
                     numrow += 1
-            for WorkOnRowIdx, WorkOnRow in enumerate(matriceROW):
-                # if not WorkOnRow:
-                #     continue
+            for WorkOnRowIdx, _ in enumerate(matriceROW):
                 for WorkOnCol in self.__parsed_query["post_data_model"].keys():
                     for obj in self.__parsed_query["post_data_model"][WorkOnCol].keys():
                         # test if "obj" is fully computed
@@ -1963,7 +1970,7 @@ class vCursor(object):
                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][WorkOnRowIdx] = self.__parsed_query["post_data_model"][WorkOnCol][obj][
                                             "colval"
                                         ][WorkOnRowIdx][-1][0]
-            for WorkOnRowIdx, WorkOnRow in enumerate(matriceROW):
+            for WorkOnRowIdx, _ in enumerate(matriceROW):
                 for WorkOnCol in self.__parsed_query["post_data_model"].keys():
                     for obj in self.__parsed_query["post_data_model"][WorkOnCol].keys():
                         if not self.__parsed_query["post_data_model"][WorkOnCol][obj]["done"]:
@@ -2019,7 +2026,7 @@ class vCursor(object):
                                             for n in range(len(self.__result)):
                                                 if matriceROW[n] and not self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n]:
                                                     val_int = self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n]
-                                                    if self.__check_INT(val_int):
+                                                    if vTools.check_INT(val_int):
                                                         self.__parsed_query["post_data_model"][WorkOnCol][obj]["rowscompleted"][n] = True
                                                         if self.__parsed_query["post_data_model"][WorkOnCol][obj]["dependant"]:
                                                             self.__parsed_query["post_data_model"][WorkOnCol][obj]["result"][n] = str(chr(int(val_int)))
@@ -2565,40 +2572,40 @@ class vCursor(object):
                     else:
                         return value
                 case _:
-                    raise vExcept(2200, '"{}" as {}'.format(value, type_value))
+                    raise vExcept(2200, '"{value}" as {type_value}')
         except vExcept:
             raise vExcept(2200, f'"{value}" as {type_value}')
 
     def __compare_cols(self, c1, c2, oper):
         # print(f'__compare_cols c1={c1} c2={c2} oper={oper}')
-        if self.__check_STR(c1):
+        if vTools.check_STR(c1):
             if ((c1[0] == '"') and (c1[-1] == '"')) or ((c1[0] == "'") and (c1[-1] == "'")):
                 c1 = c1[1:-1]
-        if self.__check_STR(c2):
+        if vTools.check_STR(c2):
             if ((c2[0] == '"') and (c2[-1] == '"')) or ((c2[0] == "'") and (c2[-1] == "'")):
                 c2 = c2[1:-1]
         match oper:
             case "=":
                 result = bool(c1 == c2)
             case ">":
-                if self.__check_FLOAT(c1) and self.__check_FLOAT(c2):
+                if vTools.check_FLOAT(c1) and vTools.check_FLOAT(c2):
                     result = bool(float(c1) > float(c2))
-                elif self.__check_INT(c1) and self.__check_INT(c2):
+                elif vTools.check_INT(c1) and vTools.check_INT(c2):
                     result = bool(int(c1) > int(c2))
-                elif self.__check_HEX(c1) and self.__check_HEX(c2):
+                elif vTools.check_HEX(c1) and vTools.check_HEX(c2):
                     result = bool(int(c1) > int(c2))
-                elif self.__check_DATETIME(c1) and self.__check_DATETIME(c2):
+                elif vTools.check_DATETIME(c1) and vTools.check_DATETIME(c2):
                     result = bool(c1 > c2)
                 else:
                     result = bool(c1 > c2)
             case ">=":
-                if self.__check_FLOAT(c1) and self.__check_FLOAT(c2):
+                if vTools.check_FLOAT(c1) and vTools.check_FLOAT(c2):
                     result = bool(float(c1) >= float(c2))
-                elif self.__check_INT(c1) and self.__check_INT(c2):
+                elif vTools.check_INT(c1) and vTools.check_INT(c2):
                     result = bool(int(c1) >= int(c2))
-                elif self.__check_HEX(c1) and self.__check_HEX(c2):
+                elif vTools.check_HEX(c1) and vTools.check_HEX(c2):
                     result = bool(int(c1) >= int(c2))
-                elif self.__check_DATETIME(c1) and self.__check_DATETIME(c2):
+                elif vTools.check_DATETIME(c1) and vTools.check_DATETIME(c2):
                     result = bool(c1 >= c2)
                 else:
                     result = bool(c1 >= c2)
@@ -2607,24 +2614,24 @@ class vCursor(object):
             case "!=":
                 result = bool(c1 != c2)
             case "<":
-                if self.__check_FLOAT(c1) and self.__check_FLOAT(c2):
+                if vTools.check_FLOAT(c1) and vTools.check_FLOAT(c2):
                     result = bool(float(c1) < float(c2))
-                elif self.__check_INT(c1) and self.__check_INT(c2):
+                elif vTools.check_INT(c1) and vTools.check_INT(c2):
                     result = bool(int(c1) < int(c2))
-                elif self.__check_HEX(c1) and self.__check_HEX(c2):
+                elif vTools.check_HEX(c1) and vTools.check_HEX(c2):
                     result = bool(int(c1) < int(c2))
-                elif self.__check_DATETIME(c1) and self.__check_DATETIME(c2):
+                elif vTools.check_DATETIME(c1) and vTools.check_DATETIME(c2):
                     result = bool(c1 < c2)
                 else:
                     result = bool(c1 < c2)
             case "<=":
-                if self.__check_FLOAT(c1) and self.__check_FLOAT(c2):
+                if vTools.check_FLOAT(c1) and vTools.check_FLOAT(c2):
                     result = bool(float(c1) <= float(c2))
-                elif self.__check_INT(c1) and self.__check_INT(c2):
+                elif vTools.check_INT(c1) and vTools.check_INT(c2):
                     result = bool(int(c1) <= int(c2))
-                elif self.__check_HEX(c1) and self.__check_HEX(c2):
+                elif vTools.check_HEX(c1) and vTools.check_HEX(c2):
                     result = bool(int(c1) <= int(c2))
-                elif self.__check_DATETIME(c1) and self.__check_DATETIME(c2):
+                elif vTools.check_DATETIME(c1) and vTools.check_DATETIME(c2):
                     result = bool(c1 <= c2)
                 else:
                     result = bool(c1 <= c2)
@@ -2636,37 +2643,6 @@ class vCursor(object):
                 raise vExcept(510, oper)
         # print(f'__compare_cols result={result}')
         return result
-
-    def __check_INT(self, varin):
-        try:
-            return isinstance(int(varin), int)
-        except Exception:
-            return False
-
-    def __check_STR(self, varin):
-        return isinstance(varin, str)
-
-    def __check_FLOAT(self, varin):
-        try:
-            return isinstance(float(varin), float)
-        #     reg = re.search(r"^[-+]?(\d+([.,]\d*)?|[.,]\d+)([eE][-+]?\d+)?$", varin)
-        #     return bool(reg is not None)
-        except Exception:
-            return False
-
-    def __check_HEX(self, varin):
-        try:
-            reg = re.search(r"^[-+]?(0[xX][\dA-Fa-f]+|0[0-7]*|\d+)$", varin)
-            return bool(reg is not None)
-        except Exception:
-            return False
-
-    def __check_DATETIME(self, varin):
-        try:
-            reg = datetime.fromtimestamp(varin, tz=None)
-            return bool(reg is not None)
-        except Exception:
-            return False
 
     def __validate_sequence(self):
         for n in range(len(self.__parsed_query["select"])):
@@ -2996,16 +2972,10 @@ class vCursor(object):
             raise vExcept(2101, cur_name)
 
     def __getCursorID(self, cur_name):
-        # cursors: cursor_alias, query
-        id = None
         for n in range(len(self.__parsed_query["cursors"])):
             if self.__parsed_query["cursors"][n][0] == cur_name:
-                id = n
-                break
-        if id is None:
-            raise vExcept(2100, cur_name)
-        else:
-            return id
+                return n
+        raise vExcept(2100, cur_name)
 
     def __get_grant_for_object(self, owner, obj_name, grant_needed, admin="NO"):
         # print(owner, obj_name, grant_needed, admin)
@@ -3014,11 +2984,6 @@ class vCursor(object):
         else:
             result = False
             grants = self.db.db["Accounts"][self.db.getAccountIDinDB(username=str(self.current_schema).lower())]["grants"]
-            # for n in range(len(self.db.db["Accounts"])):
-            #     account = self.db.db["Accounts"][n]
-            #     if str(account["username"]).upper() == str(self.current_schema).upper():
-            #         grants = account["grants"]
-            #         break
             match str(grant_needed).upper():
                 case "SELECT":
                     if obj_name == "DUAL":
@@ -3170,7 +3135,7 @@ class vCursor(object):
                 if len(self.__parsed_query["functions"][fct_num][2]) != 1:
                     raise vExcept(2309, len(self.__parsed_query["functions"][fct_num][2]))
                 val_int = self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0])
-                if self.__check_INT(val_int):
+                if vTools.check_INT(val_int):
                     return str(chr(int(val_int)))
                 else:
                     raise vExcept(2310, val_int)
@@ -3236,7 +3201,7 @@ class vCursor(object):
                     raise vExcept(2316, len(self.__parsed_query["functions"][fct_num][2]))
                 v1 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
                 v2 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1]))
-                if not self.__check_INT(v2):
+                if not vTools.check_INT(v2):
                     raise vExcept(2317, v2)
                 if len(self.__parsed_query["functions"][fct_num][2]) == 3:
                     v3 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]))
@@ -3279,7 +3244,7 @@ class vCursor(object):
                     raise vExcept(2318, len(self.__parsed_query["functions"][fct_num][2]))
                 v1 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][0]))
                 v2 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][1]))
-                if not self.__check_INT(v2):
+                if not vTools.check_INT(v2):
                     raise vExcept(2319, v2)
                 if len(self.__parsed_query["functions"][fct_num][2]) == 3:
                     v3 = self.__remove_quote(self.__get_function_col(self.__parsed_query["functions"][fct_num][2][2]))
@@ -3463,18 +3428,18 @@ class vCursor(object):
     def __SUBSTR(self, strin, sttin, lenin):
         if sttin < 0:
             sttin = 0
-        if not self.__check_STR(strin):
+        if not vTools.check_STR(strin):
             raise vExcept(2301, strin)
-        if not self.__check_INT(sttin):
+        if not vTools.check_INT(sttin):
             raise vExcept(2302, sttin)
-        if not self.__check_INT(lenin):
+        if not vTools.check_INT(lenin):
             raise vExcept(2303, lenin)
         return strin[sttin : sttin + lenin]
 
     def __TO_CHAR(self, dtein, fmtin):
-        if (not self.__check_DATETIME(dtein)) and (not self.__check_FLOAT(dtein)):
+        if (not vTools.check_DATETIME(dtein)) and (not vTools.check_FLOAT(dtein)):
             raise vExcept(2306, dtein)
-        if not self.__check_STR(fmtin):
+        if not vTools.check_STR(fmtin):
             raise vExcept(2307, fmtin)
         fmtin = fmtin.replace("YYYY", "%Y").replace("YY", "%y")
         fmtin = fmtin.replace("MM", "%m").replace("MONTH", "%B").replace("MON", "%" + "b")
@@ -3485,9 +3450,9 @@ class vCursor(object):
         return datetime.fromtimestamp(dtein).strftime(fmtin)[1:-1]
 
     def __TRUNC(self, inval, precision):
-        if (not self.__check_DATETIME(inval)) and (not self.__check_FLOAT(inval)):
+        if (not vTools.check_DATETIME(inval)) and (not vTools.check_FLOAT(inval)):
             raise vExcept(2324, inval)
-        if not self.__check_INT(precision):
+        if not vTools.check_INT(precision):
             raise vExcept(2325, precision)
         if precision > 18:
             raise vExcept(2326, precision)
@@ -3495,39 +3460,39 @@ class vCursor(object):
         return int(inval * factor) / factor
 
     def __COS(self, inval):
-        if not self.__check_FLOAT(inval):
+        if not vTools.check_FLOAT(inval):
             raise vExcept(2333, inval)
         return math.cos(inval)
 
     def __SIN(self, inval):
-        if not self.__check_FLOAT(inval):
+        if not vTools.check_FLOAT(inval):
             raise vExcept(2334, inval)
         return math.sin(inval)
 
     def __TAN(self, inval):
-        if not self.__check_FLOAT(inval):
+        if not vTools.check_FLOAT(inval):
             raise vExcept(2335, inval)
         return math.tan(inval)
 
     def __EXP(self, inval):
-        if not self.__check_FLOAT(inval):
+        if not vTools.check_FLOAT(inval):
             raise vExcept(2336, inval)
         return math.exp(inval)
 
     def __LN(self, inval):
-        if not self.__check_FLOAT(inval):
+        if not vTools.check_FLOAT(inval):
             raise vExcept(2337, inval)
         return math.log(inval)
 
     def __LOG(self, inval1, inval2):
-        if not self.__check_FLOAT(inval1):
+        if not vTools.check_FLOAT(inval1):
             raise vExcept(2338, inval1)
-        if not self.__check_FLOAT(inval2):
+        if not vTools.check_FLOAT(inval2):
             raise vExcept(2352, inval2)
         return math.log(inval2, inval1)
 
     def __CEIL(self, inval):
-        if (not self.__check_FLOAT(inval)) and (not self.__check_INT(inval)):
+        if (not vTools.check_FLOAT(inval)) and (not vTools.check_INT(inval)):
             raise vExcept(2339, inval)
         if int(inval) == inval:
             return float(inval)
@@ -3535,7 +3500,7 @@ class vCursor(object):
             return float(int(inval) + 1)
 
     def __FLOOR(self, inval):
-        if (not self.__check_FLOAT(inval)) and (not self.__check_INT(inval)):
+        if (not vTools.check_FLOAT(inval)) and (not vTools.check_INT(inval)):
             raise vExcept(2340, inval)
         return float(int(inval))
 
@@ -3543,58 +3508,58 @@ class vCursor(object):
         return math.pi
 
     def __ACOS(self, inval):
-        if not self.__check_FLOAT(inval):
+        if not vTools.check_FLOAT(inval):
             raise vExcept(2328, inval)
         return math.acos(inval)
 
     def __ASIN(self, inval):
-        if not self.__check_FLOAT(inval):
+        if not vTools.check_FLOAT(inval):
             raise vExcept(2329, inval)
         return math.asin(inval)
 
     def __ATAN(self, inval):
-        if not self.__check_FLOAT(inval):
+        if not vTools.check_FLOAT(inval):
             raise vExcept(2330, inval)
         return math.atan(inval)
 
     def __COSH(self, inval):
-        if not self.__check_FLOAT(inval):
+        if not vTools.check_FLOAT(inval):
             raise vExcept(2342, inval)
         return math.cosh(inval)
 
     def __SINH(self, inval):
-        if not self.__check_FLOAT(inval):
+        if not vTools.check_FLOAT(inval):
             raise vExcept(2343, inval)
         return math.sinh(inval)
 
     def __TANH(self, inval):
-        if not self.__check_FLOAT(inval):
+        if not vTools.check_FLOAT(inval):
             raise vExcept(2344, inval)
         return math.tanh(inval)
 
     def __ATAN2(self, inval1, inval2):
-        if not self.__check_FLOAT(inval1):
+        if not vTools.check_FLOAT(inval1):
             raise vExcept(2331, inval1)
-        if not self.__check_FLOAT(inval2):
+        if not vTools.check_FLOAT(inval2):
             raise vExcept(2331, inval2)
         return math.atan2(inval1, inval2)
 
     def __MOD(self, inval1, inval2):
-        if not self.__check_INT(inval1):
+        if not vTools.check_INT(inval1):
             raise vExcept(2345, inval1)
-        if not self.__check_INT(inval2):
+        if not vTools.check_INT(inval2):
             raise vExcept(2346, inval2)
         return inval1 % inval2
 
     def __POWER(self, inval1, inval2):
-        if (not self.__check_FLOAT(inval1)) and (not self.__check_INT(inval1)):
+        if (not vTools.check_FLOAT(inval1)) and (not vTools.check_INT(inval1)):
             raise vExcept(2347, inval1)
-        if (not self.__check_FLOAT(inval2)) and (not self.__check_INT(inval2)):
+        if (not vTools.check_FLOAT(inval2)) and (not vTools.check_INT(inval2)):
             raise vExcept(2348, inval2)
         return inval1**inval2
 
     def __SQRT(self, inval):
-        if not self.__check_FLOAT(inval):
+        if not vTools.check_FLOAT(inval):
             raise vExcept(2330, inval)
         if inval >= 0:
             return math.sqrt(inval)

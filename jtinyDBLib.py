@@ -1,3 +1,9 @@
+# pylint: disable=line-too-long
+# pylint: disable=too-many-lines
+# pylint: disable=missing-module-docstring
+# pylint: disable=invalid-name
+# pylint: disable=consider-using-enumerate
+# pylint: disable=line-too-long
 import json
 import copy
 import time
@@ -7,13 +13,27 @@ from vExceptLib import vExcept
 
 # JSON DB
 class JSONtinyDB:
+    """This class manage DBs on disk"""
+
     def __init__(self, _g_params, _db_base_dir=None):
+        """Initialise the calss
+
+        Args:
+            _g_params (dict): global parameters, used on all databases
+            _db_base_dir (str, optional): Path of database definition file (db.json). Defaults to None.
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
+        # lock_type: 0 exclusive, 1 update, 10 read only, 99 None
         self.lock_exclusive = 0
         self.lock_read_write = 1
         self.lock_read_only = 10
+        self.lock_none = 99
 
         self.__g_params = _g_params
         self.__latchcnt = 0
+        self.__meta_db = None
         self.__RAZ()
         if _db_base_dir is None:
             self.__DB_enable = False
@@ -27,13 +47,22 @@ class JSONtinyDB:
                 raise vExcept(12, str(self.__db_base_dir))
 
     def create_db(self, _db_base_dir, admin_password):
+        """Create database
+
+        Args:
+            _db_base_dir (str): Path of database definition file (db.json).
+            admin_password (str): password of "admin" account for the database
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
         self.__RAZ()
         if not os.path.exists(_db_base_dir):
             os.makedirs(_db_base_dir)
             if os.path.isdir(_db_base_dir):
-                if not os.path.exists("{}/ADMIN".format(_db_base_dir)):
-                    os.makedirs("{}/ADMIN".format(_db_base_dir))
-                if os.path.isdir("{}/ADMIN".format(_db_base_dir)):
+                if not os.path.exists(f"{_db_base_dir}/ADMIN"):
+                    os.makedirs(f"{_db_base_dir}/ADMIN")
+                if os.path.isdir(f"{_db_base_dir}/ADMIN"):
                     self.__db_base_dir = _db_base_dir
                     self.__meta_db = {
                         "Accounts": [
@@ -54,7 +83,7 @@ class JSONtinyDB:
                         "Sequences": {"ADMIN": {}},
                         "Views": {"ADMIN": []},
                     }
-                    self.__file_db = "{}/db.json".format(self.__db_base_dir)
+                    self.__file_db = f"{self.__db_base_dir}/db.json"
                     self.__DB_enable = True
                     self.saveDB()
                     self.__loadDB()
@@ -64,6 +93,7 @@ class JSONtinyDB:
             raise vExcept(17, _db_base_dir)
 
     def __RAZ(self):
+        """Reinitialisation of internal parameters of class"""
         self.__meta_db = None
         self.__file_db = None
         self.db = {
@@ -76,25 +106,29 @@ class JSONtinyDB:
         self.__db_base_dir = None
         self.__locks = []
         # [ session_id, owner, name, lock_type]
-        # lock_type: 0 exclusive, 1 update, 10 read only, 99 None
 
     def __loadDB(self):
+        """Load database definitions and tables
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
         if os.path.isfile(self.__file_db):
-            __id_db = open(self.__file_db)
+            __id_db = open(file=self.__file_db, encoding="utf-8")
             self.__meta_db = json.load(__id_db)
             for account in self.__meta_db["Accounts"]:
                 __USR = str(account["username"]).upper()
-                if os.path.isdir("{}/{}".format(self.__db_base_dir, __USR)):
+                if os.path.isdir(f"{self.__db_base_dir}/{__USR}"):
                     self.db["Accounts"].append(account)
                     # load tables
                     for __TBL in self.__meta_db["Tables"][__USR]:
-                        if os.path.isfile("{}/{}/{}.json".format(self.__db_base_dir, __USR, __TBL)):
-                            tbl_file_id = open("{}/{}/{}.json".format(self.__db_base_dir, __USR, __TBL))
+                        if os.path.isfile(f"{self.__db_base_dir}/{__USR}/{__TBL}.json"):
+                            tbl_file_id = open(file=f"{self.__db_base_dir}/{__USR}/{__TBL}.json", encoding="utf-8")
                             self.db["Tables"].append(json.load(tbl_file_id))
                             tbl_file_id.close()
                         else:
                             __id_db.close()
-                            raise vExcept(24, str("{}.{}".format(__USR, __TBL)))
+                            raise vExcept(24, str(f"{__USR}.{__TBL}"))
                     # load sequences
                     self.db["Sequences"][__USR] = self.__meta_db["Sequences"][__USR].copy()
                 else:
@@ -105,6 +139,14 @@ class JSONtinyDB:
             raise vExcept(23, str(self.__file_db))
 
     def save(self, obj_to_commit):
+        """Save a table to disk
+
+        Args:
+            obj_to_commit (str): Name of the table to save
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
         if self.__DB_enable:
             for tab_to_save in obj_to_commit["Tables"]:
                 found = False
@@ -113,8 +155,8 @@ class JSONtinyDB:
                         found = True
                         break
                 if found:
-                    dir_path = "{}/{}".format(self.__db_base_dir, tab_to_save[0])
-                    tbl_file_id = open(f"{dir_path}/{tab_to_save[1]}.json", mode="w")
+                    dir_path = f"{self.__db_base_dir}/{tab_to_save[0]}"
+                    tbl_file_id = open(file=f"{dir_path}/{tab_to_save[1]}.json", mode="w", encoding="utf-8")
                     json.dump(self.db["Tables"][n], indent=4, fp=tbl_file_id)
                     tbl_file_id.close()
         else:
@@ -124,13 +166,13 @@ class JSONtinyDB:
         """Add a lock on an object
 
         Args:
-            session_id (int): id of session requiering the lock
+            session_id (int): id of session requiring the lock
             owner (str): object owner
             name (str): object name
             lock_type (str): type of lock
 
         Raises:
-            vExcept: Exceptions handling
+            vExcept: Exception with error code and error message
 
         Returns:
             int: 0 => lock acquired
@@ -142,7 +184,7 @@ class JSONtinyDB:
                 self.__latchcnt -= 1
                 time.sleep(self.__latchcnt / 1000)  # wait some ms
                 self.__latchcnt += 1
-            for n, l in enumerate(self.__locks):
+            for l in self.__locks:
                 if l[1:-1] == [owner, name]:
                     if l[0] == session_id:
                         if l[3] == lock_type:
@@ -150,14 +192,14 @@ class JSONtinyDB:
                             return 0
                     else:
                         match lock_type:
-                            case 0:
+                            case self.lock_exclusive:
                                 self.__latchcnt -= 1
                                 return 1
-                            case 1:
+                            case self.lock_read_write:
                                 if l[3] in [0, 1]:
                                     self.__latchcnt -= 1
                                     return 1
-                            case 10:
+                            case self.lock_read_only:
                                 if l[3] == 0:
                                     self.__latchcnt -= 1
                                     return 1
@@ -169,6 +211,17 @@ class JSONtinyDB:
             raise vExcept(15)
 
     def del_locks(self, session_id, lock_type, owner=None, name=None):
+        """Remove a lock on supplied object
+
+        Args:
+            session_id (str): id of session
+            lock_type (int): type of lock (0 exclusive, 1 update, 10 read only, 99 None)
+            owner (str, optional): Owner of object. Defaults to None.
+            name (str, optional): Object name. Defaults to None.
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
         if self.__DB_enable:
             self.__latchcnt += 1
             while self.__latchcnt > 1:
@@ -177,7 +230,7 @@ class JSONtinyDB:
                 self.__latchcnt += 1
             for n in range(len(self.__locks) - 1, -1, -1):
                 if (self.__locks[n][0] == session_id) and ((owner is None) or (owner == self.__locks[n][1])) and ((name is None) or (name == self.__locks[n][2])):
-                    if lock_type == 99:
+                    if lock_type == self.lock_none:
                         del self.__locks[n]
                     elif self.__locks[n][3] == lock_type:
                         del self.__locks[n]
@@ -186,29 +239,65 @@ class JSONtinyDB:
             raise vExcept(15)
 
     def AddTableFile(self, owner, table_name, table_data):
+        """Save a table to disk
+
+        Args:
+            owner (str): Owner of the table
+            table_name (str): Name of the table
+            table_data (list): structure of the table with rows
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
         if self.__DB_enable:
-            file_path_name = "{}/{}/{}.json".format(self.__db_base_dir, owner.upper(), table_name.upper())
+            file_path_name = f"{self.__db_base_dir}/{owner.upper()}/{table_name.upper()}.json"
             if os.path.isfile(file_path_name):
                 os.remove(file_path_name)
-            tbl_file_id = open(file_path_name, mode="w")
+            tbl_file_id = open(file=file_path_name, mode="w", encoding="utf-8")
             json.dump(table_data, indent=4, fp=tbl_file_id)
             tbl_file_id.close()
         else:
             raise vExcept(15)
 
     def AddTableToMeta(self, owner, table_name):
+        """Add a table to internal structure definition
+
+        Args:
+            owner (str): Owner of the table
+            table_name (str): Name of the table
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
         if self.__DB_enable:
             self.__meta_db["Tables"][str(owner).upper()].append(table_name.upper())
         else:
             raise vExcept(15)
 
     def AddTableToDB(self, table_data):
+        """Add a table to database in memory
+
+        Args:
+            owner (str): Owner of the table
+            table_name (str): Name of the table
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
         if self.__DB_enable:
             self.db["Tables"].append(table_data)
         else:
             raise vExcept(15)
 
     def UpdTableToDB(self, table_data):
+        """Update table (structure and rows) into database in memory
+
+        Args:
+            table_data (list): structure of the table with rows
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
         if self.__DB_enable:
             for n in range(len(self.db["Tables"])):
                 if (self.db["Tables"][n]["table_name"] == table_data["table_name"]) and (self.db["Tables"][n]["schema"] == table_data["schema"]):
@@ -218,6 +307,15 @@ class JSONtinyDB:
             raise vExcept(15)
 
     def DelTableFromMeta(self, owner, table_name):
+        """Remove table from internal database description
+
+        Args:
+            owner (str): Owner of the table
+            table_name (str): Name of the table
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
         # print(f'DelTableFromMeta self.__meta_db["Tables"]={self.__meta_db["Tables"]}')
         if self.__DB_enable:
             for n in range(len(self.__meta_db["Tables"][owner.upper()])):
@@ -229,28 +327,37 @@ class JSONtinyDB:
             for aID in range(len(self.__meta_db["Accounts"])):
                 for sID in range(len(self.__meta_db["Accounts"][aID]["grants"]["SELECT"]) - 1, -1, -1):
                     if (self.__meta_db["Accounts"][aID]["grants"]["SELECT"][sID][0] == "TABLE") and (
-                        self.__meta_db["Accounts"][aID]["grants"]["SELECT"][sID][1] == "{}.{}".format(owner, table_name)
+                        self.__meta_db["Accounts"][aID]["grants"]["SELECT"][sID][1] == f"{owner}.{table_name}"
                     ):
                         del self.__meta_db["Accounts"][aID]["grants"]["SELECT"][sID]
                 for sID in range(len(self.__meta_db["Accounts"][aID]["grants"]["INSERT"]) - 1, -1, -1):
                     if (self.__meta_db["Accounts"][aID]["grants"]["INSERT"][sID][0] == "TABLE") and (
-                        self.__meta_db["Accounts"][aID]["grants"]["INSERT"][sID][1] == "{}.{}".format(owner, table_name)
+                        self.__meta_db["Accounts"][aID]["grants"]["INSERT"][sID][1] == f"{owner}.{table_name}"
                     ):
                         del self.__meta_db["Accounts"][aID]["grants"]["INSERT"][sID]
                 for sID in range(len(self.__meta_db["Accounts"][aID]["grants"]["UPDATE"]) - 1, -1, -1):
                     if (self.__meta_db["Accounts"][aID]["grants"]["UPDATE"][sID][0] == "TABLE") and (
-                        self.__meta_db["Accounts"][aID]["grants"]["UPDATE"][sID][1] == "{}.{}".format(owner, table_name)
+                        self.__meta_db["Accounts"][aID]["grants"]["UPDATE"][sID][1] == f"{owner}.{table_name}"
                     ):
                         del self.__meta_db["Accounts"][aID]["grants"]["UPDATE"][sID]
                 for sID in range(len(self.__meta_db["Accounts"][aID]["grants"]["DELETE"]) - 1, -1, -1):
                     if (self.__meta_db["Accounts"][aID]["grants"]["DELETE"][sID][0] == "TABLE") and (
-                        self.__meta_db["Accounts"][aID]["grants"]["DELETE"][sID][1] == "{}.{}".format(owner, table_name)
+                        self.__meta_db["Accounts"][aID]["grants"]["DELETE"][sID][1] == f"{owner}.{table_name}"
                     ):
                         del self.__meta_db["Accounts"][aID]["grants"]["DELETE"][sID]
         else:
             raise vExcept(15)
 
     def DelTableFromDB(self, owner, table_name):
+        """Remove table from database in memory
+
+        Args:
+            owner (str): Owner of the table
+            table_name (str): Name of the table
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
         # print(f'DelTableFromDB self.db={self.db["Tables"]}')
         if self.__DB_enable:
             for n in range(len(self.db["Tables"])):
@@ -260,39 +367,53 @@ class JSONtinyDB:
                     break
             for aID in range(len(self.db["Accounts"])):
                 for sID in range(len(self.db["Accounts"][aID]["grants"]["SELECT"]) - 1, -1, -1):
-                    if (self.db["Accounts"][aID]["grants"]["SELECT"][sID][0] == "TABLE") and (
-                        self.db["Accounts"][aID]["grants"]["SELECT"][sID][1] == "{}.{}".format(owner, table_name)
-                    ):
+                    if (self.db["Accounts"][aID]["grants"]["SELECT"][sID][0] == "TABLE") and (self.db["Accounts"][aID]["grants"]["SELECT"][sID][1] == f"{owner}.{table_name}"):
                         del self.db["Accounts"][aID]["grants"]["SELECT"][sID]
                 for sID in range(len(self.db["Accounts"][aID]["grants"]["INSERT"]) - 1, -1, -1):
-                    if (self.db["Accounts"][aID]["grants"]["INSERT"][sID][0] == "TABLE") and (
-                        self.db["Accounts"][aID]["grants"]["INSERT"][sID][1] == "{}.{}".format(owner, table_name)
-                    ):
+                    if (self.db["Accounts"][aID]["grants"]["INSERT"][sID][0] == "TABLE") and (self.db["Accounts"][aID]["grants"]["INSERT"][sID][1] == f"{owner}.{table_name}"):
                         del self.db["Accounts"][aID]["grants"]["INSERT"][sID]
                 for sID in range(len(self.db["Accounts"][aID]["grants"]["UPDATE"]) - 1, -1, -1):
-                    if (self.db["Accounts"][aID]["grants"]["UPDATE"][sID][0] == "TABLE") and (
-                        self.db["Accounts"][aID]["grants"]["UPDATE"][sID][1] == "{}.{}".format(owner, table_name)
-                    ):
+                    if (self.db["Accounts"][aID]["grants"]["UPDATE"][sID][0] == "TABLE") and (self.db["Accounts"][aID]["grants"]["UPDATE"][sID][1] == f"{owner}.{table_name}"):
                         del self.db["Accounts"][aID]["grants"]["UPDATE"][sID]
                 for sID in range(len(self.db["Accounts"][aID]["grants"]["DELETE"]) - 1, -1, -1):
-                    if (self.db["Accounts"][aID]["grants"]["DELETE"][sID][0] == "TABLE") and (
-                        self.db["Accounts"][aID]["grants"]["DELETE"][sID][1] == "{}.{}".format(owner, table_name)
-                    ):
+                    if (self.db["Accounts"][aID]["grants"]["DELETE"][sID][0] == "TABLE") and (self.db["Accounts"][aID]["grants"]["DELETE"][sID][1] == f"{owner}.{table_name}"):
                         del self.db["Accounts"][aID]["grants"]["DELETE"][sID]
         else:
             raise vExcept(15)
 
     def DelTableFile(self, owner, table_name):
+        """Delete table definition file from disk
+
+        Args:
+            owner (str): Owner of the table
+            table_name (str): Name of the table
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
         if self.__DB_enable:
-            file_path_name = "{}/{}/{}.json".format(self.__db_base_dir, owner.upper(), table_name.upper())
+            file_path_name = f"{self.__db_base_dir}/{owner.upper()}/{table_name.upper()}.json"
             if os.path.isfile(file_path_name):
                 os.remove(file_path_name)
             else:
-                raise vExcept(14, "{}.{}".format(owner, table_name))
+                raise vExcept(14, f"{owner}.{table_name}")
         else:
             raise vExcept(15)
 
     def AddGrantToMeta(self, grant, granted, grant_bloc):
+        """Add a GRANT on supplied object into database definition in memory
+
+        Args:
+            grant (str): type of grant (SELECT, INSERT, UPDATE, CREATE, DROP)
+            granted (str): Account receiving the grant
+            grant_bloc (list): Structure of the grant
+
+        Raises:
+            vExcept: Exception with error code and error message
+
+        Returns:
+            bool: True if succes, False if fail
+        """
         if self.__DB_enable:
             notfound = True
             updated = False
@@ -322,6 +443,19 @@ class JSONtinyDB:
         return notfound or updated
 
     def AddGrantToDB(self, grant, granted, grant_bloc):
+        """Add a GRANT on supplied object into database in memory
+
+        Args:
+            grant (str): type of grant (SELECT, INSERT, UPDATE, CREATE, DROP)
+            granted (str): Account receiving the grant
+            grant_bloc (list): Structure of the grant
+
+        Raises:
+            vExcept: Exception with error code and error message
+
+        Returns:
+            bool: True if succes, False if fail
+        """
         if self.__DB_enable:
             notfound = True
             updated = False
@@ -350,6 +484,19 @@ class JSONtinyDB:
         return notfound or updated
 
     def DelGrantFromMeta(self, grant, granted, grant_bloc):
+        """Remove a GRANT on supplied object from database definition in memory
+
+        Args:
+            grant (str): type of grant (SELECT, INSERT, UPDATE, CREATE, DROP)
+            granted (str): Account receiving the grant
+            grant_bloc (list): Structure of the grant
+
+        Raises:
+            vExcept: Exception with error code and error message
+
+        Returns:
+            bool: True if succes, False if fail
+        """
         if self.__DB_enable:
             deleted = False
             accountID = self.getAccountID(username=granted)
@@ -370,6 +517,19 @@ class JSONtinyDB:
         return deleted
 
     def DelGrantFromDB(self, grant, granted, grant_bloc):
+        """Remove a GRANT on supplied object from database in memory
+
+        Args:
+            grant (str): type of grant (SELECT, INSERT, UPDATE, CREATE, DROP)
+            granted (str): Account receiving the grant
+            grant_bloc (list): Structure of the grant
+
+        Raises:
+            vExcept: Exception with error code and error message
+
+        Returns:
+            bool: True if succes, False if fail
+        """
         if self.__DB_enable:
             deleted = False
             accountID = self.getAccountIDinDB(username=granted)
@@ -484,7 +644,7 @@ class JSONtinyDB:
             for tbl in self.__meta_db["Tables"][username.upper()]:
                 self.DelTableFile(owner=username.upper(), table_name=tbl)
             del self.__meta_db["Tables"][username.upper()]
-            dir_path = "{}/{}".format(self.__db_base_dir, username.upper())
+            dir_path = f"{self.__db_base_dir}/{username.upper()}"
             if os.path.exists(dir_path):
                 os.rmdir(dir_path)
             # remove sequences
@@ -540,11 +700,11 @@ class JSONtinyDB:
 
     def saveDB(self):
         if self.__DB_enable:
-            __id_db = open(self.__file_db, mode="w")
+            __id_db = open(file=self.__file_db, mode="w", encoding="utf-8")
             json.dump(self.__meta_db, indent=4, fp=__id_db)
             __id_db.close()
             for account in self.__meta_db["Accounts"]:
-                dir_path = "{}/{}".format(self.__db_base_dir, account["username"].upper())
+                dir_path = f"{self.__db_base_dir}/{account["username"].upper()}"
                 if not os.path.exists(dir_path):
                     os.makedirs(dir_path)
         else:
@@ -586,7 +746,6 @@ class JSONtinyDB:
 
     def get_sequence(self, owner: str, sequence_name: str):
         count = 0
-        result = None
         ow = owner
         if owner is None:
             for o in self.db["Sequences"].keys():

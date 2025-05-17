@@ -1,5 +1,10 @@
+# pylint: disable=line-too-long
+# pylint: disable=too-many-lines
+# pylint: disable=missing-module-docstring
+# pylint: disable=invalid-name
+# pylint: disable=consider-using-enumerate
+# pylint: disable=line-too-long
 class vExcept(Exception):
-
     def __init__(self, errcode, message="Internal error"):
         self.errcode = errcode
 

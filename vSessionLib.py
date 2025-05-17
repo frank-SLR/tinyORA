@@ -1,3 +1,9 @@
+# pylint: disable=line-too-long
+# pylint: disable=too-many-lines
+# pylint: disable=missing-module-docstring
+# pylint: disable=invalid-name
+# pylint: disable=consider-using-enumerate
+# pylint: disable=line-too-long
 import random
 from vExceptLib import vExcept
 from jtinyDBLib import JSONtinyDB
@@ -34,9 +40,7 @@ class vSession(object):
         __obj_to_commit = {"Tables": []}
         for tab_to_save in self.__updated_tables:
             self.db.UpdTableToDB(table_data=tab_to_save)
-            __obj_to_commit["Tables"].append(
-                [tab_to_save["schema"], tab_to_save["table_name"]]
-            )
+            __obj_to_commit["Tables"].append([tab_to_save["schema"], tab_to_save["table_name"]])
         self.db.save(obj_to_commit=__obj_to_commit)
         self.__updated_tables = []
 

@@ -1,14 +1,20 @@
+# pylint: disable=line-too-long
+# pylint: disable=too-many-lines
+# pylint: disable=missing-module-docstring
+# pylint: disable=invalid-name
+# pylint: disable=consider-using-enumerate
+# pylint: disable=line-too-long
 from jtinyDBLib import JSONtinyDB
 from vSessionLib import vSession
 
 
-class vDB():
+class vDB:
     def __init__(self, _db_base_dir, g_params):
         self.db = JSONtinyDB(_g_params=g_params, _db_base_dir=_db_base_dir)
         self.SYSDBA = 1
         self.SYSOPER = 2
         self.NORMAL = 0
 
-    def connect(self, user, password, dns:str=""):
+    def connect(self, user, password, dns: str = ""):
         session = vSession(db=self.db, username=user, password=password, mode=self.NORMAL)
         return session

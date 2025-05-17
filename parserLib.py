@@ -1,7 +1,12 @@
-import re
+# pylint: disable=line-too-long
+# pylint: disable=too-many-lines
+# pylint: disable=missing-module-docstring
+# pylint: disable=invalid-name
+# pylint: disable=consider-using-enumerate
+# pylint: disable=line-too-long
 import random
-import datetime
 from vExceptLib import vExcept
+from vToolsLib import vTools
 
 # querytype: (SELECT, INSERT, UPDATE, DELETE, GRANT, REVOKE, CREATE, DROP, DESCRIBE, COMMIT, ROLLBACK)
 # select: table_alias, schema, table_name, col_name/value, alias, type(COL, INT, FLOAT, STR, HEX, DATETIME, FUNCTION, MATHS, PIPE, SEQUENCE), table position, position in table, table or cursor, [-]
@@ -58,6 +63,7 @@ class vParser:
         self.__intInSeq = 0
         self.__intMathsSeq = 0
         self.__intPipeSeq = 0
+        self.__query = ""
         self.__raz()
         self.__list_of_functions = [
             "ABS",
@@ -351,7 +357,7 @@ class vParser:
         for n in range(len(self.__parsed_query["select"])):
             if (self.__parsed_query["select"][n][5] is None) or (self.__parsed_query["select"][n][5] == "COLUMN"):
                 col_alias = self.__parsed_query["select"][n][4]
-                if (col_alias is not None) and self.__check_STR(col_alias):
+                if (col_alias is not None) and vTools.check_STR(col_alias):
                     col_alias = col_alias.upper()
                 fmt, al, cn, sh, tn, tc, nt = self.__getColFromTable(self.__parsed_query["select"][n][3])
                 self.__parsed_query["select"][n] = [
@@ -428,7 +434,7 @@ class vParser:
                     self.__parsed_query["maths"][f][1][n] = [val]
                 elif val in ["(", ")"]:
                     self.__parsed_query["maths"][f][1][n] = [val]
-                elif self.__check_INT(val):
+                elif vTools.check_INT(val):
                     self.__parsed_query["maths"][f][1][n] = [
                         None,
                         None,
@@ -439,7 +445,7 @@ class vParser:
                         None,
                         None,
                     ]
-                elif self.__check_FLOAT(val):
+                elif vTools.check_FLOAT(val):
                     self.__parsed_query["maths"][f][1][n] = [
                         None,
                         None,
@@ -503,18 +509,18 @@ class vParser:
                         None,
                         tc,
                     ]
-                elif self.__check_DATETIME(self.__parsed_query["pipe"][f][1][n][3]):
+                elif vTools.check_DATETIME(self.__parsed_query["pipe"][f][1][n][3]):
                     raise vExcept(750)
-                elif self.__check_INT(self.__parsed_query["pipe"][f][1][n][3]):
+                elif vTools.check_INT(self.__parsed_query["pipe"][f][1][n][3]):
                     self.__parsed_query["pipe"][f][1][n][5] = "STR"
                     self.__parsed_query["pipe"][f][1][n][3] = str(self.__parsed_query["pipe"][f][1][n][3])
-                elif self.__check_FLOAT(self.__parsed_query["pipe"][f][1][n][3]):
+                elif vTools.check_FLOAT(self.__parsed_query["pipe"][f][1][n][3]):
                     self.__parsed_query["pipe"][f][1][n][5] = "STR"
                     self.__parsed_query["pipe"][f][1][n][3] = str(self.__parsed_query["pipe"][f][1][n][3])
-                elif self.__check_HEX(self.__parsed_query["pipe"][f][1][n][3]):
+                elif vTools.check_HEX(self.__parsed_query["pipe"][f][1][n][3]):
                     self.__parsed_query["pipe"][f][1][n][5] = "STR"
                     self.__parsed_query["pipe"][f][1][n][3] = str(self.__parsed_query["pipe"][f][1][n][3])
-                elif self.__check_STR(self.__parsed_query["pipe"][f][1][n][3]):
+                elif vTools.check_STR(self.__parsed_query["pipe"][f][1][n][3]):
                     self.__parsed_query["pipe"][f][1][n][5] = "STR"
         # group by
         col_found = False
@@ -609,7 +615,7 @@ class vParser:
         # 8: table or cursor
         for f in range(len(self.__parsed_query["order_by"])):
             ocol = self.__parsed_query["order_by"][f][0]
-            if self.__check_INT(ocol):
+            if vTools.check_INT(ocol):
                 pass
             else:
                 col = ocol.upper().split(".")
@@ -766,7 +772,7 @@ class vParser:
                         g_type = "TABLE_SEQUENCE"
                     else:
                         g_type = "TABLE"
-                    g_table = "{}.{}".format(s_t[0], s_t[1])
+                    g_table = f"{s_t[0]}.{s_t[1]}"
                 else:
                     raise vExcept(711, word)
                 word, pos = self.__parse_word(pos)
@@ -830,7 +836,7 @@ class vParser:
                         g_type = "TABLE_SEQUENCE"
                     else:
                         g_type = "TABLE"
-                    g_table = "{}.{}".format(s_t[0], s_t[1])
+                    g_table = f"{s_t[0]}.{s_t[1]}"
                 else:
                     raise vExcept(711, word)
                 word, pos = self.__parse_word(pos)
@@ -1333,7 +1339,7 @@ class vParser:
         return word, pipe_id, pos
 
     def __remove_quote(self, strin):
-        if self.__check_STR(strin) and (len(strin) >= 2):
+        if vTools.check_STR(strin) and (len(strin) >= 2):
             if (strin[0] == '"' and strin[-1] == '"') or (strin[0] == "'" and strin[-1] == "'"):
                 strin = strin[1:-1]
         return strin
@@ -1826,7 +1832,7 @@ class vParser:
         if oper not in ["<", "<="]:
             raise vExcept(744, oper)
         value, pos = self.__parse_word(pos)
-        if not self.__check_INT(value):
+        if not vTools.check_INT(value):
             raise vExcept(745, value)
         self.__parsed_query["connect"] = [oper, int(value)]
         return word, pos
@@ -2361,18 +2367,18 @@ class vParser:
         return False
 
     def __get_item_format(self, varin):
-        if self.__check_INT(varin):
+        if vTools.check_INT(varin):
             return "INT"
-        elif self.__check_FLOAT(varin):
+        elif vTools.check_FLOAT(varin):
             return "FLOAT"
-        elif self.__check_HEX(varin):
+        elif vTools.check_HEX(varin):
             return "HEXA"
-        elif self.__check_STR(varin):
+        elif vTools.check_STR(varin):
             if (varin[0] == '"') and (varin[-1] == '"') or (varin[0] == "'") and (varin[-1] == "'"):
                 return "STR"
             else:
                 return "COLUMN"
-        elif self.__check_DATETIME(varin):
+        elif vTools.check_DATETIME(varin):
             return "DATETIME"
         elif self.__is_function(varin.upper()):
             return "FUNCTION"
@@ -2383,47 +2389,16 @@ class vParser:
                 del _where[n + 2]
                 del _where[n]
 
-    def __check_INT(self, varin):
-        try:
-            return isinstance(int(varin), int)
-        except Exception:
-            return False
-
-    def __check_STR(self, varin):
-        return isinstance(varin, str)
-
-    def __check_FLOAT(self, varin):
-        try:
-            return isinstance(float(varin), float)
-        #     reg = re.search(r"^[-+]?(\d+([.,]\d*)?|[.,]\d+)([eE][-+]?\d+)?$", varin)
-        #     return bool(reg is not None)
-        except Exception:
-            return False
-
-    def __check_HEX(self, varin):
-        try:
-            reg = re.search(r"^[-+]?(0[xX][\dA-Fa-f]+|0[0-7]*|\d+)$", varin)
-            return bool(reg is not None)
-        except Exception:
-            return False
-
-    def __check_DATETIME(self, varin):
-        try:
-            reg = datetime.datetime.fromtimestamp(varin, tz=None)
-            return bool(reg is not None)
-        except Exception:
-            return False
-
     def __get_format(self, varin):
-        if self.__check_INT(varin):
+        if vTools.check_INT(varin):
             return "INT"
-        elif self.__check_FLOAT(varin):
+        elif vTools.check_FLOAT(varin):
             return "FLOAT"
-        elif self.__check_DATETIME(varin):
+        elif vTools.check_DATETIME(varin):
             return "DATETIME"
-        elif self.__check_HEX(varin):
+        elif vTools.check_HEX(varin):
             return "HEX"
-        elif self.__check_STR(varin):
+        elif vTools.check_STR(varin):
             return "STR"
         else:
             raise vExcept(2202, varin)
@@ -2461,27 +2436,27 @@ class vParser:
         return lst
 
     def __get_cur_name(self):
-        result = "CUR_{}{}".format(self.__intCurSeq, random.randint(1, 99999999))
+        result = f"CUR_{self.__intCurSeq}{random.randint(1, 99999999)}"
         self.__intCurSeq += 1
         return result
 
     def __get_fct_name(self):
-        result = "FCT_{}{}".format(self.__intFctSeq, random.randint(1, 99999999))
+        result = f"FCT_{self.__intFctSeq}{random.randint(1, 99999999)}"
         self.__intFctSeq += 1
         return result
 
     def __get_in_name(self):
-        result = "IN_{}{}".format(self.__intInSeq, random.randint(1, 99999999))
+        result = f"IN_{self.__intInSeq}{random.randint(1, 99999999)}"
         self.__intInSeq += 1
         return result
 
     def __get_maths_name(self):
-        result = "MATHS_{}{}".format(self.__intMathsSeq, random.randint(1, 99999999))
+        result = f"MATHS_{self.__intMathsSeq}{random.randint(1, 99999999)}"
         self.__intMathsSeq += 1
         return result
 
     def __get_pipe_name(self):
-        result = "PIPE_{}{}".format(self.__intPipeSeq, random.randint(1, 99999999))
+        result = f"PIPE_{self.__intPipeSeq}{random.randint(1, 99999999)}"
         self.__intPipeSeq += 1
         return result
 

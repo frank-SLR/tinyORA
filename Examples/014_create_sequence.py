@@ -25,7 +25,7 @@ try:
     username = "resto"
     password = "restopwd"
     database = "db"
-    query = "create sequence autre.seq02"
+    query = "create sequence resto.seq02"
     bind = {}
 
     db_found = False
