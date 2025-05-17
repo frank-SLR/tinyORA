@@ -8,6 +8,10 @@ from vExceptLib import vExcept
 # JSON DB
 class JSONtinyDB:
     def __init__(self, _g_params, _db_base_dir=None):
+        self.lock_exclusive = 0
+        self.lock_read_write = 1
+        self.lock_read_only = 10
+
         self.__g_params = _g_params
         self.__latchcnt = 0
         self.__RAZ()
@@ -117,18 +121,31 @@ class JSONtinyDB:
             raise vExcept(15)
 
     def add_lock(self, session_id, owner, name, lock_type):
-        # return 0 => lock acquired
-        # return 1 => lock not acquired because of previous lock
+        """Add a lock on an object
+
+        Args:
+            session_id (int): id of session requiering the lock
+            owner (str): object owner
+            name (str): object name
+            lock_type (str): type of lock
+
+        Raises:
+            vExcept: Exceptions handling
+
+        Returns:
+            int: 0 => lock acquired
+                 1 => lock not acquired because of previous lock
+        """
         if self.__DB_enable:
             self.__latchcnt += 1
             while self.__latchcnt > 1:
                 self.__latchcnt -= 1
                 time.sleep(self.__latchcnt / 1000)  # wait some ms
                 self.__latchcnt += 1
-            for n in range(len(self.__locks)):
-                if self.__locks[n][1:-1] == [owner, name]:
-                    if self.__locks[n][0] == session_id:
-                        if self.__locks[n][3] == lock_type:
+            for n, l in enumerate(self.__locks):
+                if l[1:-1] == [owner, name]:
+                    if l[0] == session_id:
+                        if l[3] == lock_type:
                             self.__latchcnt -= 1
                             return 0
                     else:
@@ -137,11 +154,11 @@ class JSONtinyDB:
                                 self.__latchcnt -= 1
                                 return 1
                             case 1:
-                                if self.__locks[n][3] in [0, 1]:
+                                if l[3] in [0, 1]:
                                     self.__latchcnt -= 1
                                     return 1
                             case 10:
-                                if self.__locks[n][3] == 0:
+                                if l[3] == 0:
                                     self.__latchcnt -= 1
                                     return 1
             self.__locks.append([session_id, owner, name, lock_type])

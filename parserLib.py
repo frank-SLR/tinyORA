@@ -43,6 +43,12 @@ from vExceptLib import vExcept
 #                            parsed= (TRUE, FALSE),
 #                            completed= (TRUE, FALSE),
 #                            function= function_name}}
+# drop: TABLE, owner, table_name
+#       USER, account
+#       SEQUENCE, owner, sequence_name
+# create : TABLE, owner, table_name, [[column, type], ...]
+#          USER, username, password
+#          SEQUENCE, owner, sequence_name
 
 
 class vParser:
@@ -929,9 +935,13 @@ class vParser:
                 self.__parsed_query["create"].append(["USER", username, password])
             case "SEQUENCE":
                 sequence_name, pos = self.__parse_word(pos)
-                if (len(sequence_name.split(".")) > 1) or (len(sequence_name.split(" ")) > 1):
+                seq = sequence_name.upper().split(".")
+                if len(seq) == 1:
+                    self.__parsed_query["create"].append(["SEQUENCE", None, seq[0]])
+                if len(seq) == 2:
+                    self.__parsed_query["create"].append(["SEQUENCE", seq[0], seq[1]])
+                else:
                     raise vExcept(762, sequence_name)
-                self.__parsed_query["create"].append(["SEQUENCE", sequence_name.upper()])
             case _:
                 raise vExcept(721, word)
         word, pos = self.__parse_word(pos)
@@ -1024,8 +1034,11 @@ class vParser:
                     raise vExcept(726, word)
             case "SEQUENCE":
                 word, pos = self.__parse_word(pos)
-                if len(word.split(".")) == 1:
-                    self.__parsed_query["drop"].append(["SEQUENCE", word.upper()])
+                seq = word.upper().split(".")
+                if len(seq) == 1:
+                    self.__parsed_query["drop"].append(["SEQUENCE", None, seq[0]])
+                elif len(word.split(".")) == 2:
+                    self.__parsed_query["drop"].append(["SEQUENCE", seq[0], seq[1]])
                 else:
                     raise vExcept(762, word)
             case _:

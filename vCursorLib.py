@@ -1,3 +1,4 @@
+from __future__ import annotations
 import re
 import copy
 import random
@@ -9,7 +10,19 @@ from parserLib import vParser
 
 
 class vCursor(object):
-    def __init__(self, db: JSONtinyDB, username, password, updated_tables, session):
+    def __init__(self, db: JSONtinyDB, username, password, updated_tables, session: "vSession"):
+        """Initialize vCursor object.
+
+        Args:
+            db (JSONtinyDB): Database class
+            username (str): User name used to connect to database
+            password (str): Password og user
+            updated_tables (_type_): List of tables structure. Tables have been updated in previous queries.
+            session (vSession): vSession object owning this object
+
+        Raises:
+            vExcept: Exceptions handling
+        """
         self.db = db
         self.__session = session
         self.current_schema = None
@@ -29,8 +42,9 @@ class vCursor(object):
         super().__init__()
 
     def __RAZ(self):
+        """Initialize internal values"""
         self.__parsed_query = None
-        self.__group_post_data = {}
+        # self.__group_post_data = {}
         self.__bind = {}
         self.__query_result = {}
         self.__query_executed = False
@@ -39,100 +53,139 @@ class vCursor(object):
         """Put the locks on all objetcs used by query
 
         Raises:
-            vExcept: _description_
-            vExcept: _description_
-            vExcept: _description_
-            vExcept: _description_
-            vExcept: _description_
+            vExcept: Exceptions handling
         """
         # put locks
-        if self.__parsed_query["querytype"] in ["SELECT", "DESCRIBE"]:
-            for n in range(len(self.__parsed_query["from"])):
-                tbl = self.__parsed_query["from"][n]
-                if tbl[3] == "TABLE":
-                    lock_flg = True
-                    while lock_flg:
-                        lock_val = self.db.add_lock(
-                            session_id=self.session_id,
-                            owner=tbl[1],
-                            name=tbl[2],
-                            lock_type=10,
-                        )
-                        match lock_val:
-                            case 0:
-                                lock_flg = False
-                            case 1:
-                                raise vExcept(1900, "{}.{}".format(tbl[1], tbl[2]))
-        elif self.__parsed_query["querytype"] in ["INSERT"]:
-            lock_flg = True
-            while lock_flg:
-                lock_val = self.db.add_lock(
-                    session_id=self.session_id,
-                    owner=self.__parsed_query["insert"][0],
-                    name=self.__parsed_query["insert"][1],
-                    lock_type=1,
-                )
-                match lock_val:
-                    case 0:
-                        lock_flg = False
-                    case 1:
-                        raise vExcept(
-                            1900,
-                            "{}.{}".format(
-                                self.__parsed_query["insert"][0],
-                                self.__parsed_query["insert"][1],
-                            ),
-                        )
-        if self.__parsed_query["querytype"] in ["UPDATE", "DELETE"]:
-            tbl = self.__parsed_query["from"][0]
-            lock_flg = True
-            while lock_flg:
-                lock_val = self.db.add_lock(session_id=self.session_id, owner=tbl[1], name=tbl[2], lock_type=1)
-                match lock_val:
-                    case 0:
-                        lock_flg = False
-                    case 1:
-                        raise vExcept(1900, "{}.{}".format(tbl[1], tbl[2]))
-        elif self.__parsed_query["querytype"] in ["DROP"]:
-            if self.__parsed_query["drop"][0][0] == "TABLE":
-                lock_flg = True
-                while lock_flg:
-                    lock_val = self.db.add_lock(
-                        session_id=self.session_id,
-                        owner=self.__parsed_query["drop"][0][1],
-                        name=self.__parsed_query["drop"][0][2],
-                        lock_type=0,
-                    )
-                    match lock_val:
-                        case 0:
-                            lock_flg = False
-                        case 1:
-                            raise vExcept(
-                                1900,
-                                "{}.{}".format(
-                                    self.__parsed_query["drop"][0][1],
-                                    self.__parsed_query["drop"][0][2],
-                                ),
-                            )
-            elif self.__parsed_query["drop"][0][0] == "USER":
-                for TAB in self.db.db["Tables"]:
-                    if TAB["schema"] == self.__parsed_query["drop"][0][1]:
+        match self.__parsed_query["querytype"]:
+            case "SELECT" | "DESCRIBE":
+                for n in range(len(self.__parsed_query["from"])):
+                    tbl = self.__parsed_query["from"][n]
+                    if tbl[3] == "TABLE":
                         lock_flg = True
                         while lock_flg:
                             lock_val = self.db.add_lock(
                                 session_id=self.session_id,
-                                owner=TAB["schema"],
-                                name=TAB["table_name"],
-                                lock_type=0,
+                                owner=tbl[1],
+                                name=tbl[2],
+                                lock_type=self.db.lock_read_only,
                             )
                             match lock_val:
                                 case 0:
                                     lock_flg = False
                                 case 1:
-                                    raise vExcept(
-                                        1900,
-                                        "{}.{}".format(TAB["schema"], TAB["table_name"]),
+                                    raise vExcept(1900, f"{tbl[1]}.{tbl[2]}")
+                for n in range(len(self.__parsed_query["select"])):
+                    col = self.__parsed_query["select"][n]
+                    if col[5] == "SEQUENCE":
+                        lock_flg = True
+                        while lock_flg:
+                            if col[3] == "CURRVAL":
+                                lock_val = self.db.add_lock(
+                                    session_id=self.session_id,
+                                    owner=col[1],
+                                    name=col[2],
+                                    lock_type=self.db.lock_read_only,
+                                )
+                            else:
+                                lock_val = self.db.add_lock(
+                                    session_id=self.session_id,
+                                    owner=col[1],
+                                    name=col[2],
+                                    lock_type=self.db.lock_read_write,
+                                )
+                            match lock_val:
+                                case 0:
+                                    lock_flg = False
+                                case 1:
+                                    raise vExcept(1900, f"{col[1]}.{col[2]}")
+            case "INSERT":
+                lock_flg = True
+                while lock_flg:
+                    lock_val = self.db.add_lock(
+                        session_id=self.session_id,
+                        owner=self.__parsed_query["insert"][0],
+                        name=self.__parsed_query["insert"][1],
+                        lock_type=self.db.lock_read_write,
+                    )
+                    match lock_val:
+                        case 0:
+                            lock_flg = False
+                        case 1:
+                            raise vExcept(1900, f'{self.__parsed_query["insert"][0]}.{self.__parsed_query["insert"][1]}')
+            case "UPDATE" | "DELETE":
+                tbl = self.__parsed_query["from"][0]
+                lock_flg = True
+                while lock_flg:
+                    lock_val = self.db.add_lock(session_id=self.session_id, owner=tbl[1], name=tbl[2], lock_type=self.db.lock_read_write)
+                    match lock_val:
+                        case 0:
+                            lock_flg = False
+                        case 1:
+                            raise vExcept(1900, f"{tbl[1]}.{tbl[2]}")
+            case "DROP":
+                if self.__parsed_query["drop"][0][0] == "TABLE":
+                    lock_flg = True
+                    while lock_flg:
+                        lock_val = self.db.add_lock(
+                            session_id=self.session_id,
+                            owner=self.__parsed_query["drop"][0][1],
+                            name=self.__parsed_query["drop"][0][2],
+                            lock_type=self.db.lock_exclusive,
+                        )
+                        match lock_val:
+                            case 0:
+                                lock_flg = False
+                            case 1:
+                                raise vExcept(
+                                    1900,
+                                    f'{self.__parsed_query["drop"][0][1]}.{self.__parsed_query["drop"][0][2]}',
+                                )
+                elif self.__parsed_query["drop"][0][0] == "USER":
+                    for USR in self.db.db["Tables"]:
+                        if USR["schema"] == self.__parsed_query["drop"][0][1]:
+                            lock_flg = True
+                            while lock_flg:
+                                lock_val = self.db.add_lock(
+                                    session_id=self.session_id,
+                                    owner=USR["schema"],
+                                    name=USR["table_name"],
+                                    lock_type=self.db.lock_exclusive,
+                                )
+                                match lock_val:
+                                    case 0:
+                                        lock_flg = False
+                                    case 1:
+                                        raise vExcept(1900, f"{USR["schema"]}.{USR["table_name"]}")
+                    for SEQ in self.db.db["Sequences"]:
+                        if self.__parsed_query["drop"][0][1] in SEQ.keys():
+                            for S in SEQ[self.__parsed_query["drop"][0][1]].keys():
+                                lock_flg = True
+                                while lock_flg:
+                                    lock_val = self.db.add_lock(
+                                        session_id=self.session_id,
+                                        owner=self.__parsed_query["drop"][0][1],
+                                        name=S,
+                                        lock_type=self.db.lock_exclusive,
                                     )
+                                    match lock_val:
+                                        case 0:
+                                            lock_flg = False
+                                        case 1:
+                                            raise vExcept(1900, f'{self.__parsed_query["drop"][0][1]}.{S}')
+                elif self.__parsed_query["drop"][0][0] == "SEQUENCE":
+                    lock_flg = True
+                    while lock_flg:
+                        lock_val = self.db.add_lock(
+                            session_id=self.session_id,
+                            owner=self.__parsed_query["drop"][0][1],
+                            name=self.__parsed_query["drop"][0][2],
+                            lock_type=self.db.lock_exclusive,
+                        )
+                        match lock_val:
+                            case 0:
+                                lock_flg = False
+                            case 1:
+                                raise vExcept(1900, f'{self.__parsed_query["drop"][0][1]}.{self.__parsed_query["drop"][0][2]}')
 
     def submit_query_check_GRANT(self, result):
         """Check the grants for all objects
@@ -141,7 +194,7 @@ class vCursor(object):
             result (dict): preformated result set of the query
 
         Raises:
-            vExcept: _description_
+            vExcept: Exceptions handling
 
         Returns:
             dict: the result set of the query
@@ -219,7 +272,7 @@ class vCursor(object):
                         )
                     case "CREATE" | "DROP":
                         match grt[2]:
-                            case "TABLE" | "INDEX":
+                            case "TABLE" | "SEQUENCE":
                                 if not self.__get_grant_for_object(
                                     owner=grt[3],
                                     obj_name=grt[2],
@@ -290,7 +343,7 @@ class vCursor(object):
                         )
                     case "CREATE" | "DROP":
                         match grt[2]:
-                            case "TABLE" | "INDEX":
+                            case "TABLE" | "SEQUENCE":
                                 if not self.__get_grant_for_object(
                                     owner=grt[3],
                                     obj_name=grt[2],
@@ -321,33 +374,55 @@ class vCursor(object):
                 self.db.saveDB()
                 result = {"message": "Revoke processed"}
             case "CREATE":
-                if self.__parsed_query["create"][0][0] == "TABLE":
-                    if self.__parsed_query["create"][0][1] is None:
-                        self.__parsed_query["create"][0][1] = self.current_schema
-                    if self.__parsed_query["create"][0][1] != self.current_schema:
-                        if not self.__get_grant_for_object(
-                            owner=self.__parsed_query["create"][0][1],
-                            obj_name="TABLE",
-                            grant_needed="CREATE",
-                        ):
+                match self.__parsed_query["create"][0][0]:
+                    case "TABLE":
+                        if self.__parsed_query["create"][0][1] is None:
+                            self.__parsed_query["create"][0][1] = self.current_schema
+                        if self.__parsed_query["create"][0][1] != self.current_schema:
+                            if not self.__get_grant_for_object(
+                                owner=self.__parsed_query["create"][0][1],
+                                obj_name="TABLE",
+                                grant_needed="CREATE",
+                            ):
+                                raise vExcept(901)
+                    case "SEQUENCE":
+                        if self.__parsed_query["create"][0][1] is None:
+                            self.__parsed_query["create"][0][1] = self.current_schema
+                        if self.__parsed_query["create"][0][1] != self.current_schema:
+                            if not self.__get_grant_for_object(
+                                owner=self.__parsed_query["create"][0][1],
+                                obj_name="SEQUENCE",
+                                grant_needed="CREATE",
+                            ):
+                                raise vExcept(901)
+                    case "USER":
+                        if not self.__get_grant_for_object(owner=None, obj_name="USER", grant_needed="CREATE"):
                             raise vExcept(901)
-                elif self.__parsed_query["create"][0][0] == "USER":
-                    if not self.__get_grant_for_object(owner=None, obj_name="USER", grant_needed="CREATE"):
-                        raise vExcept(901)
             case "DROP":
-                if self.__parsed_query["drop"][0][0] == "TABLE":
-                    if self.__parsed_query["drop"][0][1] is None:
-                        self.__parsed_query["drop"][0][1] = self.current_schema
-                    if self.__parsed_query["drop"][0][1] != self.current_schema:
-                        if not self.__get_grant_for_object(
-                            owner=self.__parsed_query["drop"][0][1],
-                            obj_name="TABLE",
-                            grant_needed="DROP",
-                        ):
+                match self.__parsed_query["drop"][0][0]:
+                    case "TABLE":
+                        if self.__parsed_query["drop"][0][1] is None:
+                            self.__parsed_query["drop"][0][1] = self.current_schema
+                        if self.__parsed_query["drop"][0][1] != self.current_schema:
+                            if not self.__get_grant_for_object(
+                                owner=self.__parsed_query["drop"][0][1],
+                                obj_name="TABLE",
+                                grant_needed="DROP",
+                            ):
+                                raise vExcept(902)
+                    case "SEQUENCE":
+                        if self.__parsed_query["drop"][0][1] is None:
+                            self.__parsed_query["drop"][0][1] = self.current_schema
+                        if self.__parsed_query["drop"][0][1] != self.current_schema:
+                            if not self.__get_grant_for_object(
+                                owner=self.__parsed_query["drop"][0][1],
+                                obj_name="SEQUENCE",
+                                grant_needed="DROP",
+                            ):
+                                raise vExcept(902)
+                    case "USER":
+                        if not self.__get_grant_for_object(owner=None, obj_name="USER", grant_needed="DROP"):
                             raise vExcept(902)
-                elif self.__parsed_query["drop"][0][0] == "USER":
-                    if not self.__get_grant_for_object(owner=None, obj_name="USER", grant_needed="DROP"):
-                        raise vExcept(902)
             case "INSERT":
                 if self.__parsed_query["insert"][0] is None:
                     self.__parsed_query["insert"][0] = self.current_schema
@@ -427,12 +502,17 @@ class vCursor(object):
         return result
 
     def submit_query_remove_locks(self):
+        """Remove the locks on all objetcs used by query
+
+        Raises:
+            vExcept: Exceptions handling
+        """
         if self.__parsed_query["querytype"] in ["SELECT", "DESCRIBE"]:
             self.db.del_locks(session_id=self.session_id, lock_type=10)
         elif self.__parsed_query["querytype"] in ["INSERT"]:
             self.db.del_locks(session_id=self.session_id, lock_type=10)
         elif self.__parsed_query["querytype"] in ["DROP"]:
-            if self.__parsed_query["drop"][0][0] == "TABLE":
+            if self.__parsed_query["drop"][0][0] in ["TABLE" | "SEQUENCE"]:
                 self.db.del_locks(
                     session_id=self.session_id,
                     owner=self.__parsed_query["drop"][0][1],
@@ -1570,9 +1650,13 @@ class vCursor(object):
         self.db.saveDB()
 
     def __process_create_sequence(self):
-        sequence = self.__parsed_query["create"][0][1].upper()
-        self.db.AddSequenceToMeta(account=self.current_schema, sequence=sequence)
-        self.db.AddSequenceToDB(account=self.current_schema, sequence=sequence)
+        if self.__parsed_query["create"][0][1] is None:
+            owner = self.current_schema
+        else:
+            owner = self.__parsed_query["create"][0][1].upper()
+        sequence = self.__parsed_query["create"][0][2].upper()
+        self.db.AddSequenceToMeta(account=owner, sequence=sequence)
+        self.db.AddSequenceToDB(account=owner, sequence=sequence)
         self.db.saveDB()
 
     def __process_drop_table(self):
@@ -1596,13 +1680,17 @@ class vCursor(object):
             raise vExcept(1800, usr)
 
     def __process_drop_sequence(self):
-        sequence = self.__parsed_query["drop"][0][1]
-        if self.db.checkSequenceExists(account=self.current_schema, sequence=sequence):
-            self.db.DelSequenceFromMeta(account=self.current_schema, sequence=sequence)
-            self.db.DelSequenceFromDB(account=self.current_schema, sequence=sequence)
+        if self.__parsed_query["drop"][0][1] is None:
+            owner = self.current_schema
+        else:
+            owner = self.__parsed_query["drop"][0][1].upper()
+        sequence = self.__parsed_query["drop"][0][2]
+        if self.db.checkSequenceExists(account=owner, sequence=sequence):
+            self.db.DelSequenceFromMeta(account=owner, sequence=sequence)
+            self.db.DelSequenceFromDB(account=owner, sequence=sequence)
             self.db.saveDB()
         else:
-            raise vExcept(381, sequence)
+            raise vExcept(381, f"{owner}.{sequence}")
 
     def __process_insert(self):
         tbl = self.__get_table(
@@ -2925,7 +3013,7 @@ class vCursor(object):
             result = True
         else:
             result = False
-            grants = self.db.db["Accounts"][self.db.getAccountID(username=str(self.current_schema).lower())]["grants"]
+            grants = self.db.db["Accounts"][self.db.getAccountIDinDB(username=str(self.current_schema).lower())]["grants"]
             # for n in range(len(self.db.db["Accounts"])):
             #     account = self.db.db["Accounts"][n]
             #     if str(account["username"]).upper() == str(self.current_schema).upper():
@@ -2953,7 +3041,7 @@ class vCursor(object):
                 case "CREATE" | "DROP":
                     for grant in grants[str(grant_needed).upper()]:
                         match grant[0]:
-                            case "TABLE" | "INDEX":
+                            case "TABLE" | "SEQUENCE":
                                 if (obj_name == grant[0]) and ((owner is not None) and (grant[1] == owner.upper())) and (admin == "NO" or admin == grant[2]):
                                     result = True
                                     break
