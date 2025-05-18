@@ -1441,10 +1441,12 @@ class vCursor(object):
                         c1 = self.__parsed_query["from"][tst[1][1]][4][0]["rows"][self.__RowsPosInTables[tst[1][1]]][tst[1][2]]
                     else:
                         no_test = True
+                        c1 = None
                     if (tst[3][5] == "COLUMN") and (tst[3][1] == tab_num):
                         c2 = self.__parsed_query["from"][tst[3][1]][4][0]["rows"][self.__RowsPosInTables[tst[3][1]]][tst[3][2]]
                     else:
                         no_test = True
+                        c2 = None
                     tstoper = tst[2]
                     if no_test:
                         result = None
@@ -2959,6 +2961,7 @@ class vCursor(object):
     def __getCursorQuery(self, cur_name):
         # cursors: cursor_alias, query
         count = 0
+        result = None
         for n in range(len(self.__parsed_query["cursors"])):
             c = self.__parsed_query["cursors"][n]
             if c[0] == cur_name:

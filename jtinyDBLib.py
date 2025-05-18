@@ -550,6 +550,15 @@ class JSONtinyDB:
         return deleted
 
     def AddSequenceToMeta(self, account, sequence):
+        """Add a SEQUENCE into database definition in memory
+
+        Args:
+            account (str): Owner of thhe sequence
+            sequence (str): Name of the sequence
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
         if self.__DB_enable:
             found = False
             for eg in self.__meta_db["Accounts"]:
@@ -567,6 +576,12 @@ class JSONtinyDB:
             raise vExcept(15)
 
     def DelSequenceFromMeta(self, account, sequence):
+        """Remove supplied sequence from database definition in memory
+
+        Args:
+            account (str): Owner of thhe sequence
+            sequence (str): Name of the sequence
+        """
         del self.__meta_db["Sequences"][account.upper()][sequence.upper()]
         # remove grant on removed sequence
         for n in range(len(self.__meta_db["Accounts"])):
@@ -576,6 +591,15 @@ class JSONtinyDB:
                     del self.__meta_db["Accounts"][n]["grants"]["SELECT"][g]
 
     def AddSequenceToDB(self, account, sequence):
+        """Add a SEQUENCE into database in memory
+
+        Args:
+            account (str): Owner of thhe sequence
+            sequence (str): Name of the sequence
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
         if self.__DB_enable:
             self.db["Sequences"][account.upper()][sequence.upper()] = 0
             # remove grant on removed sequence
@@ -588,12 +612,32 @@ class JSONtinyDB:
             raise vExcept(15)
 
     def DelSequenceFromDB(self, account, sequence):
+        """Remove supplied sequence from database in memory
+
+        Args:
+            account (str): Owner of thhe sequence
+            sequence (str): Name of the sequence
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
         if self.__DB_enable:
             del self.db["Sequences"][account.upper()][sequence.upper()]
         else:
             raise vExcept(15)
 
     def AddAccountToMeta(self, account_bloc):
+        """Add an account into database definition in memory
+
+        Args:
+            account_bloc (dist): Structure of an account
+
+        Raises:
+            vExcept: Exception with error code and error message
+
+        Returns:
+            bool: True if account is created else an exception is triggered
+        """
         if self.__DB_enable:
             notfound = True
             for eg in self.__meta_db["Accounts"]:
@@ -612,6 +656,14 @@ class JSONtinyDB:
         return notfound
 
     def AddAccountToDB(self, account_bloc):
+        """Add an account into database in memory
+
+        Args:
+            account_bloc (dist): Structure of an account
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
         if self.__DB_enable:
             self.db["Accounts"].append(account_bloc)
             self.db["Sequences"][account_bloc["username"].upper()] = {}
@@ -620,6 +672,14 @@ class JSONtinyDB:
             raise vExcept(15)
 
     def DelAccountFromMeta(self, username):
+        """Remove an account from database definition in memory
+
+        Args:
+            username (str): Username to remove from database
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
         if self.__DB_enable:
             # remove account
             for n in range(len(self.__meta_db["Accounts"])):
@@ -653,6 +713,14 @@ class JSONtinyDB:
             raise vExcept(15)
 
     def DelAccountFromDB(self, username: str):
+        """Remove an account from database in memory
+
+        Args:
+            username (str): Username to remove from database
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
         if self.__DB_enable:
             # remove account
             for n in range(len(self.db["Accounts"])):
@@ -681,6 +749,17 @@ class JSONtinyDB:
             raise vExcept(15)
 
     def getAccountID(self, username: str):
+        """Obtain account identifier from database definition in memory
+
+        Args:
+            username (str): User name
+
+        Raises:
+            vExcept: Exception with error code and error message
+
+        Returns:
+            int: Identifier of the account if it exists else an exception is triggered
+        """
         if self.__DB_enable:
             for n in range(len(self.__meta_db["Accounts"])):
                 if self.__meta_db["Accounts"][n]["username"] == username:
@@ -690,6 +769,17 @@ class JSONtinyDB:
             raise vExcept(15)
 
     def getAccountIDinDB(self, username: str):
+        """Obtain account identifier from database in memory
+
+        Args:
+            username (str): User name
+
+        Raises:
+            vExcept: Exception with error code and error message
+
+        Returns:
+            int: Identifier of the account if it exists else an exception is triggered
+        """
         if self.__DB_enable:
             for n in range(len(self.db["Accounts"])):
                 if self.db["Accounts"][n]["username"] == username:
@@ -699,6 +789,11 @@ class JSONtinyDB:
             raise vExcept(15)
 
     def saveDB(self):
+        """Save database decription in memory to disk
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
         if self.__DB_enable:
             __id_db = open(file=self.__file_db, mode="w", encoding="utf-8")
             json.dump(self.__meta_db, indent=4, fp=__id_db)
@@ -711,6 +806,11 @@ class JSONtinyDB:
             raise vExcept(15)
 
     def reload(self):
+        """Load and overwrite database definition in memory
+
+        Raises:
+            vExcept: Exception with error code and error message
+        """
         if self.__DB_enable:
             self.__RAZ()
             self.__loadDB()
@@ -718,6 +818,18 @@ class JSONtinyDB:
             raise vExcept(15)
 
     def getTable(self, owner: str, table_name: str):
+        """Get structure and rows of supplied table from database in memory
+
+        Args:
+            owner (str): Owner of the table
+            table_name (str): Table name
+
+        Raises:
+            vExcept: Exception with error code and error message
+
+        Returns:
+            list: Structure of the table with rows if table exists else an exception is triggered
+        """
         count = 0
         result = None
         if table_name == "DUAL":
@@ -745,6 +857,18 @@ class JSONtinyDB:
         return result
 
     def get_sequence(self, owner: str, sequence_name: str):
+        """Get structure of supplied sequence from database in memory
+
+        Args:
+            owner (str): Owner of the sequence
+            sequence_name (str): Sequence name
+
+        Raises:
+            vExcept: Exception with error code and error message
+
+        Returns:
+            list: Structure of the sequence if it exists else an exception is triggered
+        """
         count = 0
         ow = owner
         if owner is None:
@@ -770,6 +894,11 @@ class JSONtinyDB:
         return ow, sequence_name, self.db["Sequences"][ow][sequence_name]
 
     def save_sequence(self, seq_dic: dict):
+        """Save sequence definition into database (definition and data) to memory
+
+        Args:
+            seq_dic (dict): Structure of sequence
+        """
         if len(seq_dic) > 0:
             for o in seq_dic.keys():
                 for s in seq_dic[o].keys():
@@ -778,6 +907,15 @@ class JSONtinyDB:
             self.saveDB()
 
     def checkSequenceExists(self, account: str, sequence_name: str):
+        """Check if supplied sequence exists
+
+        Args:
+            account (str): Owner of the sequence
+            sequence_name (str): Name of the sequence
+
+        Returns:
+            bool: True if sequence exists else False
+        """
         result = False
         if account.upper() in self.db["Sequences"].keys():
             result = bool(sequence_name.upper() in self.db["Sequences"][account.upper()].keys())
@@ -786,6 +924,15 @@ class JSONtinyDB:
         return result
 
     def checkTableExists(self, owner: str, table_name: str):
+        """Check if supplied table exists
+
+        Args:
+            owner (str): Owner of the table
+            table_name (str): Name of the table
+
+        Returns:
+            bool: True if table exists else False
+        """
         result = False
         for t in self.db["Tables"]:
             if (t["table_name"] == table_name) and (t["schema"] == owner):
@@ -794,6 +941,14 @@ class JSONtinyDB:
         return result
 
     def checkUserExists(self, username: str):
+        """Check if supplied account exists
+
+        Args:
+            username (str): Name of the account
+
+        Returns:
+            bool: True if account exists else False
+        """
         result = False
         for t in self.db["Accounts"]:
             if t["username"] == username.lower():
